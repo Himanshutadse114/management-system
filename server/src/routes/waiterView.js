@@ -1,16 +1,15 @@
 const express = require('express');
 const { Op } = require('sequelize');
-const { Product, ProductPriceOption, InventoryBalance } = require('../models');
+const { AuditLog, Product, ProductPriceOption, InventoryBalance } = require('../models');
 const { RestaurantTable } = require('../models/restaurant');
 const { Order, OrderLine } = require('../models/sales');
 const { authenticate, requireApproved, requireBranchRoles } = require('../middleware/auth');
-const { effectiveRole } = require('../security/rolePolicy');
+const { createRestaurantOrder, addRestaurantLines, setRestaurantStatus } = require('../services/restaurantService');
 
 const router = express.Router();
 router.use(authenticate, requireApproved);
 
 function waiterScope(req, res, next) {
-  if (effectiveRole(req.access, req.params.tenantId, req.params.branchId) !== 'WAITER') return next('route');
   return requireBranchRoles('WAITER')(req, res, (error) => {
     if (error) return next(error);
     if (!req.branch || String(req.branch.tenantId) !== String(req.params.tenantId)) {
@@ -26,6 +25,11 @@ function waiterScope(req, res, next) {
 function mediaUrl(objectKey) {
   const base = String(process.env.PUBLIC_MEDIA_BASE_URL || '').trim().replace(/\/$/, '');
   return base && objectKey ? `${base}/${objectKey}` : null;
+}
+
+function cleanText(value, max = 255) {
+  const text = String(value || '').trim();
+  return text ? text.slice(0, max) : null;
 }
 
 function safeLine(line) {
@@ -70,7 +74,33 @@ function safeOrder(order, table = null) {
   };
 }
 
-router.get('/tenants/:tenantId/branches/:branchId/catalogue', waiterScope, async (req, res, next) => {
+async function audit(req, action, entityId, metadata = null) {
+  await AuditLog.create({
+    tenantId: req.params.tenantId,
+    branchId: req.params.branchId,
+    actorUserId: req.userId,
+    action,
+    entityType: 'Order',
+    entityId: entityId ? String(entityId) : null,
+    metadata,
+    ipAddress: req.ip || null
+  });
+}
+
+async function loadOwnOrder(req) {
+  return Order.findOne({
+    where: {
+      id: req.params.orderId,
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      orderType: 'RESTAURANT',
+      waiterUserId: req.userId
+    },
+    include: [{ model: OrderLine, as: 'lines' }]
+  });
+}
+
+router.get('/waiter/tenants/:tenantId/branches/:branchId/catalogue', waiterScope, async (req, res, next) => {
   try {
     const products = await Product.findAll({
       where: { tenantId: req.params.tenantId, status: 'ACTIVE' },
@@ -113,7 +143,7 @@ router.get('/tenants/:tenantId/branches/:branchId/catalogue', waiterScope, async
   } catch (error) { next(error); }
 });
 
-router.get('/tenants/:tenantId/branches/:branchId/tables', waiterScope, async (req, res, next) => {
+router.get('/waiter/tenants/:tenantId/branches/:branchId/tables', waiterScope, async (req, res, next) => {
   try {
     const tables = await RestaurantTable.findAll({
       where: { tenantId: req.params.tenantId, branchId: req.params.branchId, status: 'ACTIVE' },
@@ -148,7 +178,7 @@ router.get('/tenants/:tenantId/branches/:branchId/tables', waiterScope, async (r
   } catch (error) { next(error); }
 });
 
-router.get('/tenants/:tenantId/branches/:branchId/orders', waiterScope, async (req, res, next) => {
+router.get('/waiter/tenants/:tenantId/branches/:branchId/orders', waiterScope, async (req, res, next) => {
   try {
     const where = {
       tenantId: req.params.tenantId,
@@ -170,7 +200,7 @@ router.get('/tenants/:tenantId/branches/:branchId/orders', waiterScope, async (r
   } catch (error) { next(error); }
 });
 
-router.get('/tenants/:tenantId/branches/:branchId/unresolved', waiterScope, async (req, res, next) => {
+router.get('/waiter/tenants/:tenantId/branches/:branchId/unresolved', waiterScope, async (req, res, next) => {
   try {
     const orders = await Order.findAll({
       where: {
@@ -184,6 +214,50 @@ router.get('/tenants/:tenantId/branches/:branchId/unresolved', waiterScope, asyn
       order: [['createdAt', 'ASC']]
     });
     res.json({ orders: orders.map((order) => safeOrder(order)) });
+  } catch (error) { next(error); }
+});
+
+router.post('/waiter/tenants/:tenantId/branches/:branchId/orders', waiterScope, async (req, res, next) => {
+  try {
+    const result = await createRestaurantOrder({
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      tableId: req.body?.tableId,
+      lines: req.body?.lines,
+      waiterUserId: req.userId,
+      actorUserId: req.userId,
+      notes: req.body?.notes,
+      idempotencyKey: cleanText(req.header('Idempotency-Key') || req.body?.idempotencyKey, 180)
+    });
+    if (!result.replayed) await audit(req, 'WAITER_ORDER_OPENED', result.order.id, { orderNumber: result.order.orderNumber, tableId: result.order.tableId });
+    const reloaded = await Order.findByPk(result.order.id, { include: [{ model: OrderLine, as: 'lines' }] });
+    res.status(result.replayed ? 200 : 201).json({ replayed: result.replayed, order: safeOrder(reloaded) });
+  } catch (error) { next(error); }
+});
+
+router.post('/waiter/tenants/:tenantId/branches/:branchId/orders/:orderId/lines', waiterScope, async (req, res, next) => {
+  try {
+    const order = await loadOwnOrder(req);
+    if (!order) return res.status(404).json({ message: 'Your table order was not found.' });
+    if (!['OPEN', 'SERVED'].includes(order.status)) return res.status(409).json({ message: 'Items cannot be added after payment has been requested.' });
+    await addRestaurantLines({ order, lines: req.body?.lines, actorUserId: req.userId });
+    await audit(req, 'WAITER_ORDER_ITEMS_ADDED', order.id, { addedLineCount: Array.isArray(req.body?.lines) ? req.body.lines.length : 0 });
+    const reloaded = await loadOwnOrder(req);
+    res.json({ order: safeOrder(reloaded) });
+  } catch (error) { next(error); }
+});
+
+router.post('/waiter/tenants/:tenantId/branches/:branchId/orders/:orderId/status', waiterScope, async (req, res, next) => {
+  try {
+    const order = await loadOwnOrder(req);
+    if (!order) return res.status(404).json({ message: 'Your table order was not found.' });
+    const nextStatus = String(req.body?.status || '').toUpperCase();
+    if (!['SERVED', 'AWAITING_PAYMENT'].includes(nextStatus)) return res.status(400).json({ message: 'Waiters can only mark an order served or request payment.' });
+    const updated = await setRestaurantStatus({ orderId: order.id, tenantId: req.params.tenantId, branchId: req.params.branchId, nextStatus });
+    await audit(req, 'WAITER_ORDER_STATUS_CHANGED', order.id, { previous: order.status, status: nextStatus });
+    const value = updated.toJSON ? updated.toJSON() : updated;
+    value.lines = order.lines || [];
+    res.json({ order: safeOrder(value) });
   } catch (error) { next(error); }
 });
 
