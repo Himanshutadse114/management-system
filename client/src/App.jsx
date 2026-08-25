@@ -17,6 +17,7 @@ import {
   Store,
   Sun,
   UsersRound,
+  UtensilsCrossed,
   Wine,
   X
 } from 'lucide-react';
@@ -24,6 +25,8 @@ import { useAuth } from './AuthContext';
 import { api, apiErrorMessage, authHeaders } from './api';
 import InventoryWorkspace from './InventoryWorkspace';
 import SalesWorkspace from './SalesWorkspace';
+import RestaurantWorkspace from './RestaurantWorkspace';
+import StaffWorkspace from './StaffWorkspace';
 
 const THEME_KEY = 'managementSystemTheme';
 
@@ -365,19 +368,16 @@ function TenantBranches({ token, membership }) {
 
 function RoadmapPanel({ section }) {
   const copy = {
-    Inventory: ['Inventory workspace', 'ML-based alcohol stock, bottle quantities, purchase batches, adjustments and stock movement controls will live here.'],
-    'Sales & Orders': ['Sales & orders', 'Wine-shop POS, restaurant tables, waiter ordering and payment reconciliation will use this workspace.'],
-    Staff: ['Staff & access', 'Tenant and branch membership is already enforced by the backend. Full staff administration will be added here.'],
-    Branches: ['Branch operations', 'Outlet configuration, branch controls and branch-level activity will be managed from this workspace.']
+    Branches: ['Branch operations', 'Outlet configuration, branch controls and branch-level activity are managed from this workspace.']
   };
-  const [title, body] = copy[section] || copy.Inventory;
+  const [title, body] = copy[section] || copy.Branches;
   return (
     <section className="scorm-panel roadmap-panel">
       <div className="scorm-action-icon"><Activity size={18} /></div>
-      <div className="scorm-eyebrow">Product roadmap</div>
+      <div className="scorm-eyebrow">Workspace</div>
       <h3>{title}</h3>
       <p>{body}</p>
-      <div className="roadmap-note"><ShieldCheck size={14} /> Live backend permission checks are already active.</div>
+      <div className="roadmap-note"><ShieldCheck size={14} /> Live backend permission checks are active.</div>
     </section>
   );
 }
@@ -412,10 +412,10 @@ function Overview({ token, access, isSuperAdmin, tenantAdmin, primaryRole, onOpe
               <span className="scorm-health-pill is-online"><span className="scorm-health-dot" /> Operations online</span>
             </div>
             <h2 className="scorm-display"><span>Operations</span> <span className="wb-accent">Workbench</span></h2>
-            <p>Manage outlets, staff access, inventory and sales from one branch-aware operating view.</p>
+            <p>Manage outlets, staff access, inventory, counter sales and restaurant table service from one branch-aware operating view.</p>
           </div>
           <div className="hero-actions">
-            <button className="scorm-button-secondary" onClick={() => onOpenSection('Inventory')}><PackageSearch size={15} /> Inventory</button>
+            <button className="scorm-button-secondary" onClick={() => onOpenSection('Restaurant')}><UtensilsCrossed size={15} /> Restaurant</button>
             <button className="scorm-button-primary" onClick={() => onOpenSection(isSuperAdmin ? 'Tenants' : 'Branches')}><Plus size={15} /> {isSuperAdmin ? 'Create tenant' : 'Add outlet'}</button>
           </div>
         </div>
@@ -438,18 +438,19 @@ function Overview({ token, access, isSuperAdmin, tenantAdmin, primaryRole, onOpe
               <div className="scorm-progress-icon"><Activity size={18} /></div>
             </div>
             <div>
-              <div className="scorm-progress-number">Phase 3</div>
-              <div className="progress-copy">Inventory, purchases and weighted costing are connected. Counter and wine-shop POS now deduct stock and snapshot revenue, COGS and gross profit.</div>
-              <div className="scorm-progress-track is-dark"><div className="scorm-progress-fill" style={{ width: '55%' }} /></div>
+              <div className="scorm-progress-number">Phase 4</div>
+              <div className="progress-copy">Inventory and counter POS are connected. Restaurant tables, public QR menus, waiter orders, settlement, cancellation controls and staff assignment are now part of the operating system.</div>
+              <div className="scorm-progress-track is-dark"><div className="scorm-progress-fill" style={{ width: '68%' }} /></div>
             </div>
           </section>
 
           <section className="scorm-panel quick-panel">
             <SectionHeader eyebrow="Workspace" title="Quick access" />
             <div className="quick-list">
-              <button onClick={() => onOpenSection('Branches')}><Store size={15} /><span><strong>Branches</strong><small>Outlet setup and access</small></span><ChevronRight size={14} /></button>
               <button onClick={() => onOpenSection('Inventory')}><PackageSearch size={15} /><span><strong>Inventory</strong><small>ML stock and purchases</small></span><ChevronRight size={14} /></button>
-              <button onClick={() => onOpenSection('Sales & Orders')}><ClipboardList size={15} /><span><strong>Sales & Orders</strong><small>POS and waiter operations</small></span><ChevronRight size={14} /></button>
+              <button onClick={() => onOpenSection('Sales & Orders')}><ClipboardList size={15} /><span><strong>Sales & Orders</strong><small>Counter POS and settlements</small></span><ChevronRight size={14} /></button>
+              <button onClick={() => onOpenSection('Restaurant')}><UtensilsCrossed size={15} /><span><strong>Restaurant</strong><small>Tables, QR menu and waiter service</small></span><ChevronRight size={14} /></button>
+              <button onClick={() => onOpenSection('Staff')}><UsersRound size={15} /><span><strong>Staff</strong><small>Branch roles and invitations</small></span><ChevronRight size={14} /></button>
             </div>
           </section>
         </div>
@@ -462,8 +463,8 @@ function Overview({ token, access, isSuperAdmin, tenantAdmin, primaryRole, onOpe
         <button className="scorm-action-card" onClick={() => onOpenSection('Sales & Orders')}>
           <div className="scorm-action-icon"><ClipboardList size={17} /></div><div className="action-title">Sales & Orders</div><div className="action-copy">Run wine-shop and counter sales with exact stock deduction, payment capture and profit snapshots.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
         </button>
-        <button className="scorm-action-card" onClick={() => onOpenSection('Staff')}>
-          <div className="scorm-action-icon"><UsersRound size={17} /></div><div className="action-title">Staff & Access</div><div className="action-copy">Control tenant and branch roles while keeping every operational action attributable.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
+        <button className="scorm-action-card" onClick={() => onOpenSection('Restaurant')}>
+          <div className="scorm-action-icon"><UtensilsCrossed size={17} /></div><div className="action-title">Restaurant</div><div className="action-copy">Operate tables, waiter orders, public QR menus and unresolved-order reconciliation.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
         </button>
       </div>
     </div>
@@ -492,6 +493,7 @@ function Dashboard() {
       { label: 'Operations', items: [
         { label: 'Inventory', icon: PackageSearch },
         { label: 'Sales & Orders', icon: ClipboardList },
+        { label: 'Restaurant', icon: UtensilsCrossed },
         { label: 'Staff', icon: UsersRound }
       ]}
     ];
@@ -578,16 +580,17 @@ function Dashboard() {
           {activeSection === 'Branches' && !tenantAdmin && <div className="platform-page standalone-page"><RoadmapPanel section="Branches" /></div>}
           {activeSection === 'Inventory' && <InventoryWorkspace token={token} access={access} />}
           {activeSection === 'Sales & Orders' && <SalesWorkspace token={token} access={access} />}
-          {activeSection === 'Staff' && <div className="platform-page standalone-page"><RoadmapPanel section="Staff" /></div>}
+          {activeSection === 'Restaurant' && <RestaurantWorkspace token={token} access={access} />}
+          {activeSection === 'Staff' && <StaffWorkspace token={token} access={access} />}
         </main>
       </div>
 
       <div className="scorm-mobile-tabbar">
         {[
           { label: 'Overview', icon: BarChart3 },
-          { label: 'Branches', icon: Store },
           { label: 'Inventory', icon: PackageSearch },
-          { label: 'Sales & Orders', short: 'Sales', icon: ClipboardList }
+          { label: 'Sales & Orders', short: 'Sales', icon: ClipboardList },
+          { label: 'Restaurant', short: 'Tables', icon: UtensilsCrossed }
         ].map(({ label, short, icon: Icon }) => (
           <button key={label} className={`scorm-mobile-tab ${activeSection === label ? 'is-active' : ''}`} onClick={() => openSection(label)}>
             <Icon size={17} /><span>{short || label}</span>
