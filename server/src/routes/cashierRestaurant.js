@@ -4,14 +4,12 @@ const { AuditLog } = require('../models');
 const { RestaurantTable } = require('../models/restaurant');
 const { Order, OrderLine, PAYMENT_METHODS } = require('../models/sales');
 const { authenticate, requireApproved, requireBranchRoles } = require('../middleware/auth');
-const { effectiveRole } = require('../security/rolePolicy');
 const { payRestaurantOrder } = require('../services/restaurantService');
 
 const router = express.Router();
 router.use(authenticate, requireApproved);
 
 function cashierRestaurantScope(req, res, next) {
-  if (effectiveRole(req.access, req.params.tenantId, req.params.branchId) !== 'CASHIER') return next('route');
   return requireBranchRoles('CASHIER')(req, res, (error) => {
     if (error) return next(error);
     if (!req.branch || String(req.branch.tenantId) !== String(req.params.tenantId)) {
@@ -68,7 +66,7 @@ async function audit(req, action, order, metadata = null) {
   });
 }
 
-router.get('/tenants/:tenantId/branches/:branchId/settlements', cashierRestaurantScope, async (req, res, next) => {
+router.get('/cashier/tenants/:tenantId/branches/:branchId/settlements', cashierRestaurantScope, async (req, res, next) => {
   try {
     const orders = await Order.findAll({
       where: {
@@ -88,7 +86,7 @@ router.get('/tenants/:tenantId/branches/:branchId/settlements', cashierRestauran
   } catch (error) { next(error); }
 });
 
-router.post('/tenants/:tenantId/branches/:branchId/orders/:orderId/pay', cashierRestaurantScope, async (req, res, next) => {
+router.post('/cashier/tenants/:tenantId/branches/:branchId/orders/:orderId/pay', cashierRestaurantScope, async (req, res, next) => {
   try {
     const order = await Order.findOne({
       where: {
@@ -115,7 +113,7 @@ router.post('/tenants/:tenantId/branches/:branchId/orders/:orderId/pay', cashier
       paymentReference: req.body?.paymentReference,
       actorUserId: req.userId
     });
-    await audit(req, 'RESTAURANT_ORDER_PAID', order, { orderNumber: order.orderNumber, totalMinor: order.totalMinor, paymentMethod });
+    await audit(req, 'CASHIER_RESTAURANT_ORDER_PAID', order, { orderNumber: order.orderNumber, totalMinor: order.totalMinor, paymentMethod });
     res.json({ order: safeSettlement(updated) });
   } catch (error) { next(error); }
 });
