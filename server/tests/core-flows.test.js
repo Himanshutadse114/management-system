@@ -6,12 +6,14 @@ const { runSalesMigration } = require('../src/migrations/sales');
 const { runRestaurantMigration } = require('../src/migrations/restaurant');
 const { runAnalyticsMigration } = require('../src/migrations/analytics');
 const { runReportsMigration } = require('../src/migrations/reports');
-const { RestaurantTable } = require('../src/models/restaurant');
+const { RestaurantTable, MenuItem } = require('../src/models/restaurant');
+const { Order } = require('../src/models/sales');
 const { postPurchase } = require('../src/services/inventoryService');
 const { postCounterSale } = require('../src/services/salesService');
 const { createRestaurantOrder, cancelRestaurantOrder } = require('../src/services/restaurantService');
+const { seedDemoData, DEMO } = require('../src/services/demoSeedService');
 
-const { User, Tenant, Branch, Product, ProductPriceOption, InventoryBalance } = models;
+const { User, Tenant, TenantMembership, Branch, BranchMembership, Product, ProductPriceOption, InventoryBalance } = models;
 
 async function prepareSchema() {
   await sequelize.authenticate();
@@ -42,7 +44,7 @@ async function stockOf(tenantId, branchId, productId) {
 }
 
 describe('critical commerce and restaurant flows', function () {
-  this.timeout(30000);
+  this.timeout(60000);
   let fixture;
 
   before(async () => { await prepareSchema(); fixture = await seedBase(); });
@@ -85,5 +87,29 @@ describe('critical commerce and restaurant flows', function () {
     await cancelRestaurantOrder({ orderId: opened.order.id, tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, reason: 'Automated cancellation test', approvedByUserId: fixture.actor.id });
     const afterCancel = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
     assert.equal(afterCancel, before);
+  });
+
+  it('creates the requested demo tenant, manager, waiter, food menu and remains idempotent', async () => {
+    process.env.DEMO_SEED_ENABLED = 'true';
+    const first = await seedDemoData();
+    const tenant = await Tenant.findOne({ where: { slug: DEMO.tenantSlug } });
+    assert.ok(tenant);
+    const ownerMembership = await TenantMembership.findOne({ where: { tenantId: tenant.id, email: DEMO.ownerEmail, role: 'TENANT_ADMIN', status: 'ACTIVE' } });
+    assert.ok(ownerMembership);
+    const restaurant = await Branch.findOne({ where: { tenantId: tenant.id, code: 'DEMO-RST' } });
+    const wineShop = await Branch.findOne({ where: { tenantId: tenant.id, code: 'DEMO-WS' } });
+    assert.equal(restaurant.type, 'BAR_RESTAURANT');
+    assert.equal(wineShop.type, 'WINE_SHOP');
+    assert.ok(await BranchMembership.findOne({ where: { branchId: restaurant.id, email: DEMO.managerEmail, role: 'BRANCH_MANAGER', status: 'ACTIVE' } }));
+    assert.ok(await BranchMembership.findOne({ where: { branchId: restaurant.id, email: DEMO.waiterEmail, role: 'WAITER', status: 'ACTIVE' } }));
+    const foodCount = await Product.count({ where: { tenantId: tenant.id, productType: 'FOOD' } });
+    const menuCount = await MenuItem.count({ where: { tenantId: tenant.id, branchId: restaurant.id, active: true } });
+    assert.ok(foodCount >= 15, `expected food dummy data, found ${foodCount}`);
+    assert.ok(menuCount >= 20, `expected full dummy menu, found ${menuCount}`);
+    const orderCountBefore = await Order.count({ where: { tenantId: tenant.id } });
+    const second = await seedDemoData();
+    const orderCountAfter = await Order.count({ where: { tenantId: tenant.id } });
+    assert.equal(first.tenantId, second.tenantId);
+    assert.equal(orderCountAfter, orderCountBefore);
   });
 });
