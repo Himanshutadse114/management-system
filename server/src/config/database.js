@@ -28,6 +28,8 @@ async function connectDatabase() {
   await sequelize.authenticate();
   const models = require('../models');
   await models.bootstrapModels();
+  const { runSalesMigration } = require('../migrations/sales');
+  await runSalesMigration(sequelize);
   console.log('[database] PostgreSQL connected and models ready');
 }
 
