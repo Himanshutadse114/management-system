@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const { connectDatabase } = require('./config/database');
+const { policyGuard } = require('./middleware/routePolicy');
 
 const app = express();
 const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
@@ -52,10 +53,21 @@ app.get(['/health', '/api', '/api/'], (_req, res) => {
 
 app.use('/api/public', require('./routes/public'));
 app.use('/api/auth', require('./routes/auth'));
+
+// Capability guard is evaluated before branch-operational routers. It uses the
+// live membership snapshot, so hiding a UI module is never the security boundary.
+app.use('/api', policyGuard);
+
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api/tenants', require('./routes/tenants'));
 app.use('/api/inventory', require('./routes/inventory'));
+
+// Focused employee views intercept cashier/waiter reads and shape responses to
+// the minimum data required for that job. Higher-scope roles fall through.
+app.use('/api/sales', require('./routes/cashierSales'));
 app.use('/api/sales', require('./routes/sales'));
+app.use('/api/restaurant', require('./routes/waiterView'));
+app.use('/api/restaurant', require('./routes/cashierRestaurant'));
 app.use('/api/restaurant', require('./routes/restaurantCatalogue'));
 app.use('/api/restaurant', require('./routes/restaurant'));
 app.use('/api/analytics', require('./routes/analytics'));
