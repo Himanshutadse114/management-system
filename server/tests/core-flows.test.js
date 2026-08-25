@@ -76,6 +76,13 @@ function focusedApiApp() {
   return app;
 }
 
+function assertNoSensitiveEmployeeFields(body) {
+  const payload = JSON.stringify(body);
+  for (const key of ['quantityBase', 'inventoryValueMinor', 'cogsMinor', 'grossProfitMinor', 'costAmountMinor', 'averageUnitCostMinor']) {
+    assert.ok(!payload.includes(`\"${key}\":`), `response must not contain ${key}`);
+  }
+}
+
 describe('critical commerce, restaurant and role-isolation flows', function () {
   this.timeout(60000);
   let fixture;
@@ -205,10 +212,7 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
     assert.equal(catalogue.body.products.length, 1);
     assert.equal(catalogue.body.products[0].name, 'Published Whisky');
     assert.ok(!catalogue.body.products.some((row) => row.id === hiddenProduct.id));
-    const payload = JSON.stringify(catalogue.body);
-    assert.ok(!payload.includes('inventoryValueMinor'));
-    assert.ok(!payload.includes('quantityBase'));
-    assert.ok(!payload.includes('cogsMinor'));
+    assertNoSensitiveEmployeeFields(catalogue.body);
   });
 
   it('keeps cashier inside dedicated POS namespace and hides inventory/cost fields', async () => {
@@ -236,11 +240,7 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
       .get(`/api/sales/cashier/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/catalogue`)
       .set('Authorization', auth);
     assert.equal(catalogue.status, 200);
-    const payload = JSON.stringify(catalogue.body);
-    assert.ok(!payload.includes('quantityBase'));
-    assert.ok(!payload.includes('inventoryValueMinor'));
-    assert.ok(!payload.includes('cogsMinor'));
-    assert.ok(!payload.includes('grossProfitMinor'));
+    assertNoSensitiveEmployeeFields(catalogue.body);
   });
 
   it('creates the requested demo tenant, manager, waiter, food menu and remains idempotent', async () => {
