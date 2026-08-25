@@ -7,6 +7,7 @@ import App from './App';
 import PublicMenu from './PublicMenu';
 import './styles.css';
 import './language.css';
+import './responsive.css';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
