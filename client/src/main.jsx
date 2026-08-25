@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './AuthContext';
+import { LanguageProvider } from './LanguageContext';
 import App from './App';
 import PublicMenu from './PublicMenu';
 import './styles.css';
@@ -18,20 +19,18 @@ function publicMenuToken() {
 const menuToken = publicMenuToken();
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-if (menuToken) {
-  root.render(
-    <React.StrictMode>
-      <PublicMenu qrToken={menuToken} />
-    </React.StrictMode>
-  );
-} else {
-  root.render(
-    <React.StrictMode>
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </GoogleOAuthProvider>
-    </React.StrictMode>
-  );
-}
+root.render(
+  <React.StrictMode>
+    <LanguageProvider>
+      {menuToken ? (
+        <PublicMenu qrToken={menuToken} />
+      ) : (
+        <GoogleOAuthProvider clientId={googleClientId}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </GoogleOAuthProvider>
+      )}
+    </LanguageProvider>
+  </React.StrictMode>
+);
