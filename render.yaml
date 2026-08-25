@@ -1,0 +1,83 @@
+databases:
+  - name: management-system-db
+    databaseName: management_system
+    user: management_system_user
+
+services:
+  - type: web
+    name: management-system-backend
+    env: docker
+    rootDir: server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_DIALECT
+        value: postgres
+      - key: DB_HOST
+        fromDatabase:
+          name: management-system-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: management-system-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: management-system-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: management-system-db
+          property: user
+      - key: DB_PASS
+        fromDatabase:
+          name: management-system-db
+          property: password
+      - key: DB_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: STORAGE_DRIVER
+        value: s3
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_FORCE_PATH_STYLE
+        value: "1"
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: PUBLIC_MEDIA_BASE_URL
+        sync: false
+
+  - type: web
+    name: management-system-frontend
+    env: static
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        fromService:
+          type: web
+          name: management-system-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
