@@ -30,8 +30,10 @@ async function connectDatabase() {
   await models.bootstrapModels();
   const { runSalesMigration } = require('../migrations/sales');
   const { runRestaurantMigration } = require('../migrations/restaurant');
+  const { runAnalyticsMigration } = require('../migrations/analytics');
   await runSalesMigration(sequelize);
   await runRestaurantMigration(sequelize);
+  await runAnalyticsMigration(sequelize);
   console.log('[database] PostgreSQL connected and models ready');
 }
 
