@@ -37,7 +37,7 @@ export default function WaiterWorkspace({ token, access }) {
   const tenantId = membership?.tenantId || '';
   const branchId = membership?.branchId || '';
   const branch = membership?.branch || null;
-  const base = tenantId && branchId ? `/restaurant/tenants/${tenantId}/branches/${branchId}` : '';
+  const base = tenantId && branchId ? `/restaurant/waiter/tenants/${tenantId}/branches/${branchId}` : '';
 
   const [tables, setTables] = useState([]);
   const [products, setProducts] = useState([]);
