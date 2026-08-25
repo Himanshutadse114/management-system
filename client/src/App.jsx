@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { api, apiErrorMessage, authHeaders } from './api';
+import InventoryWorkspace from './InventoryWorkspace';
 
 const THEME_KEY = 'managementSystemTheme';
 
@@ -436,9 +437,9 @@ function Overview({ token, access, isSuperAdmin, tenantAdmin, primaryRole, onOpe
               <div className="scorm-progress-icon"><Activity size={18} /></div>
             </div>
             <div>
-              <div className="scorm-progress-number">Phase 1</div>
-              <div className="progress-copy">Authentication, tenancy, branch access, PostgreSQL and object storage foundations are connected.</div>
-              <div className="scorm-progress-track is-dark"><div className="scorm-progress-fill" style={{ width: '28%' }} /></div>
+              <div className="scorm-progress-number">Phase 2</div>
+              <div className="progress-copy">Authentication, tenancy and object storage are live. The migration-managed inventory ledger, catalogue, purchases and stock controls are now connected.</div>
+              <div className="scorm-progress-track is-dark"><div className="scorm-progress-fill" style={{ width: '42%' }} /></div>
             </div>
           </section>
 
@@ -574,7 +575,8 @@ function Dashboard() {
           {activeSection === 'Tenants' && isSuperAdmin && <div className="platform-page standalone-page"><PlatformTenants token={token} /></div>}
           {activeSection === 'Branches' && tenantAdmin && <div className="platform-page standalone-page"><TenantBranches token={token} membership={tenantAdmin} /></div>}
           {activeSection === 'Branches' && !tenantAdmin && <div className="platform-page standalone-page"><RoadmapPanel section="Branches" /></div>}
-          {['Inventory', 'Sales & Orders', 'Staff'].includes(activeSection) && <div className="platform-page standalone-page"><RoadmapPanel section={activeSection} /></div>}
+          {activeSection === 'Inventory' && <InventoryWorkspace token={token} access={access} />}
+          {['Sales & Orders', 'Staff'].includes(activeSection) && <div className="platform-page standalone-page"><RoadmapPanel section={activeSection} /></div>}
         </main>
       </div>
 
