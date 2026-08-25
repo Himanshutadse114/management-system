@@ -55,22 +55,23 @@ app.get(['/health', '/api', '/api/'], (_req, res) => {
 app.use('/api/public', require('./routes/public'));
 app.use('/api/auth', require('./routes/auth'));
 
-// Capability guard is evaluated before branch-operational routers. It uses the
-// live membership snapshot, so hiding a UI module is never the security boundary.
+// Role policy is evaluated before all tenant operational routers. The token
+// proves identity; the live membership snapshot defines current access.
 app.use('/api', policyGuard);
 
-// Employee responses are shaped after authorisation and before route handlers
-// send JSON, preventing cost/profit/stock internals from leaking via DevTools.
+// Dedicated employee responses are stripped of cost/profit/stock internals even
+// if a route accidentally includes them in an object returned to res.json().
 app.use('/api', responsePolicy);
 
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api/tenants', require('./routes/tenants'));
 app.use('/api/inventory', require('./routes/inventory'));
 
-// Focused employee views intercept cashier/waiter reads and shape responses to
-// the minimum data required for that job. Higher-scope roles fall through.
+// Cashier and waiter traffic has explicit namespaces. This avoids ambiguous
+// role inference when an identity happens to hold more than one membership.
 app.use('/api/sales', require('./routes/cashierSales'));
 app.use('/api/sales', require('./routes/sales'));
+app.use('/api/restaurant', require('./routes/waiterCatalogue'));
 app.use('/api/restaurant', require('./routes/waiterView'));
 app.use('/api/restaurant', require('./routes/cashierRestaurant'));
 app.use('/api/restaurant', require('./routes/restaurantCatalogue'));
