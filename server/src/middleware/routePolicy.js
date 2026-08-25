@@ -1,41 +1,43 @@
 const { authenticate, requireApproved } = require('./auth');
 const { CAPABILITIES, roleHasCapability } = require('../security/rolePolicy');
 
-function requirement(tenantId, branchId, capability, roles = null) {
-  return { tenantId, branchId, capability, roles };
+const OPERATION_PREFIXES = ['/tenants', '/inventory', '/sales', '/restaurant', '/analytics', '/reports'];
+
+function requirement(tenantId, branchId, capability, roles = null, tenantAdminAllowed = true) {
+  return { tenantId, branchId, capability, roles, tenantAdminAllowed };
 }
 
 function branchRequirement(req) {
   const path = req.path;
   let match;
 
-  // Dedicated cashier API. The URL itself declares the employee context,
-  // removing ambiguity for identities with more than one branch role.
+  // Dedicated cashier API. Exact-role only: Tenant Admins and Platform Admins
+  // should use their management APIs rather than impersonating cashier context.
   match = path.match(/^\/sales\/cashier\/tenants\/([^/]+)\/branches\/([^/]+)(?:\/|$)/);
-  if (match) return requirement(match[1], match[2], req.method === 'GET' ? CAPABILITIES.SALES_READ : CAPABILITIES.SALES_WRITE, ['CASHIER']);
+  if (match) return requirement(match[1], match[2], req.method === 'GET' ? CAPABILITIES.SALES_READ : CAPABILITIES.SALES_WRITE, ['CASHIER'], false);
 
   match = path.match(/^\/restaurant\/cashier\/tenants\/([^/]+)\/branches\/([^/]+)\/settlements(?:\/|$)/);
-  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_PAY, ['CASHIER']);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_PAY, ['CASHIER'], false);
 
   match = path.match(/^\/restaurant\/cashier\/tenants\/([^/]+)\/branches\/([^/]+)\/orders\/[^/]+\/pay(?:\/|$)/);
-  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_PAY, ['CASHIER']);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_PAY, ['CASHIER'], false);
 
-  // Dedicated waiter API. Waiter reads/writes are always waiter-scoped even
-  // when the same identity is also a cashier or manager elsewhere.
+  // Dedicated waiter API. Exact-role only and intentionally narrower than the
+  // management restaurant API.
   match = path.match(/^\/restaurant\/waiter\/tenants\/([^/]+)\/branches\/([^/]+)\/catalogue(?:\/|$)/);
-  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_CATALOGUE_READ, ['WAITER']);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_CATALOGUE_READ, ['WAITER'], false);
 
   match = path.match(/^\/restaurant\/waiter\/tenants\/([^/]+)\/branches\/([^/]+)\/tables(?:\/|$)/);
-  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_TABLES_READ, ['WAITER']);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_TABLES_READ, ['WAITER'], false);
 
   match = path.match(/^\/restaurant\/waiter\/tenants\/([^/]+)\/branches\/([^/]+)\/unresolved(?:\/|$)/);
-  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_ORDERS_READ, ['WAITER']);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_ORDERS_READ, ['WAITER'], false);
 
   match = path.match(/^\/restaurant\/waiter\/tenants\/([^/]+)\/branches\/([^/]+)\/orders\/[^/]+\/status(?:\/|$)/);
-  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_ORDERS_STATUS, ['WAITER']);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_ORDERS_STATUS, ['WAITER'], false);
 
   match = path.match(/^\/restaurant\/waiter\/tenants\/([^/]+)\/branches\/([^/]+)\/orders(?:\/|$)/);
-  if (match) return requirement(match[1], match[2], req.method === 'GET' ? CAPABILITIES.RESTAURANT_ORDERS_READ : CAPABILITIES.RESTAURANT_ORDERS_WRITE, ['WAITER']);
+  if (match) return requirement(match[1], match[2], req.method === 'GET' ? CAPABILITIES.RESTAURANT_ORDERS_READ : CAPABILITIES.RESTAURANT_ORDERS_WRITE, ['WAITER'], false);
 
   // Inventory management API: branch managers and inventory managers only.
   match = path.match(/^\/inventory\/tenants\/([^/]+)\/branches\/([^/]+)(?:\/|$)/);
@@ -88,13 +90,33 @@ function authenticateOnce(req, res, next) {
   return authenticate(req, res, next);
 }
 
+function isOperationalPath(path) {
+  return OPERATION_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
 function policyGuard(req, res, next) {
   const required = branchRequirement(req);
-  if (!required) return next();
+  const operational = isOperationalPath(req.path);
+  if (!required && !operational) return next();
 
   return authenticateOnce(req, res, () => requireApproved(req, res, () => {
-    if (req.access?.isSuperAdmin) return next();
-    if ((req.access?.tenants || []).some((row) => String(row.tenantId) === String(required.tenantId) && row.role === 'TENANT_ADMIN')) return next();
+    // Platform Admin is a control-plane role. It manages tenant lifecycle through
+    // /api/platform and does not inherit customer operational data access.
+    if (req.access?.isSuperAdmin) {
+      return res.status(403).json({
+        message: 'Platform administrators do not have tenant operational access.',
+        code: 'PLATFORM_OPERATION_SCOPE_DENIED'
+      });
+    }
+
+    // Tenant-wide routes (branches list, consolidated analytics/reports) perform
+    // their own tenant membership checks inside the router.
+    if (!required) return next();
+
+    const tenantAdmin = (req.access?.tenants || []).some((row) =>
+      String(row.tenantId) === String(required.tenantId) && row.role === 'TENANT_ADMIN'
+    );
+    if (required.tenantAdminAllowed && tenantAdmin) return next();
 
     const memberships = (req.access?.branches || []).filter((row) =>
       String(row.tenantId) === String(required.tenantId) && String(row.branchId) === String(required.branchId)
@@ -107,11 +129,12 @@ function policyGuard(req, res, next) {
       return res.status(403).json({
         message: 'This action is not available for your assigned branch role.',
         code: 'ROLE_CAPABILITY_DENIED',
-        capability: required.capability
+        capability: required.capability,
+        allowedRoles: required.roles || []
       });
     }
     next();
   }));
 }
 
-module.exports = { branchRequirement, policyGuard };
+module.exports = { branchRequirement, policyGuard, isOperationalPath };
