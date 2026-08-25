@@ -36,6 +36,12 @@ async function connectDatabase() {
   await runRestaurantMigration(sequelize);
   await runAnalyticsMigration(sequelize);
   await runReportsMigration(sequelize);
+
+  if (String(process.env.NODE_ENV || '').toLowerCase() !== 'test') {
+    const { seedDemoData } = require('../services/demoSeedService');
+    await seedDemoData();
+  }
+
   console.log('[database] PostgreSQL connected and models ready');
 }
 
