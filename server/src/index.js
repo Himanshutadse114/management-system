@@ -60,6 +60,7 @@ app.use('/api/platform', require('./routes/platform'));
 app.use('/api/tenants', require('./routes/tenants'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/sales', require('./routes/sales'));
+app.use('/api/restaurant', require('./routes/restaurantCatalogue'));
 app.use('/api/restaurant', require('./routes/restaurant'));
 
 app.use((req, res) => {
