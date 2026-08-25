@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const defineInventoryModels = require('./inventory');
 
 const USER_STATUS = ['PENDING', 'ACTIVE', 'SUSPENDED'];
 const TENANT_STATUS = ['ACTIVE', 'SUSPENDED'];
@@ -7,6 +8,22 @@ const MEMBERSHIP_STATUS = ['INVITED', 'ACTIVE', 'SUSPENDED'];
 const TENANT_ROLES = ['TENANT_ADMIN', 'AUDITOR'];
 const BRANCH_ROLES = ['BRANCH_MANAGER', 'INVENTORY_MANAGER', 'CASHIER', 'WAITER', 'AUDITOR'];
 const BRANCH_TYPES = ['BAR_RESTAURANT', 'WINE_SHOP'];
+
+const CATALOG_STATUS = ['ACTIVE', 'INACTIVE'];
+const PRODUCT_TYPES = ['ALCOHOL', 'FOOD', 'MIXER', 'OTHER'];
+const INVENTORY_UNITS = ['ML', 'PIECE', 'GRAM'];
+const PURCHASE_STATUS = ['POSTED', 'VOIDED'];
+const INVENTORY_MOVEMENT_TYPES = [
+  'PURCHASE',
+  'SALE',
+  'WASTAGE',
+  'ADJUSTMENT_IN',
+  'ADJUSTMENT_OUT',
+  'TRANSFER_IN',
+  'TRANSFER_OUT',
+  'RETURN_IN',
+  'RETURN_OUT'
+];
 
 const User = sequelize.define('User', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
@@ -126,6 +143,17 @@ const AuditLog = sequelize.define('AuditLog', {
   ]
 });
 
+const {
+  ProductCategory,
+  Product,
+  ProductPriceOption,
+  Supplier,
+  Purchase,
+  PurchaseLine,
+  InventoryBalance,
+  InventoryMovement
+} = defineInventoryModels(sequelize, DataTypes);
+
 User.hasMany(TenantMembership, { foreignKey: 'userId', as: 'tenantMemberships' });
 TenantMembership.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Tenant.hasMany(TenantMembership, { foreignKey: 'tenantId', as: 'memberships', onDelete: 'CASCADE' });
@@ -142,6 +170,43 @@ Tenant.hasMany(BranchMembership, { foreignKey: 'tenantId', as: 'branchMembership
 
 User.hasMany(AccessRequest, { foreignKey: 'userId', as: 'accessRequests' });
 AccessRequest.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+Tenant.hasMany(ProductCategory, { foreignKey: 'tenantId', as: 'productCategories', onDelete: 'CASCADE' });
+ProductCategory.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+ProductCategory.hasMany(Product, { foreignKey: 'categoryId', as: 'products' });
+Product.belongsTo(ProductCategory, { foreignKey: 'categoryId', as: 'category' });
+Tenant.hasMany(Product, { foreignKey: 'tenantId', as: 'products', onDelete: 'CASCADE' });
+Product.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+
+Product.hasMany(ProductPriceOption, { foreignKey: 'productId', as: 'priceOptions', onDelete: 'CASCADE' });
+ProductPriceOption.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+Branch.hasMany(ProductPriceOption, { foreignKey: 'branchId', as: 'priceOptions', onDelete: 'CASCADE' });
+ProductPriceOption.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+
+Tenant.hasMany(Supplier, { foreignKey: 'tenantId', as: 'suppliers', onDelete: 'CASCADE' });
+Supplier.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+Tenant.hasMany(Purchase, { foreignKey: 'tenantId', as: 'purchases', onDelete: 'CASCADE' });
+Branch.hasMany(Purchase, { foreignKey: 'branchId', as: 'purchases' });
+Purchase.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+Supplier.hasMany(Purchase, { foreignKey: 'supplierId', as: 'purchases' });
+Purchase.belongsTo(Supplier, { foreignKey: 'supplierId', as: 'supplier' });
+User.hasMany(Purchase, { foreignKey: 'createdByUserId', as: 'createdPurchases' });
+Purchase.belongsTo(User, { foreignKey: 'createdByUserId', as: 'createdBy' });
+Purchase.hasMany(PurchaseLine, { foreignKey: 'purchaseId', as: 'lines' });
+PurchaseLine.belongsTo(Purchase, { foreignKey: 'purchaseId', as: 'purchase' });
+Product.hasMany(PurchaseLine, { foreignKey: 'productId', as: 'purchaseLines' });
+PurchaseLine.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+
+Product.hasMany(InventoryBalance, { foreignKey: 'productId', as: 'inventoryBalances', onDelete: 'CASCADE' });
+InventoryBalance.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+Branch.hasMany(InventoryBalance, { foreignKey: 'branchId', as: 'inventoryBalances', onDelete: 'CASCADE' });
+InventoryBalance.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+Product.hasMany(InventoryMovement, { foreignKey: 'productId', as: 'inventoryMovements' });
+InventoryMovement.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+Branch.hasMany(InventoryMovement, { foreignKey: 'branchId', as: 'inventoryMovements' });
+InventoryMovement.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+User.hasMany(InventoryMovement, { foreignKey: 'actorUserId', as: 'inventoryMovements' });
+InventoryMovement.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
 function assertAllowed(value, allowed, label) {
   if (!allowed.includes(value)) throw new Error(`${label} must be one of: ${allowed.join(', ')}`);
@@ -161,11 +226,39 @@ BranchMembership.beforeValidate((m) => {
   assertAllowed(m.role, BRANCH_ROLES, 'Branch membership role');
 });
 User.beforeValidate((user) => assertAllowed(user.status, USER_STATUS, 'User status'));
+ProductCategory.beforeValidate((category) => assertAllowed(category.status, CATALOG_STATUS, 'Category status'));
+Supplier.beforeValidate((supplier) => assertAllowed(supplier.status, CATALOG_STATUS, 'Supplier status'));
+Purchase.beforeValidate((purchase) => assertAllowed(purchase.status, PURCHASE_STATUS, 'Purchase status'));
+Product.beforeValidate((product) => {
+  assertAllowed(product.status, CATALOG_STATUS, 'Product status');
+  assertAllowed(product.productType, PRODUCT_TYPES, 'Product type');
+  assertAllowed(product.inventoryUnit, INVENTORY_UNITS, 'Inventory unit');
+  if (product.productType === 'ALCOHOL') {
+    if (product.inventoryUnit !== 'ML') throw new Error('Alcohol products must use ML as the inventory unit.');
+    if (!product.bottleVolumeMl || Number(product.bottleVolumeMl) <= 0) {
+      throw new Error('Alcohol products require a positive bottle volume in ML.');
+    }
+  }
+});
+InventoryMovement.beforeValidate((movement) => assertAllowed(movement.movementType, INVENTORY_MOVEMENT_TYPES, 'Inventory movement type'));
 
 async function bootstrapModels() {
-  // Foundation bootstrap only. Replace with versioned migrations before the
-  // schema begins carrying production accounting/inventory data.
-  await sequelize.sync();
+  // Phase 1 compatibility: existing identity/tenancy tables were initially
+  // bootstrapped with Sequelize. Keep only those foundation tables on sync.
+  // Phase 2+ accounting/inventory tables are exclusively migration-managed.
+  const foundationModels = [
+    User,
+    AccessRequest,
+    Tenant,
+    TenantMembership,
+    Branch,
+    BranchMembership,
+    AuditLog
+  ];
+  for (const model of foundationModels) await model.sync();
+
+  const { runMigrations } = require('../migrations');
+  await runMigrations(sequelize);
 }
 
 module.exports = {
@@ -176,11 +269,24 @@ module.exports = {
   Branch,
   BranchMembership,
   AuditLog,
+  ProductCategory,
+  Product,
+  ProductPriceOption,
+  Supplier,
+  Purchase,
+  PurchaseLine,
+  InventoryBalance,
+  InventoryMovement,
   USER_STATUS,
   TENANT_STATUS,
   MEMBERSHIP_STATUS,
   TENANT_ROLES,
   BRANCH_ROLES,
   BRANCH_TYPES,
+  CATALOG_STATUS,
+  PRODUCT_TYPES,
+  INVENTORY_UNITS,
+  PURCHASE_STATUS,
+  INVENTORY_MOVEMENT_TYPES,
   bootstrapModels
 };
