@@ -62,6 +62,7 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/sales', require('./routes/sales'));
 app.use('/api/restaurant', require('./routes/restaurantCatalogue'));
 app.use('/api/restaurant', require('./routes/restaurant'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found.', code: 'NOT_FOUND' });
