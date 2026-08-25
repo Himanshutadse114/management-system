@@ -10,9 +10,9 @@ const router = express.Router();
 router.use(authenticate, requireApproved);
 
 function waiterScope(req, res, next) {
+  if (effectiveRole(req.access, req.params.tenantId, req.params.branchId) !== 'WAITER') return next('route');
   return requireBranchRoles('WAITER')(req, res, (error) => {
     if (error) return next(error);
-    if (effectiveRole(req.access, req.params.tenantId, req.params.branchId) !== 'WAITER') return next('route');
     if (!req.branch || String(req.branch.tenantId) !== String(req.params.tenantId)) {
       return res.status(404).json({ message: 'Branch not found in this tenant.' });
     }
