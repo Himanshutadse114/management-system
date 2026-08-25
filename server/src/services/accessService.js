@@ -146,7 +146,6 @@ async function accessSnapshot(user) {
 }
 
 async function canManageTenant(user, tenantId) {
-  if (isSuperAdmin(user.email)) return true;
   return Boolean(await TenantMembership.findOne({
     where: {
       tenantId,
@@ -158,7 +157,6 @@ async function canManageTenant(user, tenantId) {
 }
 
 async function hasBranchRole(user, branch, allowedRoles = []) {
-  if (isSuperAdmin(user.email)) return true;
   if (await canManageTenant(user, branch.tenantId)) return true;
   return Boolean(await BranchMembership.findOne({
     where: {
