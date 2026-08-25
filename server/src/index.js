@@ -47,11 +47,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.get(['/health', '/api', '/api/'], (_req, res) => {
-  res.json({
-    service: 'management-system-backend',
-    status: 'healthy',
-    timestamp: new Date().toISOString()
-  });
+  res.json({ service: 'management-system-backend', status: 'healthy', timestamp: new Date().toISOString() });
 });
 
 app.use('/api/public', require('./routes/public'));
@@ -63,6 +59,7 @@ app.use('/api/sales', require('./routes/sales'));
 app.use('/api/restaurant', require('./routes/restaurantCatalogue'));
 app.use('/api/restaurant', require('./routes/restaurant'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/reports', require('./routes/reports'));
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found.', code: 'NOT_FOUND' });
@@ -71,23 +68,12 @@ app.use((req, res) => {
 app.use((error, _req, res, _next) => {
   console.error('[api]', error);
   const status = Number(error.status || 500);
-  res.status(status).json({
-    message: status >= 500 ? 'Unexpected server error.' : error.message,
-    code: error.code || 'SERVER_ERROR'
-  });
+  res.status(status).json({ message: status >= 500 ? 'Unexpected server error.' : error.message, code: error.code || 'SERVER_ERROR' });
 });
 
 const port = Number(process.env.PORT || 5001);
-
 connectDatabase()
-  .then(() => {
-    app.listen(port, '0.0.0.0', () => {
-      console.log(`[server] listening on ${port}`);
-    });
-  })
-  .catch((error) => {
-    console.error('[server] startup failed:', error);
-    process.exit(1);
-  });
+  .then(() => app.listen(port, '0.0.0.0', () => console.log(`[server] listening on ${port}`)))
+  .catch((error) => { console.error('[server] startup failed:', error); process.exit(1); });
 
 module.exports = app;
