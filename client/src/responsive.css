@@ -1,0 +1,1436 @@
+/*
+ * Platform-wide responsive safety layer.
+ * Loaded last from main.jsx so every role uses the same mobile contract.
+ * Supported viewport floor: 320px.
+ */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.scorm-editorial,
+.scorm-shell-content,
+.scorm-main,
+.platform-page,
+.focused-shell,
+.focused-content,
+.focused-main,
+.focused-single,
+.focused-single-main,
+.inventory-page,
+.sales-page,
+.restaurant-page,
+.analytics-page,
+.reports-page,
+.staff-page,
+.waiter-page,
+.cashier-page,
+.public-menu-page {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.inventory-table-wrap,
+.sales-table,
+.report-history,
+.analytics-trend,
+.restaurant-tabs,
+.inventory-tabs,
+.public-menu-sections {
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent the analytics waiter table from overriding the actual waiter app. */
+.waiter-page .waiter-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+@media (max-width: 1023px) {
+  /* ---------------------------------------------------------------------- */
+  /* Shared application shells                                               */
+  /* ---------------------------------------------------------------------- */
+
+  .scorm-sidebar {
+    display: none !important;
+  }
+
+  .scorm-shell-content {
+    width: 100% !important;
+    padding-left: 0 !important;
+  }
+
+  .mobile-menu-trigger {
+    display: inline-flex !important;
+    flex: 0 0 auto;
+  }
+
+  .scorm-topbar,
+  .focused-topbar,
+  .focused-single-top {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .scorm-main,
+  .focused-main,
+  .focused-single-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .scorm-mobile-drawer,
+  .focused-mobile-drawer {
+    width: min(360px, 88vw) !important;
+    max-width: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .scorm-mobile-tabbar,
+  .focused-mobile-tabs {
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+
+  .focused-shell {
+    display: block !important;
+    width: 100%;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+
+  .focused-sidebar {
+    display: none !important;
+  }
+
+  .focused-content {
+    width: 100%;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Admin / Tenant Admin                                                    */
+  /* ---------------------------------------------------------------------- */
+
+  .page-hero-row,
+  .overview-grid,
+  .ops-admin-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .page-hero-row {
+    display: grid !important;
+    gap: 18px !important;
+  }
+
+  .hero-actions {
+    width: 100%;
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .ops-admin-grid {
+    display: grid !important;
+  }
+
+  .ops-row {
+    min-width: 0;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Inventory                                                               */
+  /* ---------------------------------------------------------------------- */
+
+  .inventory-page {
+    padding: 20px 18px calc(100px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .inventory-hero,
+  .inventory-scope-card {
+    align-items: flex-start !important;
+  }
+
+  .inventory-scope-card,
+  .inventory-two-column,
+  .inventory-two-column.compact-layout,
+  .inventory-two-column.purchase-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .inventory-scope-inputs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .inventory-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .form-grid.four {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Sales / manager POS                                                     */
+  /* ---------------------------------------------------------------------- */
+
+  .sales-page {
+    padding: 20px 18px calc(100px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .pos-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .pos-cart {
+    position: static !important;
+  }
+
+  .sales-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Restaurant manager                                                      */
+  /* ---------------------------------------------------------------------- */
+
+  .restaurant-page {
+    padding: 20px 18px calc(100px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .service-layout,
+  .restaurant-two-column {
+    grid-template-columns: 1fr !important;
+  }
+
+  .order-draft {
+    position: static !important;
+  }
+
+  .service-products,
+  .order-card-grid,
+  .qr-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Analytics / reports / staff                                             */
+  /* ---------------------------------------------------------------------- */
+
+  .analytics-page,
+  .reports-page,
+  .staff-page {
+    padding: 20px 18px calc(100px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .analytics-grid-two,
+  .reports-layout,
+  .staff-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .analytics-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .analytics-controls > button {
+    grid-column: 1 / -1;
+  }
+
+  .analytics-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .report-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .staff-scope {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  /* ---------------------------------------------------------------------- */
+  /* Global mobile interaction contract                                      */
+  /* ---------------------------------------------------------------------- */
+
+  button,
+  [role='button'],
+  input,
+  select {
+    min-height: 44px;
+  }
+
+  textarea {
+    min-height: 88px;
+  }
+
+  .scorm-button-primary,
+  .scorm-button-secondary,
+  .scorm-sidebar-switch,
+  .scorm-topbar-icon,
+  .scorm-drawer-close,
+  .focused-theme,
+  .focused-signout,
+  .focused-sidebar-foot > button {
+    min-height: 44px !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Login / pending                                                         */
+  /* ---------------------------------------------------------------------- */
+
+  .scorm-auth-workbench {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .sa-shell {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100dvh;
+    display: block !important;
+    padding: 10px 12px 24px !important;
+  }
+
+  .sa-topbar {
+    min-height: 46px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 2px 8px;
+  }
+
+  .sa-top-actions {
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px !important;
+  }
+
+  .sa-card {
+    width: 100%;
+    min-height: 0 !important;
+    max-height: none !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    overflow: visible !important;
+    border-radius: 13px;
+  }
+
+  .sa-brand-panel,
+  .sa-form-panel {
+    min-width: 0;
+    padding: 24px 20px !important;
+  }
+
+  .sa-brand-panel {
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--sa-border);
+  }
+
+  .sa-brand-panel::after {
+    display: none;
+  }
+
+  .sa-mark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .sa-kicker {
+    margin-top: 18px;
+  }
+
+  .sa-title {
+    font-size: clamp(38px, 13vw, 52px) !important;
+  }
+
+  .sa-copy {
+    margin-top: 14px;
+    font-size: 12px;
+  }
+
+  .sa-points {
+    margin-top: 18px;
+  }
+
+  .sa-notice {
+    margin-top: 18px;
+  }
+
+  .sa-form-title {
+    font-size: 28px;
+  }
+
+  .sa-google-button,
+  .sa-google-button > div,
+  .sa-google-button iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .pending-shell {
+    width: 100% !important;
+  }
+
+  .pending-card {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 10px;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Shared topbars / drawers                                                */
+  /* ---------------------------------------------------------------------- */
+
+  .scorm-topbar,
+  .focused-topbar,
+  .focused-single-top {
+    min-height: 58px !important;
+    height: auto !important;
+    padding: 8px 10px !important;
+    gap: 6px !important;
+  }
+
+  .topbar-context,
+  .focused-context,
+  .focused-user,
+  .focused-single-top .focused-user,
+  .topbar-secondary {
+    display: none !important;
+  }
+
+  .topbar-actions,
+  .focused-top-actions,
+  .focused-single-top > div {
+    min-width: 0;
+    gap: 5px !important;
+  }
+
+  .topbar-actions .language-switcher,
+  .focused-top-actions .language-switcher,
+  .focused-single-top .language-switcher {
+    display: none !important;
+  }
+
+  .scorm-theme-toggle > span:not(.theme-toggle-track),
+  .focused-theme > span {
+    display: none;
+  }
+
+  .scorm-theme-toggle,
+  .focused-theme {
+    width: 44px;
+    padding: 0 !important;
+  }
+
+  .scorm-topbar .scorm-button-primary span {
+    display: none;
+  }
+
+  .scorm-topbar .scorm-button-primary {
+    width: 44px;
+    padding: 0 !important;
+  }
+
+  .focused-single-top .focused-signout span {
+    display: none;
+  }
+
+  .focused-single-top .focused-signout {
+    width: 44px;
+    padding: 0 !important;
+  }
+
+  .scorm-mobile-tabbar,
+  .focused-mobile-tabs {
+    left: 6px !important;
+    right: 6px !important;
+    bottom: max(6px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .scorm-mobile-tab,
+  .focused-mobile-tabs button {
+    min-width: 0;
+    min-height: 48px !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Tenant Admin / Super Admin                                             */
+  /* ---------------------------------------------------------------------- */
+
+  .platform-page,
+  .standalone-page {
+    width: 100%;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .scorm-page-hero {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .page-hero-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .scorm-display {
+    font-size: clamp(29px, 9vw, 40px) !important;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px !important;
+  }
+
+  .hero-actions > button {
+    width: 100%;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .scorm-metric-card {
+    min-width: 0;
+  }
+
+  .ops-admin-grid,
+  .overview-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ops-form,
+  .ops-list,
+  .scorm-panel {
+    min-width: 0;
+  }
+
+  .ops-row {
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .ops-entity {
+    min-width: 0;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Focused branch shell                                                    */
+  /* ---------------------------------------------------------------------- */
+
+  .focused-main,
+  .focused-single-main {
+    padding: 10px !important;
+  }
+
+  .focused-overview-hero {
+    padding: 16px !important;
+    display: grid !important;
+    grid-template-columns: 1fr;
+  }
+
+  .focused-overview-hero h1 {
+    font-size: clamp(25px, 8vw, 31px) !important;
+  }
+
+  .focused-live {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .focused-branch-grid,
+  .focused-tool-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .focused-brand {
+    min-width: 0;
+  }
+
+  .focused-brand > span:last-child {
+    min-width: 0;
+  }
+
+  .focused-brand small {
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Waiter                                                                 */
+  /* ---------------------------------------------------------------------- */
+
+  .waiter-page {
+    width: 100%;
+    gap: 12px !important;
+    padding: 0 0 calc(86px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .waiter-page .waiter-head {
+    padding: 15px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .waiter-head h1 {
+    font-size: clamp(22px, 8vw, 27px) !important;
+    overflow-wrap: anywhere;
+  }
+
+  .waiter-head p {
+    font-size: 10px !important;
+  }
+
+  .waiter-head-actions {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px !important;
+  }
+
+  .waiter-head-actions select,
+  .waiter-head-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .waiter-section {
+    padding: 12px !important;
+  }
+
+  .waiter-section-head {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .waiter-search,
+  .waiter-search input {
+    width: 100% !important;
+  }
+
+  .waiter-tables {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .waiter-table {
+    min-width: 0;
+    min-height: 108px !important;
+    padding: 10px !important;
+  }
+
+  .waiter-order-layout {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .waiter-draft {
+    position: static !important;
+  }
+
+  .waiter-product {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .waiter-product-copy {
+    width: 100%;
+  }
+
+  .waiter-price-list {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch !important;
+  }
+
+  .waiter-price-list button {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    justify-content: space-between !important;
+  }
+
+  .waiter-draft-line {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .waiter-draft-line > strong {
+    grid-column: 1 / -1;
+  }
+
+  .waiter-qty button {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .waiter-active-orders {
+    grid-template-columns: 1fr !important;
+  }
+
+  .waiter-order-top,
+  .waiter-order-lines > div {
+    min-width: 0;
+  }
+
+  .waiter-order-lines > div {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .waiter-order-actions button {
+    min-height: 42px !important;
+    padding-inline: 11px !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Cashier                                                                */
+  /* ---------------------------------------------------------------------- */
+
+  .cashier-page {
+    width: 100%;
+    gap: 12px !important;
+    padding: 0 0 calc(86px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .cashier-head {
+    padding: 15px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .cashier-head h1 {
+    font-size: clamp(22px, 8vw, 27px) !important;
+    overflow-wrap: anywhere;
+  }
+
+  .cashier-head p {
+    font-size: 10px !important;
+  }
+
+  .cashier-head-actions {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px !important;
+  }
+
+  .cashier-head-actions select,
+  .cashier-head-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cashier-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .cashier-panel {
+    padding: 12px !important;
+  }
+
+  .cashier-panel-head {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .cashier-payment-select,
+  .cashier-payment-select select,
+  .cashier-search,
+  .cashier-search input {
+    width: 100% !important;
+  }
+
+  .cashier-settlements,
+  .cashier-pos-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .cashier-cart {
+    position: static !important;
+  }
+
+  .cashier-products > article {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .cashier-product-copy {
+    width: 100%;
+  }
+
+  .cashier-price-list {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch !important;
+  }
+
+  .cashier-price-list button {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    justify-content: space-between !important;
+  }
+
+  .cashier-cart-lines > div {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .cashier-cart-lines > div > strong {
+    grid-column: 1 / -1;
+  }
+
+  .cashier-qty button {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .cashier-primary {
+    min-height: 44px !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Inventory                                                              */
+  /* ---------------------------------------------------------------------- */
+
+  .inventory-page {
+    padding: 12px 10px calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .inventory-hero {
+    padding-top: 10px !important;
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .inventory-hero h2 {
+    font-size: clamp(31px, 10vw, 40px) !important;
+  }
+
+  .inventory-hero p {
+    font-size: 11px !important;
+  }
+
+  .inventory-scope-card,
+  .inventory-scope-inputs,
+  .inventory-two-column,
+  .inventory-two-column.compact-layout,
+  .inventory-two-column.purchase-layout,
+  .form-grid.two,
+  .form-grid.three,
+  .form-grid.four {
+    grid-template-columns: 1fr !important;
+  }
+
+  .inventory-scope-card {
+    padding: 12px !important;
+  }
+
+  .inventory-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .inventory-metric {
+    min-height: 92px !important;
+    padding: 12px !important;
+  }
+
+  .inventory-tabs button {
+    min-height: 44px !important;
+  }
+
+  .inventory-panel-head {
+    min-height: 0 !important;
+    padding: 12px !important;
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .inline-create {
+    grid-template-columns: 1fr !important;
+  }
+
+  .inline-create .scorm-button-secondary,
+  .inventory-submit,
+  .add-line {
+    width: calc(100% - 24px) !important;
+    margin-left: 12px !important;
+    margin-right: 12px !important;
+  }
+
+  .inline-create .scorm-button-secondary {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .product-list-row,
+  .history-row {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .image-upload {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .purchase-line {
+    grid-template-columns: 26px minmax(0, 1fr) auto !important;
+  }
+
+  .inventory-table-wrap,
+  .sales-table,
+  .report-history {
+    margin-inline: 0;
+    border-radius: 0 0 12px 12px;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Sales                                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  .sales-page {
+    padding: 12px 10px calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .sales-hero {
+    padding-top: 10px !important;
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .sales-hero h2 {
+    font-size: clamp(31px, 10vw, 40px) !important;
+  }
+
+  .sales-hero p {
+    font-size: 11px !important;
+  }
+
+  .sales-scope,
+  .field-pair {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sales-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .pos-toolbar,
+  .cart-head,
+  .sales-history-head {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .pos-search,
+  .pos-search input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .product-pos-grid {
+    grid-template-columns: 1fr !important;
+    padding: 9px !important;
+  }
+
+  .pos-prices button {
+    min-height: 44px !important;
+  }
+
+  .qty-control button {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .receipt-toast {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Restaurant manager                                                     */
+  /* ---------------------------------------------------------------------- */
+
+  .restaurant-page {
+    padding: 12px 10px calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .restaurant-hero {
+    padding-top: 10px !important;
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .restaurant-hero h2 {
+    font-size: clamp(31px, 10vw, 40px) !important;
+  }
+
+  .restaurant-hero p {
+    font-size: 11px !important;
+  }
+
+  .restaurant-scope,
+  .service-layout,
+  .restaurant-two-column,
+  .service-controls,
+  .form-pair {
+    grid-template-columns: 1fr !important;
+  }
+
+  .restaurant-tabs button {
+    min-height: 44px !important;
+  }
+
+  .restaurant-panel-head {
+    min-height: 0 !important;
+    padding: 12px !important;
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .restaurant-search {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .service-products,
+  .order-card-grid,
+  .qr-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .service-price-buttons button,
+  .active-order-actions button {
+    min-height: 42px !important;
+  }
+
+  .active-order-top,
+  .active-order-lines > div,
+  .active-order-meta {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .qr-card {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .menu-admin-row {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .menu-admin-row > button {
+    min-height: 40px !important;
+  }
+
+  .restaurant-modal {
+    align-items: end !important;
+    padding: 8px !important;
+  }
+
+  .restaurant-modal-card {
+    width: 100% !important;
+    max-height: calc(100dvh - 16px);
+    overflow-y: auto !important;
+    border-radius: 15px 15px 10px 10px !important;
+  }
+
+  .restaurant-modal-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .restaurant-modal-actions button {
+    width: 100%;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Analytics                                                              */
+  /* ---------------------------------------------------------------------- */
+
+  .analytics-page {
+    padding: 12px 10px calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .analytics-hero {
+    padding-top: 10px !important;
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .analytics-hero h2 {
+    font-size: clamp(31px, 10vw, 40px) !important;
+  }
+
+  .analytics-hero p {
+    font-size: 11px !important;
+  }
+
+  .analytics-controls {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .analytics-controls > button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .analytics-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .analytics-panel-head {
+    min-height: 0 !important;
+    padding: 12px !important;
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .analytics-branch-row,
+  .analytics-product-row {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .analytics-branch-row > .analytics-bar,
+  .analytics-product-row > .analytics-bar {
+    grid-column: 1 / -1;
+  }
+
+  .analytics-payment-grid,
+  .alcohol-mix,
+  .expense-mix,
+  .control-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .analytics-page .waiter-table {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .analytics-page .waiter-head,
+  .analytics-page .waiter-row {
+    min-width: 560px;
+    display: grid !important;
+    grid-template-columns: minmax(160px, 1.5fr) 80px 90px 120px !important;
+  }
+
+  /* Restore the actual waiter workspace after analytics.css generic selectors. */
+  .waiter-page .waiter-head {
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Reports                                                                */
+  /* ---------------------------------------------------------------------- */
+
+  .reports-page {
+    padding: 12px 10px calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .reports-hero {
+    padding-top: 10px !important;
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .reports-hero h2 {
+    font-size: clamp(31px, 10vw, 40px) !important;
+  }
+
+  .reports-hero p {
+    font-size: 11px !important;
+  }
+
+  .reports-layout,
+  .report-pair {
+    grid-template-columns: 1fr !important;
+  }
+
+  .reports-panel-head {
+    min-height: 0 !important;
+    padding: 12px !important;
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .report-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    padding: 9px !important;
+  }
+
+  .report-card {
+    min-height: 112px !important;
+  }
+
+  .report-generate {
+    width: calc(100% - 24px) !important;
+  }
+
+  .report-download {
+    min-height: 40px !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Staff                                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  .staff-page {
+    padding: 12px 10px calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .staff-hero {
+    padding-top: 10px !important;
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .staff-hero h2 {
+    font-size: clamp(31px, 10vw, 40px) !important;
+  }
+
+  .staff-hero p {
+    font-size: 11px !important;
+  }
+
+  .staff-scope,
+  .staff-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .staff-panel-head {
+    min-height: 0 !important;
+    padding: 12px !important;
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .staff-row {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: flex-start !important;
+  }
+
+  .staff-status,
+  .staff-access-action {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .staff-access-action {
+    min-height: 40px !important;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Public QR menu                                                         */
+  /* ---------------------------------------------------------------------- */
+
+  .public-menu-hero {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .public-menu-hero-copy h1 {
+    font-size: clamp(35px, 12vw, 48px) !important;
+  }
+
+  .public-menu-toolbar {
+    padding: 10px 10px !important;
+  }
+
+  .public-menu-content {
+    padding: 20px 10px 42px !important;
+  }
+
+  .public-menu-sections button {
+    min-height: 40px !important;
+    padding-inline: 13px !important;
+  }
+
+  .public-menu-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .public-menu-card {
+    min-width: 0;
+  }
+
+  .public-menu-footer {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .sa-topbar > .sa-top-note {
+    display: none;
+  }
+
+  .sa-top-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sa-brand-panel,
+  .sa-form-panel {
+    padding: 20px 16px !important;
+  }
+
+  .sa-access-grid > div {
+    grid-template-columns: 24px minmax(0, 1fr) !important;
+  }
+
+  .hero-actions,
+  .restaurant-modal-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .metric-grid,
+  .inventory-metrics,
+  .sales-stats,
+  .analytics-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .scorm-metric-value,
+  .inventory-metric strong,
+  .sales-stat strong,
+  .analytics-metric strong {
+    font-size: 16px !important;
+  }
+
+  .waiter-head-actions,
+  .cashier-head-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .waiter-price-list,
+  .cashier-price-list,
+  .analytics-payment-grid,
+  .alcohol-mix,
+  .expense-mix,
+  .control-cards,
+  .report-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .waiter-tables {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .waiter-table {
+    min-height: 100px !important;
+  }
+
+  .qr-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .qr-canvas {
+    width: fit-content;
+  }
+
+  .report-history-head,
+  .report-history-row {
+    min-width: 760px !important;
+  }
+
+  .public-menu-card {
+    display: block !important;
+  }
+
+  .public-menu-card > img,
+  .public-menu-image-placeholder {
+    width: 100% !important;
+    height: 170px !important;
+    min-height: 0 !important;
+  }
+
+  .public-menu-section-head {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 4px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .metric-grid,
+  .inventory-metrics,
+  .sales-stats,
+  .analytics-metrics,
+  .waiter-tables {
+    grid-template-columns: 1fr !important;
+  }
+
+  .scorm-mobile-tabbar,
+  .focused-mobile-tabs {
+    left: 4px !important;
+    right: 4px !important;
+  }
+
+  .focused-mobile-tabs span,
+  .scorm-mobile-tab span {
+    font-size: 6.5px !important;
+  }
+
+  .public-menu-hero-copy h1 {
+    font-size: 34px !important;
+  }
+}
