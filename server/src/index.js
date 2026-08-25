@@ -57,6 +57,7 @@ app.get(['/health', '/api', '/api/'], (_req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api/tenants', require('./routes/tenants'));
+app.use('/api/inventory', require('./routes/inventory'));
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found.', code: 'NOT_FOUND' });
