@@ -1,5 +1,8 @@
 const assert = require('assert');
 const crypto = require('crypto');
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const request = require('supertest');
 const { sequelize } = require('../src/config/database');
 const models = require('../src/models');
 const { runSalesMigration } = require('../src/migrations/sales');
@@ -12,8 +15,22 @@ const { postPurchase } = require('../src/services/inventoryService');
 const { postCounterSale } = require('../src/services/salesService');
 const { createRestaurantOrder, cancelRestaurantOrder } = require('../src/services/restaurantService');
 const { seedDemoData, DEMO } = require('../src/services/demoSeedService');
+const { canManageTenant, hasBranchRole } = require('../src/services/accessService');
+const { policyGuard } = require('../src/middleware/routePolicy');
+const { responsePolicy } = require('../src/middleware/responsePolicy');
+const waiterCatalogue = require('../src/routes/waiterCatalogue');
+const cashierSales = require('../src/routes/cashierSales');
 
-const { User, Tenant, TenantMembership, Branch, BranchMembership, Product, ProductPriceOption, InventoryBalance } = models;
+const {
+  User,
+  Tenant,
+  TenantMembership,
+  Branch,
+  BranchMembership,
+  Product,
+  ProductPriceOption,
+  InventoryBalance
+} = models;
 
 async function prepareSchema() {
   await sequelize.authenticate();
@@ -43,11 +60,32 @@ async function stockOf(tenantId, branchId, productId) {
   return Number(row?.quantityBase || 0);
 }
 
-describe('critical commerce and restaurant flows', function () {
+function testToken(user) {
+  return jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+}
+
+function focusedApiApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/api', policyGuard);
+  app.use('/api', responsePolicy);
+  app.use('/api/restaurant', waiterCatalogue);
+  app.use('/api/sales', cashierSales);
+  app.use((req, res) => res.status(404).json({ message: 'Route not mounted in test app.' }));
+  app.use((error, _req, res, _next) => res.status(Number(error.status || 500)).json({ message: error.message, code: error.code || 'TEST_ERROR' }));
+  return app;
+}
+
+describe('critical commerce, restaurant and role-isolation flows', function () {
   this.timeout(60000);
   let fixture;
 
-  before(async () => { await prepareSchema(); fixture = await seedBase(); });
+  before(async () => {
+    process.env.JWT_SECRET = 'test-jwt-secret-that-is-longer-than-thirty-two-characters';
+    process.env.SUPER_ADMIN_EMAIL = 'platform-admin@example.com';
+    await prepareSchema();
+    fixture = await seedBase();
+  });
   after(async () => { await sequelize.close(); });
 
   it('rejects a cross-tenant price option sale', async () => {
@@ -87,6 +125,122 @@ describe('critical commerce and restaurant flows', function () {
     await cancelRestaurantOrder({ orderId: opened.order.id, tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, reason: 'Automated cancellation test', approvedByUserId: fixture.actor.id });
     const afterCancel = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
     assert.equal(afterCancel, before);
+  });
+
+  it('does not let Platform Admin inherit Tenant Admin or Branch Manager access', async () => {
+    const platformAdmin = await User.create({ email: process.env.SUPER_ADMIN_EMAIL, name: 'Platform Admin', status: 'ACTIVE' });
+    assert.equal(await canManageTenant(platformAdmin, fixture.tenantA.id), false);
+    assert.equal(await hasBranchRole(platformAdmin, fixture.branchA, ['BRANCH_MANAGER']), false);
+
+    const app = focusedApiApp();
+    const response = await request(app)
+      .get(`/api/tenants/${fixture.tenantA.id}`)
+      .set('Authorization', `Bearer ${testToken(platformAdmin)}`);
+    assert.equal(response.status, 403);
+    assert.equal(response.body.code, 'PLATFORM_OPERATION_SCOPE_DENIED');
+  });
+
+  it('keeps waiter inside dedicated table-service APIs and published menu only', async () => {
+    const waiter = await User.create({ email: 'waiter-policy@example.com', name: 'Policy Waiter', status: 'ACTIVE' });
+    await BranchMembership.create({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      userId: waiter.id,
+      email: waiter.email,
+      role: 'WAITER',
+      status: 'ACTIVE',
+      invitedByUserId: fixture.actor.id,
+      activatedAt: new Date()
+    });
+
+    await MenuItem.create({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      productId: fixture.productA.id,
+      displayName: 'Published Whisky',
+      description: 'Visible waiter menu item',
+      sectionName: 'Spirits',
+      sortOrder: 1,
+      featured: false,
+      active: true
+    });
+
+    const hiddenProduct = await Product.create({
+      tenantId: fixture.tenantA.id,
+      name: 'Hidden Kitchen Item',
+      sku: 'HIDDEN-FOOD-1',
+      productType: 'FOOD',
+      inventoryUnit: 'PIECE',
+      trackInventory: false,
+      status: 'ACTIVE'
+    });
+    await ProductPriceOption.create({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      productId: hiddenProduct.id,
+      label: 'Plate',
+      quantityBaseUnits: '1.000',
+      priceMinor: '25000',
+      active: true,
+      sortOrder: 0
+    });
+
+    const app = focusedApiApp();
+    const auth = `Bearer ${testToken(waiter)}`;
+
+    const inventoryAttempt = await request(app)
+      .get(`/api/inventory/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/stock`)
+      .set('Authorization', auth);
+    assert.equal(inventoryAttempt.status, 403);
+
+    const managerRestaurantAttempt = await request(app)
+      .get(`/api/restaurant/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/tables`)
+      .set('Authorization', auth);
+    assert.equal(managerRestaurantAttempt.status, 403);
+
+    const catalogue = await request(app)
+      .get(`/api/restaurant/waiter/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/catalogue`)
+      .set('Authorization', auth);
+    assert.equal(catalogue.status, 200);
+    assert.equal(catalogue.body.products.length, 1);
+    assert.equal(catalogue.body.products[0].name, 'Published Whisky');
+    assert.ok(!catalogue.body.products.some((row) => row.id === hiddenProduct.id));
+    const payload = JSON.stringify(catalogue.body);
+    assert.ok(!payload.includes('inventoryValueMinor'));
+    assert.ok(!payload.includes('quantityBase'));
+    assert.ok(!payload.includes('cogsMinor'));
+  });
+
+  it('keeps cashier inside dedicated POS namespace and hides inventory/cost fields', async () => {
+    const cashier = await User.create({ email: 'cashier-policy@example.com', name: 'Policy Cashier', status: 'ACTIVE' });
+    await BranchMembership.create({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      userId: cashier.id,
+      email: cashier.email,
+      role: 'CASHIER',
+      status: 'ACTIVE',
+      invitedByUserId: fixture.actor.id,
+      activatedAt: new Date()
+    });
+
+    const app = focusedApiApp();
+    const auth = `Bearer ${testToken(cashier)}`;
+
+    const managerSalesAttempt = await request(app)
+      .get(`/api/sales/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/orders`)
+      .set('Authorization', auth);
+    assert.equal(managerSalesAttempt.status, 403);
+
+    const catalogue = await request(app)
+      .get(`/api/sales/cashier/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/catalogue`)
+      .set('Authorization', auth);
+    assert.equal(catalogue.status, 200);
+    const payload = JSON.stringify(catalogue.body);
+    assert.ok(!payload.includes('quantityBase'));
+    assert.ok(!payload.includes('inventoryValueMinor'));
+    assert.ok(!payload.includes('cogsMinor'));
+    assert.ok(!payload.includes('grossProfitMinor'));
   });
 
   it('creates the requested demo tenant, manager, waiter, food menu and remains idempotent', async () => {
