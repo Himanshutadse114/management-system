@@ -56,6 +56,9 @@ export function focusedAccessProfile(access) {
   const tenantAuditor = (access.tenants || []).some((row) => row.role === 'AUDITOR');
   const modules = new Set();
 
+  // A Branch Manager gets the management workspace only. Lower job roles on the
+  // same account do not add waiter/cashier screens because manager responsibilities
+  // already supersede those operational duties and mixing views increases risk.
   if (branchRoles.has('BRANCH_MANAGER')) {
     modules.add(MODULES.BRANCH_OVERVIEW);
     modules.add(MODULES.INVENTORY);
@@ -65,13 +68,14 @@ export function focusedAccessProfile(access) {
     if (branchMemberships.some((row) => row.role === 'BRANCH_MANAGER' && row.branch?.type === 'BAR_RESTAURANT')) {
       modules.add(MODULES.RESTAURANT_MANAGER);
     }
-  }
-  if (branchRoles.has('INVENTORY_MANAGER')) modules.add(MODULES.INVENTORY);
-  if (branchRoles.has('CASHIER')) modules.add(MODULES.CASHIER);
-  if (branchRoles.has('WAITER')) modules.add(MODULES.WAITER);
-  if (branchRoles.has('AUDITOR') || tenantAuditor) {
-    modules.add(MODULES.ANALYTICS);
-    modules.add(MODULES.REPORTS);
+  } else {
+    if (branchRoles.has('INVENTORY_MANAGER')) modules.add(MODULES.INVENTORY);
+    if (branchRoles.has('CASHIER')) modules.add(MODULES.CASHIER);
+    if (branchRoles.has('WAITER')) modules.add(MODULES.WAITER);
+    if (branchRoles.has('AUDITOR') || tenantAuditor) {
+      modules.add(MODULES.ANALYTICS);
+      modules.add(MODULES.REPORTS);
+    }
   }
 
   const orderedModules = MODULE_ORDER.filter((module) => modules.has(module));
