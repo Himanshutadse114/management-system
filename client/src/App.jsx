@@ -23,6 +23,7 @@ import {
 import { useAuth } from './AuthContext';
 import { api, apiErrorMessage, authHeaders } from './api';
 import InventoryWorkspace from './InventoryWorkspace';
+import SalesWorkspace from './SalesWorkspace';
 
 const THEME_KEY = 'managementSystemTheme';
 
@@ -437,9 +438,9 @@ function Overview({ token, access, isSuperAdmin, tenantAdmin, primaryRole, onOpe
               <div className="scorm-progress-icon"><Activity size={18} /></div>
             </div>
             <div>
-              <div className="scorm-progress-number">Phase 2</div>
-              <div className="progress-copy">Authentication, tenancy and object storage are live. The migration-managed inventory ledger, catalogue, purchases and stock controls are now connected.</div>
-              <div className="scorm-progress-track is-dark"><div className="scorm-progress-fill" style={{ width: '42%' }} /></div>
+              <div className="scorm-progress-number">Phase 3</div>
+              <div className="progress-copy">Inventory, purchases and weighted costing are connected. Counter and wine-shop POS now deduct stock and snapshot revenue, COGS and gross profit.</div>
+              <div className="scorm-progress-track is-dark"><div className="scorm-progress-fill" style={{ width: '55%' }} /></div>
             </div>
           </section>
 
@@ -459,7 +460,7 @@ function Overview({ token, access, isSuperAdmin, tenantAdmin, primaryRole, onOpe
           <div className="scorm-action-icon"><PackageSearch size={17} /></div><div className="action-title">Inventory</div><div className="action-copy">Track bottles, pours, purchases, adjustments and branch stock from one ledger-backed view.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
         </button>
         <button className="scorm-action-card" onClick={() => onOpenSection('Sales & Orders')}>
-          <div className="scorm-action-icon"><ClipboardList size={17} /></div><div className="action-title">Sales & Orders</div><div className="action-copy">Run wine-shop and restaurant sales with waiter accountability and payment reconciliation.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
+          <div className="scorm-action-icon"><ClipboardList size={17} /></div><div className="action-title">Sales & Orders</div><div className="action-copy">Run wine-shop and counter sales with exact stock deduction, payment capture and profit snapshots.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
         </button>
         <button className="scorm-action-card" onClick={() => onOpenSection('Staff')}>
           <div className="scorm-action-icon"><UsersRound size={17} /></div><div className="action-title">Staff & Access</div><div className="action-copy">Control tenant and branch roles while keeping every operational action attributable.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
@@ -576,7 +577,8 @@ function Dashboard() {
           {activeSection === 'Branches' && tenantAdmin && <div className="platform-page standalone-page"><TenantBranches token={token} membership={tenantAdmin} /></div>}
           {activeSection === 'Branches' && !tenantAdmin && <div className="platform-page standalone-page"><RoadmapPanel section="Branches" /></div>}
           {activeSection === 'Inventory' && <InventoryWorkspace token={token} access={access} />}
-          {['Sales & Orders', 'Staff'].includes(activeSection) && <div className="platform-page standalone-page"><RoadmapPanel section={activeSection} /></div>}
+          {activeSection === 'Sales & Orders' && <SalesWorkspace token={token} access={access} />}
+          {activeSection === 'Staff' && <div className="platform-page standalone-page"><RoadmapPanel section="Staff" /></div>}
         </main>
       </div>
 
