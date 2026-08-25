@@ -4,15 +4,12 @@ const { sequelize } = require('../config/database');
 const { AuditLog, Product, ProductPriceOption, InventoryBalance } = require('../models');
 const { Order, OrderLine, Payment, PAYMENT_METHODS } = require('../models/sales');
 const { authenticate, requireApproved, requireBranchRoles } = require('../middleware/auth');
-const { effectiveRole } = require('../security/rolePolicy');
 const { postCounterSale } = require('../services/salesService');
-const { minorInteger } = require('../services/inventoryService');
 
 const router = express.Router();
 router.use(authenticate, requireApproved);
 
 function cashierScope(req, res, next) {
-  if (effectiveRole(req.access, req.params.tenantId, req.params.branchId) !== 'CASHIER') return next('route');
   return requireBranchRoles('CASHIER')(req, res, (error) => {
     if (error) return next(error);
     if (!req.branch || String(req.branch.tenantId) !== String(req.params.tenantId)) {
@@ -58,7 +55,7 @@ async function audit(req, action, entityId, metadata = null) {
   });
 }
 
-router.get('/tenants/:tenantId/branches/:branchId/catalogue', cashierScope, async (req, res, next) => {
+router.get('/cashier/tenants/:tenantId/branches/:branchId/catalogue', cashierScope, async (req, res, next) => {
   try {
     const search = cleanText(req.query.search, 120);
     const where = { tenantId: req.params.tenantId, status: 'ACTIVE' };
@@ -100,34 +97,39 @@ router.get('/tenants/:tenantId/branches/:branchId/catalogue', cashierScope, asyn
   } catch (error) { next(error); }
 });
 
-router.post('/tenants/:tenantId/branches/:branchId/checkout', cashierScope, async (req, res, next) => {
+router.post('/cashier/tenants/:tenantId/branches/:branchId/checkout', cashierScope, async (req, res, next) => {
   try {
     const paymentMethod = String(req.body?.paymentMethod || '').toUpperCase();
     if (!PAYMENT_METHODS.includes(paymentMethod)) {
       return res.status(400).json({ message: `paymentMethod must be one of: ${PAYMENT_METHODS.join(', ')}` });
     }
-    const discountMinor = req.body?.discountMinor == null ? '0' : minorInteger(req.body.discountMinor, 'discountMinor').toString();
-    const taxMinor = req.body?.taxMinor == null ? '0' : minorInteger(req.body.taxMinor, 'taxMinor').toString();
+
+    // A cashier chooses an existing selling option and payment method. Pricing,
+    // discount and tax overrides require a manager/admin workflow, not cashier input.
+    if (String(req.body?.discountMinor ?? '0') !== '0' || String(req.body?.taxMinor ?? '0') !== '0') {
+      return res.status(403).json({ message: 'Cashiers cannot override discounts or tax.', code: 'CASHIER_PRICE_OVERRIDE_DENIED' });
+    }
+
     const idempotencyKey = cleanText(req.header('Idempotency-Key') || req.body?.idempotencyKey, 180);
     const result = await postCounterSale({
       tenantId: req.params.tenantId,
       branchId: req.params.branchId,
       orderType: req.branch.type === 'WINE_SHOP' ? 'WINE_SHOP' : 'COUNTER',
       lines: req.body?.lines,
-      discountMinor,
-      taxMinor,
+      discountMinor: '0',
+      taxMinor: '0',
       paymentMethod,
       paymentReference: req.body?.paymentReference,
       notes: req.body?.notes,
       idempotencyKey,
       actorUserId: req.userId
     });
-    if (!result.replayed) await audit(req, 'COUNTER_SALE_PAID', result.order.id, { orderNumber: result.order.orderNumber, totalMinor: result.order.totalMinor, paymentMethod });
+    if (!result.replayed) await audit(req, 'CASHIER_COUNTER_SALE_PAID', result.order.id, { orderNumber: result.order.orderNumber, totalMinor: result.order.totalMinor, paymentMethod });
     res.status(result.replayed ? 200 : 201).json({ ...result, order: safeOrder(result.order) });
   } catch (error) { next(error); }
 });
 
-router.get('/tenants/:tenantId/branches/:branchId/orders', cashierScope, async (req, res, next) => {
+router.get('/cashier/tenants/:tenantId/branches/:branchId/orders', cashierScope, async (req, res, next) => {
   try {
     const limit = Math.min(Math.max(Number(req.query.limit || 50), 1), 100);
     const orders = await Order.findAll({
@@ -146,7 +148,7 @@ router.get('/tenants/:tenantId/branches/:branchId/orders', cashierScope, async (
   } catch (error) { next(error); }
 });
 
-router.get('/tenants/:tenantId/branches/:branchId/orders/:orderId', cashierScope, async (req, res, next) => {
+router.get('/cashier/tenants/:tenantId/branches/:branchId/orders/:orderId', cashierScope, async (req, res, next) => {
   try {
     const order = await Order.findOne({
       where: { id: req.params.orderId, tenantId: req.params.tenantId, branchId: req.params.branchId, closedByUserId: req.userId },
@@ -157,7 +159,7 @@ router.get('/tenants/:tenantId/branches/:branchId/orders/:orderId', cashierScope
   } catch (error) { next(error); }
 });
 
-router.get('/tenants/:tenantId/branches/:branchId/summary', cashierScope, async (req, res, next) => {
+router.get('/cashier/tenants/:tenantId/branches/:branchId/summary', cashierScope, async (req, res, next) => {
   try {
     const timezone = req.branch.timezone || 'Asia/Kolkata';
     const rows = await sequelize.query(`
