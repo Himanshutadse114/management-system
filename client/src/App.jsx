@@ -1,20 +1,21 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import {
   Activity,
   BarChart3,
   Building2,
-  CheckCircle2,
   ChevronRight,
-  CircleUserRound,
   ClipboardList,
+  Layers3,
   LogOut,
   Menu,
+  Moon,
   PackageSearch,
   Plus,
   RefreshCw,
   ShieldCheck,
   Store,
+  Sun,
   UsersRound,
   Wine,
   X
@@ -22,12 +23,65 @@ import {
 import { useAuth } from './AuthContext';
 import { api, apiErrorMessage, authHeaders } from './api';
 
+const THEME_KEY = 'managementSystemTheme';
+
+function readTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
+  } catch (_) {
+    return 'dark';
+  }
+}
+
+function usePlatformTheme() {
+  const [theme, setTheme] = useState(readTheme);
+  useEffect(() => {
+    try { localStorage.setItem(THEME_KEY, theme); } catch (_) {}
+  }, [theme]);
+  return [theme, () => setTheme((current) => current === 'light' ? 'dark' : 'light')];
+}
+
+function ThemeToggle({ theme, onToggle, auth = false }) {
+  const light = theme === 'light';
+  const Icon = light ? Moon : Sun;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={auth ? 'sa-theme-toggle' : 'scorm-theme-toggle'}
+      aria-label={light ? 'Switch to dark theme' : 'Switch to light theme'}
+      title={light ? 'Switch to dark theme' : 'Switch to light theme'}
+    >
+      <Icon size={15} strokeWidth={2} />
+      <span>{light ? 'Dark' : 'Light'}</span>
+      <span className="theme-toggle-track" aria-hidden="true"><span className="theme-toggle-knob" /></span>
+    </button>
+  );
+}
+
+function getGoogleButtonWidth() {
+  if (typeof window === 'undefined') return 400;
+  return Math.max(220, Math.min(400, window.innerWidth - 82));
+}
+
 function LoginScreen() {
   const { loginWithGoogle } = useAuth();
+  const [theme, toggleTheme] = usePlatformTheme();
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(getGoogleButtonWidth);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    const update = () => setGoogleButtonWidth(getGoogleButtonWidth());
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   async function handleCredential(response) {
+    if (!response?.credential) {
+      setError('Google Sign-In did not return a valid credential.');
+      return;
+    }
     try {
       setBusy(true);
       setError('');
@@ -40,49 +94,82 @@ function LoginScreen() {
   }
 
   return (
-    <main className="login-page">
-      <section className="login-visual">
-        <div className="login-brand-row">
-          <div className="brand-mark"><Wine size={23} /></div>
-          <div className="login-brand-copy"><strong>Outlet Management</strong><span>Hospitality operations platform</span></div>
-        </div>
-        <div className="login-copy">
-          <span className="eyebrow light">Multi-outlet operations</span>
-          <h1>Every outlet.<br />Every pour.<br />One control desk.</h1>
-          <p>Run inventory, restaurant operations, wine-shop sales and staff access from one branch-aware management system.</p>
-        </div>
-        <div className="feature-strip">
-          <span><CheckCircle2 size={16} /> ML-based alcohol stock</span>
-          <span><CheckCircle2 size={16} /> Branch-level controls</span>
-          <span><CheckCircle2 size={16} /> Management reporting</span>
-        </div>
-      </section>
-
-      <section className="login-panel-wrap">
-        <div className="login-panel">
-          <div className="mini-brand"><span className="brand-dot" /> Secure operations access</div>
-          <span className="eyebrow">Welcome</span>
-          <h2>Sign in to your workspace</h2>
-          <p className="muted">Use the Google account assigned by your platform or tenant administrator.</p>
-          <div className={busy ? 'google-wrap is-busy' : 'google-wrap'}>
-            <GoogleLogin
-              onSuccess={handleCredential}
-              onError={() => setError('Google sign-in could not be completed.')}
-              width="320"
-              shape="pill"
-              text="continue_with"
-            />
+    <div className={`scorm-auth-workbench scorm-theme-${theme}`}>
+      <div className="sa-shell">
+        <div className="sa-topbar">
+          <div className="sa-top-note">Outlet Management Platform · Multi-outlet operations</div>
+          <div className="sa-top-actions">
+            <div className="sa-top-note">Role-based access · Live server permission checks</div>
+            <ThemeToggle theme={theme} onToggle={toggleTheme} auth />
           </div>
-          {error && <div className="error-box">{error}</div>}
-          <div className="security-note"><ShieldCheck size={18} /><span>Google verifies identity first. The backend then checks live tenant and branch permissions before allowing access.</span></div>
         </div>
-      </section>
-    </main>
+
+        <main className="sa-card auth-enter">
+          <section className="sa-brand-panel">
+            <div className="sa-mark"><Layers3 size={22} /></div>
+            <div className="sa-kicker">Inventory · sales · restaurants · staff</div>
+            <h1 className="sa-title">OUTLET <span>OS</span></h1>
+            <p className="sa-copy">
+              One workspace for multi-outlet inventory, bar and restaurant operations, wine-shop sales, staff accountability and management reporting.
+            </p>
+            <div className="sa-points" aria-label="Platform highlights">
+              <div className="sa-point"><span className="sa-point-dot" /> ML-based alcohol inventory and bottle-level control</div>
+              <div className="sa-point"><span className="sa-point-dot" /> Tenant, branch and staff permissions checked live</div>
+              <div className="sa-point"><span className="sa-point-dot" /> Restaurant, wine-shop and reporting workflows in one console</div>
+            </div>
+            <div className="sa-notice">
+              <div className="sa-notice-title"><ShieldCheck size={14} /> Secure by design</div>
+              <div>Google verifies the identity. The backend then resolves the current tenant, branch and role before protected data is returned.</div>
+            </div>
+          </section>
+
+          <section className="sa-form-panel">
+            <div className="sa-form-kicker">Platform access</div>
+            <h2 className="sa-form-title">Sign in to Outlet OS</h2>
+            <p className="sa-form-sub">
+              Continue with the Google account assigned by your platform or tenant administrator.
+            </p>
+
+            <div className="sa-tabs" aria-label="Authentication mode">
+              <button type="button" className="sa-tab is-active">Google sign in</button>
+              <button type="button" className="sa-tab" disabled>Managed access</button>
+            </div>
+
+            {error && <div className="sa-error">{error}</div>}
+
+            <div className={busy ? 'sa-google-block is-busy' : 'sa-google-block'}>
+              <div className="sa-google-label"><ShieldCheck size={13} /> Google account</div>
+              <div className="sa-google-button">
+                <GoogleLogin
+                  onSuccess={handleCredential}
+                  onError={() => setError('Google Sign-In failed. Please try again.')}
+                  theme="outline"
+                  size="large"
+                  shape="rectangular"
+                  text="continue_with"
+                  width={String(googleButtonWidth)}
+                />
+              </div>
+              <div className="sa-google-hint">New identities are captured as pending until an administrator assigns platform, tenant or branch access.</div>
+            </div>
+
+            <div className="sa-divider"><span>access model</span></div>
+
+            <div className="sa-access-grid">
+              <div><Building2 size={16} /><strong>Super Admin</strong><span>Creates tenants and platform access.</span></div>
+              <div><Store size={16} /><strong>Tenant Admin</strong><span>Creates outlets and assigns staff.</span></div>
+              <div><UsersRound size={16} /><strong>Branch Staff</strong><span>Works only inside assigned outlets.</span></div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
   );
 }
 
 function PendingScreen() {
   const { session, refresh, logout } = useAuth();
+  const [theme, toggleTheme] = usePlatformTheme();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -100,24 +187,42 @@ function PendingScreen() {
   }
 
   return (
-    <main className="center-page">
-      <section className="status-card">
-        <div className="status-icon"><ShieldCheck size={28} /></div>
-        <span className="eyebrow">Identity verified</span>
-        <h1>Waiting for access assignment</h1>
-        <p>Your account <strong>{session?.user?.email}</strong> is verified, but no tenant or branch role has been assigned yet.</p>
-        <p className="muted">Once an administrator assigns your role, the same login will unlock your authorised workspace.</p>
-        {message && <div className="info-box">{message}</div>}
-        <div className="button-row">
-          <button className="primary-btn" onClick={checkAgain} disabled={busy}><RefreshCw size={16} /> {busy ? 'Checking…' : 'Check approval'}</button>
-          <button className="ghost-btn" onClick={logout}><LogOut size={16} /> Sign out</button>
+    <div className={`scorm-auth-workbench scorm-theme-${theme}`}>
+      <div className="sa-shell pending-shell">
+        <div className="sa-topbar">
+          <div className="sa-top-note">Outlet Management Platform</div>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} auth />
         </div>
-      </section>
-    </main>
+        <main className="pending-card auth-enter">
+          <div className="pending-mark"><ShieldCheck size={26} /></div>
+          <div className="sa-kicker">Identity verified</div>
+          <h1>Waiting for access assignment</h1>
+          <p>Your account <strong>{session?.user?.email}</strong> is verified, but it does not yet have an active tenant or branch role.</p>
+          <p>Once an administrator assigns access, the same Google login will open the authorised workspace automatically.</p>
+          {message && <div className="sa-notice pending-message">{message}</div>}
+          <div className="pending-actions">
+            <button className="scorm-button-primary" onClick={checkAgain} disabled={busy}><RefreshCw size={15} className={busy ? 'spin' : ''} /> {busy ? 'Checking…' : 'Refresh access'}</button>
+            <button className="scorm-button-secondary" onClick={logout}><LogOut size={15} /> Sign out</button>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
 
-function PlatformTenants({ token, formRef }) {
+function SectionHeader({ eyebrow, title, count, icon: Icon }) {
+  return (
+    <div className="scorm-panel-header ops-panel-header">
+      <div>
+        <div className="scorm-eyebrow">{eyebrow}</div>
+        <h3>{title}</h3>
+      </div>
+      {count !== undefined && <div className="ops-count">{Icon && <Icon size={13} />}{count}</div>}
+    </div>
+  );
+}
+
+function PlatformTenants({ token }) {
   const [tenants, setTenants] = useState([]);
   const [name, setName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -152,32 +257,32 @@ function PlatformTenants({ token, formRef }) {
   }
 
   return (
-    <section className="content-section">
-      <div className="section-bar">
-        <div><span className="section-kicker">Platform administration</span><h3>Tenant management</h3></div>
-        <div className="section-count"><Building2 size={15} /> {tenants.length} tenants</div>
-      </div>
-      <div className="platform-layout">
-        <form className="create-panel" onSubmit={createTenant} ref={formRef}>
-          <div className="panel-heading">
-            <div className="panel-icon"><Plus size={17} /></div>
-            <div><span>Super Admin</span><h4>Create tenant</h4></div>
+    <section className="scorm-panel ops-management-panel">
+      <SectionHeader eyebrow="Platform administration" title="Tenant management" count={`${tenants.length} tenants`} icon={Building2} />
+      <div className="ops-admin-grid">
+        <form className="ops-form" onSubmit={createTenant}>
+          <div className="ops-form-heading">
+            <div className="scorm-action-icon"><Plus size={17} /></div>
+            <div><div className="scorm-eyebrow">Super Admin</div><h4>Create tenant</h4></div>
           </div>
           <label>Business / group name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sunrise Hospitality" required /></label>
           <label>First Tenant Admin email<input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="owner@example.com" /></label>
-          <button className="primary-btn full" disabled={busy}>{busy ? 'Creating…' : 'Create tenant'} <ChevronRight size={16} /></button>
-          {error && <div className="error-box">{error}</div>}
+          <button className="scorm-button-primary ops-submit" disabled={busy}>{busy ? 'Creating…' : 'Create tenant'}<ChevronRight size={15} /></button>
+          {error && <div className="ops-error">{error}</div>}
         </form>
 
-        <div className="management-list">
-          <div className="list-head"><span>Business</span><span>Status</span></div>
+        <div className="ops-list">
+          <div className="ops-list-head"><span>Business</span><span>Status</span></div>
           {tenants.length === 0 && (
-            <div className="empty-state compact"><Building2 size={25} /><strong>No tenants created yet</strong><span>Create the first business group to begin adding outlets and administrators.</span></div>
+            <div className="ops-empty"><div className="scorm-empty-icon"><Building2 size={18} /></div><strong>No tenants yet</strong><span>Create the first business group to begin outlet setup.</span></div>
           )}
           {tenants.map((tenant) => (
-            <div className="management-row" key={tenant.id}>
-              <div className="entity-main"><div className="tenant-avatar">{tenant.name.slice(0, 2).toUpperCase()}</div><div><strong>{tenant.name}</strong><span>{tenant.slug}</span></div></div>
-              <span className={`status-pill ${tenant.status === 'ACTIVE' ? 'success' : ''}`}>{tenant.status}</span>
+            <div className="ops-row" key={tenant.id}>
+              <div className="ops-entity">
+                <div className="ops-avatar">{tenant.name.slice(0, 2).toUpperCase()}</div>
+                <div><strong>{tenant.name}</strong><span>{tenant.slug}</span></div>
+              </div>
+              <span className={`ops-status ${tenant.status === 'ACTIVE' ? 'is-active' : ''}`}>{tenant.status}</span>
             </div>
           ))}
         </div>
@@ -186,7 +291,7 @@ function PlatformTenants({ token, formRef }) {
   );
 }
 
-function TenantBranches({ token, membership, formRef }) {
+function TenantBranches({ token, membership }) {
   const tenantId = membership?.tenantId;
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({ name: '', code: '', type: 'BAR_RESTAURANT' });
@@ -221,161 +326,277 @@ function TenantBranches({ token, membership, formRef }) {
   }
 
   return (
-    <section className="content-section">
-      <div className="section-bar">
-        <div><span className="section-kicker">{membership?.tenant?.name || 'Tenant workspace'}</span><h3>Branch management</h3></div>
-        <div className="section-count"><Store size={15} /> {branches.length} outlets</div>
-      </div>
-      <div className="platform-layout">
-        <form className="create-panel" onSubmit={createBranch} ref={formRef}>
-          <div className="panel-heading"><div className="panel-icon"><Plus size={17} /></div><div><span>Tenant Admin</span><h4>Add outlet</h4></div></div>
+    <section className="scorm-panel ops-management-panel">
+      <SectionHeader eyebrow={membership?.tenant?.name || 'Tenant workspace'} title="Branch management" count={`${branches.length} outlets`} icon={Store} />
+      <div className="ops-admin-grid">
+        <form className="ops-form" onSubmit={createBranch}>
+          <div className="ops-form-heading">
+            <div className="scorm-action-icon"><Plus size={17} /></div>
+            <div><div className="scorm-eyebrow">Tenant Admin</div><h4>Add outlet</h4></div>
+          </div>
           <label>Branch name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Central Bar & Kitchen" required /></label>
           <label>Branch code<input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="CBK-01" required /></label>
           <label>Outlet type<select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}><option value="BAR_RESTAURANT">Bar + Restaurant</option><option value="WINE_SHOP">Wine Shop</option></select></label>
-          <button className="primary-btn full" disabled={busy}>{busy ? 'Creating…' : 'Create outlet'} <ChevronRight size={16} /></button>
-          {error && <div className="error-box">{error}</div>}
+          <button className="scorm-button-primary ops-submit" disabled={busy}>{busy ? 'Creating…' : 'Create outlet'}<ChevronRight size={15} /></button>
+          {error && <div className="ops-error">{error}</div>}
         </form>
-        <div className="branch-list-wrap">
-          {branches.length === 0 && <div className="empty-state"><Store size={28} /><strong>No outlets configured</strong><span>Create the first branch to begin inventory and staff setup.</span></div>}
-          <div className="branch-grid">
-            {branches.map((branch) => (
-              <article className="branch-card" key={branch.id}>
-                <div className="branch-card-top"><div className="outlet-icon">{branch.type === 'BAR_RESTAURANT' ? <Wine /> : <Store />}</div><span className="status-pill success">{branch.status}</span></div>
-                <h4>{branch.name}</h4><p>{branch.code}</p>
-                <div className="branch-footer"><span>{branch.type === 'BAR_RESTAURANT' ? 'Bar + Restaurant' : 'Wine Shop'}</span><ChevronRight size={15} /></div>
-              </article>
-            ))}
-          </div>
+
+        <div className="ops-list">
+          <div className="ops-list-head"><span>Outlet</span><span>Status</span></div>
+          {branches.length === 0 && (
+            <div className="ops-empty"><div className="scorm-empty-icon"><Store size={18} /></div><strong>No outlets configured</strong><span>Create the first branch to begin inventory and staff setup.</span></div>
+          )}
+          {branches.map((branch) => (
+            <div className="ops-row" key={branch.id}>
+              <div className="ops-entity">
+                <div className="ops-avatar">{branch.type === 'BAR_RESTAURANT' ? <Wine size={16} /> : <Store size={16} />}</div>
+                <div><strong>{branch.name}</strong><span>{branch.code} · {branch.type === 'BAR_RESTAURANT' ? 'Bar + Restaurant' : 'Wine Shop'}</span></div>
+              </div>
+              <span className="ops-status is-active">{branch.status}</span>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-function PhasePanel({ activeSection }) {
+function RoadmapPanel({ section }) {
   const copy = {
-    Branches: ['Branch operations', 'Outlet configuration and branch-level access are being expanded from the foundation already in place.'],
-    Inventory: ['Inventory workspace', 'ML-based alcohol stock, purchase batches, adjustments and stock movement controls are the next implementation phase.'],
-    'Sales & Orders': ['Sales & orders', 'Wine-shop POS and restaurant order workflows will plug into the inventory ledger once the stock engine is complete.'],
-    Staff: ['Staff & access', 'Branch membership is enforced by the backend today. The full staff management screen is the next UI layer.']
+    Inventory: ['Inventory workspace', 'ML-based alcohol stock, bottle quantities, purchase batches, adjustments and stock movement controls will live here.'],
+    'Sales & Orders': ['Sales & orders', 'Wine-shop POS, restaurant tables, waiter ordering and payment reconciliation will use this workspace.'],
+    Staff: ['Staff & access', 'Tenant and branch membership is already enforced by the backend. Full staff administration will be added here.'],
+    Branches: ['Branch operations', 'Outlet configuration, branch controls and branch-level activity will be managed from this workspace.']
   };
-  const [title, body] = copy[activeSection] || copy.Inventory;
+  const [title, body] = copy[section] || copy.Inventory;
   return (
-    <section className="content-section phase-panel">
-      <div className="phase-illustration"><Activity size={28} /></div>
-      <span className="section-kicker">Product roadmap</span>
+    <section className="scorm-panel roadmap-panel">
+      <div className="scorm-action-icon"><Activity size={18} /></div>
+      <div className="scorm-eyebrow">Product roadmap</div>
       <h3>{title}</h3>
       <p>{body}</p>
-      <div className="phase-tag"><ShieldCheck size={15} /> Access controls are already enforced server-side</div>
+      <div className="roadmap-note"><ShieldCheck size={14} /> Live backend permission checks are already active.</div>
     </section>
+  );
+}
+
+function MetricCard({ label, value, icon: Icon, tone = 'orange' }) {
+  return (
+    <div className={`scorm-metric-card scorm-metric-${tone}`}>
+      <div className="metric-inner">
+        <div><div className="scorm-metric-value">{value}</div><div className="scorm-metric-label">{label}</div></div>
+        <div className="scorm-metric-icon"><Icon size={17} /></div>
+      </div>
+    </div>
+  );
+}
+
+function Overview({ token, access, isSuperAdmin, tenantAdmin, primaryRole, onOpenSection }) {
+  const stats = useMemo(() => [
+    { label: 'Workspace', value: isSuperAdmin ? 'Platform' : tenantAdmin ? 'Tenant' : 'Branch', icon: Building2 },
+    { label: 'Assigned branches', value: String(access.branches?.length || 0), icon: Store },
+    { label: 'Live access', value: 'Active', icon: ShieldCheck },
+    { label: 'Inventory base', value: 'ML', icon: PackageSearch },
+    { label: 'Current role', value: primaryRole, icon: UsersRound }
+  ], [access, isSuperAdmin, tenantAdmin, primaryRole]);
+
+  return (
+    <div className="platform-page">
+      <section className="scorm-page-hero">
+        <div className="page-hero-row">
+          <div className="page-hero-copy">
+            <div className="hero-meta-row">
+              <span className="scorm-eyebrow">Operate · control · reconcile · report</span>
+              <span className="scorm-health-pill is-online"><span className="scorm-health-dot" /> Operations online</span>
+            </div>
+            <h2 className="scorm-display"><span>Operations</span> <span className="wb-accent">Workbench</span></h2>
+            <p>Manage outlets, staff access, inventory and sales from one branch-aware operating view.</p>
+          </div>
+          <div className="hero-actions">
+            <button className="scorm-button-secondary" onClick={() => onOpenSection('Inventory')}><PackageSearch size={15} /> Inventory</button>
+            <button className="scorm-button-primary" onClick={() => onOpenSection(isSuperAdmin ? 'Tenants' : 'Branches')}><Plus size={15} /> {isSuperAdmin ? 'Create tenant' : 'Add outlet'}</button>
+          </div>
+        </div>
+      </section>
+
+      <div className="metric-grid">
+        {stats.map((stat) => <MetricCard key={stat.label} {...stat} />)}
+      </div>
+
+      <div className="overview-grid">
+        <div>
+          {isSuperAdmin && <PlatformTenants token={token} />}
+          {!isSuperAdmin && tenantAdmin && <TenantBranches token={token} membership={tenantAdmin} />}
+          {!isSuperAdmin && !tenantAdmin && <RoadmapPanel section="Branches" />}
+        </div>
+        <div className="overview-side">
+          <section className="scorm-progress-hero">
+            <div className="progress-hero-top">
+              <div><div className="scorm-progress-kicker">System foundation</div><h3>Operations readiness</h3></div>
+              <div className="scorm-progress-icon"><Activity size={18} /></div>
+            </div>
+            <div>
+              <div className="scorm-progress-number">Phase 1</div>
+              <div className="progress-copy">Authentication, tenancy, branch access, PostgreSQL and object storage foundations are connected.</div>
+              <div className="scorm-progress-track is-dark"><div className="scorm-progress-fill" style={{ width: '28%' }} /></div>
+            </div>
+          </section>
+
+          <section className="scorm-panel quick-panel">
+            <SectionHeader eyebrow="Workspace" title="Quick access" />
+            <div className="quick-list">
+              <button onClick={() => onOpenSection('Branches')}><Store size={15} /><span><strong>Branches</strong><small>Outlet setup and access</small></span><ChevronRight size={14} /></button>
+              <button onClick={() => onOpenSection('Inventory')}><PackageSearch size={15} /><span><strong>Inventory</strong><small>ML stock and purchases</small></span><ChevronRight size={14} /></button>
+              <button onClick={() => onOpenSection('Sales & Orders')}><ClipboardList size={15} /><span><strong>Sales & Orders</strong><small>POS and waiter operations</small></span><ChevronRight size={14} /></button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div className="action-grid">
+        <button className="scorm-action-card" onClick={() => onOpenSection('Inventory')}>
+          <div className="scorm-action-icon"><PackageSearch size={17} /></div><div className="action-title">Inventory</div><div className="action-copy">Track bottles, pours, purchases, adjustments and branch stock from one ledger-backed view.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
+        </button>
+        <button className="scorm-action-card" onClick={() => onOpenSection('Sales & Orders')}>
+          <div className="scorm-action-icon"><ClipboardList size={17} /></div><div className="action-title">Sales & Orders</div><div className="action-copy">Run wine-shop and restaurant sales with waiter accountability and payment reconciliation.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
+        </button>
+        <button className="scorm-action-card" onClick={() => onOpenSection('Staff')}>
+          <div className="scorm-action-icon"><UsersRound size={17} /></div><div className="action-title">Staff & Access</div><div className="action-copy">Control tenant and branch roles while keeping every operational action attributable.</div><div className="scorm-action-arrow"><ChevronRight size={15} /></div>
+        </button>
+      </div>
+    </div>
   );
 }
 
 function Dashboard() {
   const { token, session, logout } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [theme, toggleTheme] = usePlatformTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('Overview');
-  const actionRef = useRef(null);
-  const access = session.access || {};
+
+  const access = session?.access || {};
   const isSuperAdmin = Boolean(access.isSuperAdmin);
-  const tenantAdmin = (access.tenants || []).find((m) => m.role === 'TENANT_ADMIN');
+  const tenantAdmin = (access.tenants || []).find((membership) => membership.role === 'TENANT_ADMIN');
   const primaryRole = isSuperAdmin ? 'Super Admin' : tenantAdmin ? 'Tenant Admin' : access.branches?.[0]?.role?.replaceAll('_', ' ') || 'Staff';
 
-  const navItems = [
-    { label: 'Overview', icon: BarChart3 },
-    { label: 'Branches', icon: Store },
-    { label: 'Inventory', icon: PackageSearch },
-    { label: 'Sales & Orders', icon: ClipboardList },
-    { label: 'Staff', icon: UsersRound }
-  ];
+  const groups = useMemo(() => {
+    const platform = [
+      { label: 'Overview', icon: BarChart3 },
+      ...(isSuperAdmin ? [{ label: 'Tenants', icon: Building2 }] : []),
+      { label: 'Branches', icon: Store }
+    ];
+    return [
+      { label: 'Platform', items: platform },
+      { label: 'Operations', items: [
+        { label: 'Inventory', icon: PackageSearch },
+        { label: 'Sales & Orders', icon: ClipboardList },
+        { label: 'Staff', icon: UsersRound }
+      ]}
+    ];
+  }, [isSuperAdmin]);
 
-  const stats = useMemo(() => [
-    { label: 'Workspace access', value: isSuperAdmin ? 'Platform' : `${access.tenants?.length || 0} tenant`, icon: Building2, hint: isSuperAdmin ? 'All tenant operations' : 'Assigned business access' },
-    { label: 'Assigned branches', value: String(access.branches?.length || 0), icon: Store, hint: 'Live branch memberships' },
-    { label: 'Access status', value: 'Active', icon: ShieldCheck, hint: 'Checked on every request' },
-    { label: 'Inventory model', value: 'ML ready', icon: PackageSearch, hint: 'Bottle + pour foundation' }
-  ], [access, isSuperAdmin]);
-
-  function chooseSection(label) {
-    setActiveSection(label);
-    setMobileMenuOpen(false);
+  function openSection(section) {
+    setActiveSection(section);
+    setMobileOpen(false);
   }
 
-  function primaryAction() {
-    setActiveSection('Overview');
-    setMobileMenuOpen(false);
-    setTimeout(() => actionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 40);
+  function Navigation() {
+    return (
+      <nav className="scorm-nav">
+        {groups.map((group, index) => (
+          <div className={index ? 'nav-group nav-group-spaced' : 'nav-group'} key={group.label}>
+            <div className="scorm-nav-section">{group.label}</div>
+            <div className="nav-items">
+              {group.items.map(({ label, icon: Icon }) => {
+                const active = activeSection === label;
+                return (
+                  <button key={label} type="button" className={`scorm-nav-item ${active ? 'scorm-nav-active' : ''}`} onClick={() => openSection(label)}>
+                    <span className="scorm-nav-icon"><Icon size={16} strokeWidth={active ? 2.2 : 1.9} /></span>
+                    <span>{label}</span>
+                    {active && <ChevronRight size={14} className="scorm-nav-chevron" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+    );
   }
 
-  const navigation = (
-    <>
-      <div className="nav-label">Workspace</div>
-      {navItems.map(({ label, icon: Icon }) => (
-        <button key={label} type="button" className={`nav-item ${activeSection === label ? 'active' : ''}`} onClick={() => chooseSection(label)}>
-          <Icon size={18} /><span>{label}</span>{activeSection === label && <span className="nav-marker" />}
-        </button>
-      ))}
-    </>
-  );
+  function Brand() {
+    return (
+      <button type="button" className="scorm-brand" onClick={() => openSection('Overview')}>
+        <span className="scorm-brand-mark"><Layers3 size={19} /></span>
+        <span className="brand-copy"><strong className="scorm-brand-name">OUTLET <em>OS</em></strong><small>Hospitality operations platform</small></span>
+      </button>
+    );
+  }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand"><span className="brand-box"><Wine size={18} /></span><div><strong>Outlet</strong><span>Management System</span></div></div>
-        <nav>{navigation}</nav>
-        <div className="sidebar-foot">
-          <div className="workspace-badge"><ShieldCheck size={16} /><div><strong>Secure workspace</strong><span>Live permission checks</span></div></div>
-          <button className="sidebar-logout" onClick={logout}><LogOut size={17} /> Sign out</button>
+    <div className={`scorm-editorial scorm-theme-${theme}`}>
+      <aside className="scorm-sidebar">
+        <div className="scorm-brand-wrap"><Brand /></div>
+        <Navigation />
+        <div className="scorm-sidebar-footer">
+          <div className="scorm-status-card">
+            <div className="status-title"><span className="scorm-status-dot" />{primaryRole}</div>
+            <div className="status-copy">{session?.user?.email}</div>
+          </div>
+          <button type="button" onClick={logout} className="scorm-sidebar-switch"><span><LogOut size={14} /> Sign out</span><ChevronRight size={13} /></button>
         </div>
       </aside>
 
-      <div className="mobilebar">
-        <div className="mobile-brand"><span className="brand-box"><Wine size={17} /></span><div><strong>Outlet</strong><span>Management</span></div></div>
-        <button className="mobile-menu-button" onClick={() => setMobileMenuOpen((open) => !open)} aria-label="Toggle navigation">{mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}</button>
-      </div>
-      {mobileMenuOpen && <button className="drawer-backdrop" aria-label="Close navigation" onClick={() => setMobileMenuOpen(false)} />}
-      <div className={`mobile-drawer ${mobileMenuOpen ? 'open' : ''}`}>
-        <nav>{navigation}</nav>
-        <div className="mobile-drawer-user"><CircleUserRound size={22} /><div><strong>{session.user?.name || session.user?.email}</strong><span>{primaryRole}</span></div></div>
-        <button className="sidebar-logout" onClick={logout}><LogOut size={17} /> Sign out</button>
-      </div>
+      {mobileOpen && (
+        <div className="mobile-overlay">
+          <button aria-label="Close navigation" className="mobile-backdrop" onClick={() => setMobileOpen(false)} />
+          <div className="scorm-mobile-drawer">
+            <div className="drawer-head"><Brand /><button className="scorm-drawer-close" onClick={() => setMobileOpen(false)}><X size={17} /></button></div>
+            <Navigation />
+            <div className="drawer-foot"><button type="button" onClick={logout} className="scorm-sidebar-switch"><span><LogOut size={14} /> Sign out</span><ChevronRight size={13} /></button></div>
+          </div>
+        </div>
+      )}
 
-      <main className="main-area">
-        <header className="topbar">
-          <div className="topbar-copy"><span className="eyebrow">Operations console</span><h2>{activeSection}</h2></div>
-          <div className="profile-chip">{session.user?.avatarUrl ? <img src={session.user.avatarUrl} alt="" /> : <CircleUserRound />}<div><strong>{session.user?.name || session.user?.email}</strong><span>{primaryRole}</span></div><button onClick={logout} title="Sign out"><LogOut size={17} /></button></div>
+      <div className="scorm-shell-content">
+        <header className="scorm-topbar">
+          <button type="button" onClick={() => setMobileOpen(true)} className="scorm-topbar-icon mobile-menu-trigger" aria-label="Open navigation"><Menu size={18} /></button>
+          <div className="topbar-context"><ShieldCheck size={12} /> Live access · {primaryRole}</div>
+          <div className="topbar-actions">
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
+            <button className="scorm-button-secondary topbar-secondary" onClick={() => openSection('Staff')}><UsersRound size={14} /> Staff</button>
+            <button className="scorm-button-primary" onClick={() => openSection(isSuperAdmin ? 'Tenants' : 'Branches')}><Plus size={14} /><span>{isSuperAdmin ? 'Create tenant' : 'Add outlet'}</span></button>
+          </div>
         </header>
 
-        {activeSection === 'Overview' ? (
-          <>
-            <section className="dashboard-hero">
-              <div className="hero-copy">
-                <span className="hero-kicker">{isSuperAdmin ? 'Platform control' : tenantAdmin?.tenant?.name || 'Branch operations'}</span>
-                <h1>Good to see you, {session.user?.name?.split(' ')?.[0] || 'Admin'}.</h1>
-                <p>{isSuperAdmin ? 'Create business groups, assign tenant ownership and keep every outlet under one governed platform.' : 'Manage the outlets and operational access assigned to your business workspace.'}</p>
-              </div>
-              {(isSuperAdmin || tenantAdmin) && <button className="hero-action" onClick={primaryAction}><Plus size={17} /> {isSuperAdmin ? 'Create tenant' : 'Add outlet'}</button>}
-            </section>
+        <main className="scorm-main">
+          {activeSection === 'Overview' && <Overview token={token} access={access} isSuperAdmin={isSuperAdmin} tenantAdmin={tenantAdmin} primaryRole={primaryRole} onOpenSection={openSection} />}
+          {activeSection === 'Tenants' && isSuperAdmin && <div className="platform-page standalone-page"><PlatformTenants token={token} /></div>}
+          {activeSection === 'Branches' && tenantAdmin && <div className="platform-page standalone-page"><TenantBranches token={token} membership={tenantAdmin} /></div>}
+          {activeSection === 'Branches' && !tenantAdmin && <div className="platform-page standalone-page"><RoadmapPanel section="Branches" /></div>}
+          {['Inventory', 'Sales & Orders', 'Staff'].includes(activeSection) && <div className="platform-page standalone-page"><RoadmapPanel section={activeSection} /></div>}
+        </main>
+      </div>
 
-            <section className="stat-grid" aria-label="Workspace overview">
-              {stats.map(({ label, value, icon: Icon, hint }) => <article className="stat-card" key={label}><div className="stat-top"><div className="stat-icon"><Icon /></div><span className="status-dot" /></div><strong>{value}</strong><span>{label}</span><small>{hint}</small></article>)}
-            </section>
-
-            {isSuperAdmin && <PlatformTenants token={token} formRef={actionRef} />}
-            {!isSuperAdmin && tenantAdmin && <TenantBranches token={token} membership={tenantAdmin} formRef={actionRef} />}
-            {!isSuperAdmin && !tenantAdmin && <PhasePanel activeSection="Branches" />}
-          </>
-        ) : (
-          <PhasePanel activeSection={activeSection} />
-        )}
-      </main>
+      <div className="scorm-mobile-tabbar">
+        {[
+          { label: 'Overview', icon: BarChart3 },
+          { label: 'Branches', icon: Store },
+          { label: 'Inventory', icon: PackageSearch },
+          { label: 'Sales & Orders', short: 'Sales', icon: ClipboardList }
+        ].map(({ label, short, icon: Icon }) => (
+          <button key={label} className={`scorm-mobile-tab ${activeSection === label ? 'is-active' : ''}`} onClick={() => openSection(label)}>
+            <Icon size={17} /><span>{short || label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
 export default function App() {
   const { session, loading } = useAuth();
-  if (loading) return <main className="center-page"><div className="loading-orb"><RefreshCw /></div></main>;
+  if (loading) return <div className="app-loading"><RefreshCw size={23} className="spin" /></div>;
   if (!session) return <LoginScreen />;
   if (session.pendingApproval || !session.access?.approved) return <PendingScreen />;
   return <Dashboard />;
