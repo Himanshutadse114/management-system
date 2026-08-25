@@ -35,8 +35,8 @@ export default function CashierWorkspace({ token, access }) {
   const tenantId = membership?.tenantId || '';
   const branchId = membership?.branchId || '';
   const branch = membership?.branch || null;
-  const salesBase = tenantId && branchId ? `/sales/tenants/${tenantId}/branches/${branchId}` : '';
-  const restaurantBase = tenantId && branchId && branch?.type === 'BAR_RESTAURANT' ? `/restaurant/tenants/${tenantId}/branches/${branchId}` : '';
+  const salesBase = tenantId && branchId ? `/sales/cashier/tenants/${tenantId}/branches/${branchId}` : '';
+  const restaurantBase = tenantId && branchId && branch?.type === 'BAR_RESTAURANT' ? `/restaurant/cashier/tenants/${tenantId}/branches/${branchId}` : '';
 
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
