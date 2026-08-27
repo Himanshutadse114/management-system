@@ -35,6 +35,7 @@ function reportJson(report) {
     rangeFrom: report.rangeFrom,
     rangeTo: report.rangeTo,
     status: report.status,
+    storageMode: report.storageMode || null,
     fileName: report.fileName,
     contentType: report.contentType,
     sizeBytes: report.sizeBytes,
@@ -101,9 +102,22 @@ router.post('/tenants/:tenantId/generate', async (req, res, next) => {
       to: req.body?.to,
       createdByUserId: req.userId
     });
-    await audit(req, tenantId, branchId, 'REPORT_GENERATED', result.report, { reportType, format, locale, generator: result.generator });
-    res.status(201).json({ report: reportJson(result.report), generator: result.generator });
-  } catch (error) { next(error); }
+    await audit(req, tenantId, branchId, 'REPORT_GENERATED', result.report, {
+      reportType,
+      format,
+      locale,
+      generator: result.generator,
+      storageMode: result.storageMode
+    });
+    res.status(201).json({ report: reportJson(result.report), generator: result.generator, storageMode: result.storageMode });
+  } catch (error) {
+    console.error('[reports] request failed:', error);
+    if (Number(error.status || 0) > 0 && Number(error.status) < 500) return next(error);
+    return res.status(500).json({
+      message: 'The report could not be created. Please try again. If it keeps failing, check the latest failed report in Report History.',
+      code: error.code || 'REPORT_GENERATION_FAILED'
+    });
+  }
 });
 
 router.get('/tenants/:tenantId/history', async (req, res, next) => {
@@ -120,7 +134,12 @@ router.get('/tenants/:tenantId/history', async (req, res, next) => {
       if (!allowed.length) return res.json({ reports: [] });
       where.branchId = { [Op.in]: allowed };
     }
-    const reports = await GeneratedReport.findAll({ where, order: [['createdAt', 'DESC']], limit: 100 });
+    const reports = await GeneratedReport.findAll({
+      where,
+      attributes: { exclude: ['fileData'] },
+      order: [['createdAt', 'DESC']],
+      limit: 100
+    });
     res.json({ reports: reports.map(reportJson) });
   } catch (error) { next(error); }
 });
