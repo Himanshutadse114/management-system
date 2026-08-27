@@ -1,0 +1,293 @@
+/* Final usability polish. Loaded after every other stylesheet. */
+
+.simple-module-intro { display: none !important; }
+
+/* The analytics waiter table must not share class names with the waiter app. */
+.analytics-waiter-table { width: 100%; overflow-x: auto; }
+.analytics-waiter-head,
+.analytics-waiter-row {
+  min-width: 560px;
+  display: grid;
+  grid-template-columns: minmax(180px,1.5fr) 90px 90px 120px;
+  gap: 10px;
+  align-items: center;
+}
+.analytics-waiter-head {
+  padding: 11px 14px;
+  background: #F6F6F6 !important;
+  color: #555 !important;
+  border-bottom: 1px solid #E2E2E2;
+  font-size: 10px;
+  font-weight: 700;
+}
+.analytics-waiter-row {
+  padding: 12px 14px;
+  border-top: 1px solid #EEEEEE;
+  color: #222;
+  font-size: 12px;
+}
+.analytics-waiter-row > div { min-width: 0; display: grid; gap: 3px; }
+.analytics-waiter-row strong { color: #111; font-size: 12px; }
+.analytics-waiter-row span { color: #666; font-size: 10px; }
+
+/* Keep page headers compact. Staff should reach actions without scrolling past marketing copy. */
+.inventory-hero,
+.sales-hero,
+.restaurant-hero,
+.analytics-hero,
+.reports-hero,
+.staff-hero {
+  padding-top: 12px !important;
+  padding-bottom: 16px !important;
+  min-height: 0 !important;
+}
+.inventory-hero h2,
+.sales-hero h2,
+.restaurant-hero h2,
+.analytics-hero h2,
+.reports-hero h2,
+.staff-hero h2 { font-size: clamp(26px,3vw,36px) !important; }
+
+/* Consistent page widths and spacing. */
+.inventory-page,
+.sales-page,
+.restaurant-page,
+.analytics-page,
+.reports-page,
+.staff-page {
+  max-width: 1480px !important;
+  padding-top: 18px !important;
+}
+
+/* Replace tiny uppercase metadata with readable labels. */
+.inventory-mini,
+.sales-mini,
+.restaurant-mini,
+.analytics-mini,
+.reports-mini,
+.staff-mini,
+.waiter-kicker,
+.cashier-kicker,
+.focused-kicker,
+.scorm-eyebrow {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+}
+
+/* Clear card hierarchy. */
+.inventory-panel,
+.pos-catalogue,
+.pos-cart,
+.sales-history,
+.restaurant-panel,
+.analytics-panel,
+.reports-panel,
+.staff-panel,
+.waiter-section,
+.cashier-panel,
+.scorm-panel {
+  border-radius: 10px !important;
+}
+.inventory-panel-head,
+.pos-toolbar,
+.cart-head,
+.sales-history-head,
+.restaurant-panel-head,
+.analytics-panel-head,
+.reports-panel-head,
+.staff-panel-head,
+.waiter-section-head,
+.cashier-panel-head {
+  min-height: 58px !important;
+}
+
+/* Tables are still tables where comparison matters; keep them contained. */
+.inventory-table-wrap,
+.sales-table,
+.report-history,
+.analytics-waiter-table { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Status treatment stays simple: black/white/red rather than many unrelated accents. */
+.ops-status,
+.staff-status,
+.movement-pill,
+.report-status,
+.focused-active {
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  letter-spacing: 0 !important;
+}
+.ops-status.is-active,
+.staff-status.active,
+.report-status.ready,
+.focused-active {
+  color: #111 !important;
+  background: #F0F0F0 !important;
+  border: 1px solid #D8D8D8 !important;
+}
+.staff-status.suspended,
+.report-status.failed,
+.movement-pill.out {
+  color: #A40E27 !important;
+  background: #FFF2F4 !important;
+  border: 1px solid #EDC3CB !important;
+}
+.staff-status.invited,
+.report-status.generating,
+.movement-pill.in {
+  color: #333 !important;
+  background: #F7F7F7 !important;
+  border: 1px solid #DDD !important;
+}
+
+/* Important success/error messages stay semantic but visually restrained. */
+.inventory-notice,
+.restaurant-notice,
+.analytics-notice,
+.reports-notice,
+.staff-notice,
+.waiter-message.success,
+.cashier-message.success {
+  color: #222 !important;
+  background: #F5F5F5 !important;
+  border-color: #D8D8D8 !important;
+}
+.inventory-error,
+.restaurant-error,
+.analytics-error,
+.reports-error,
+.staff-error,
+.waiter-message.error,
+.cashier-message.error {
+  color: #9D0B24 !important;
+  background: #FFF3F5 !important;
+  border-color: #EBC2CA !important;
+}
+
+/* Remove unnecessary visual decoration from metrics. */
+.inventory-metric,
+.sales-stat,
+.analytics-metric,
+.cashier-stats article,
+.scorm-metric-card {
+  min-height: 92px !important;
+  padding: 14px !important;
+}
+.inventory-metric-icon,
+.analytics-metric-icon,
+.scorm-metric-icon,
+.sales-stat > div:last-child {
+  box-shadow: none !important;
+}
+
+/* Mobile: each role should feel like a mobile app, not a squeezed desktop dashboard. */
+@media (max-width: 760px) {
+  .inventory-page,
+  .sales-page,
+  .restaurant-page,
+  .analytics-page,
+  .reports-page,
+  .staff-page {
+    padding-top: 8px !important;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .inventory-hero,
+  .sales-hero,
+  .restaurant-hero,
+  .analytics-hero,
+  .reports-hero,
+  .staff-hero,
+  .waiter-head,
+  .cashier-head {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    align-items: start !important;
+  }
+
+  .inventory-hero > button,
+  .sales-hero > button,
+  .restaurant-hero > button,
+  .analytics-hero > button,
+  .reports-hero > button,
+  .staff-hero > button,
+  .waiter-head-actions,
+  .cashier-head-actions { width: 100% !important; }
+
+  .inventory-hero > button,
+  .sales-hero > button,
+  .restaurant-hero > button,
+  .analytics-hero > button,
+  .reports-hero > button,
+  .staff-hero > button,
+  .waiter-head-actions button,
+  .cashier-head-actions button { width: 100% !important; }
+
+  .waiter-head-actions,
+  .cashier-head-actions { display: grid !important; grid-template-columns: 1fr !important; }
+  .waiter-head-actions select,
+  .cashier-head-actions select { width: 100% !important; }
+
+  .inventory-scope-card,
+  .sales-scope,
+  .restaurant-scope,
+  .staff-scope,
+  .analytics-controls {
+    padding: 12px !important;
+    margin-top: 10px !important;
+  }
+
+  .inventory-metrics,
+  .sales-stats,
+  .analytics-metrics,
+  .cashier-stats { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+
+  .inventory-panel-head,
+  .pos-toolbar,
+  .cart-head,
+  .sales-history-head,
+  .restaurant-panel-head,
+  .analytics-panel-head,
+  .reports-panel-head,
+  .staff-panel-head,
+  .waiter-section-head,
+  .cashier-panel-head {
+    padding: 12px !important;
+  }
+
+  .waiter-products,
+  .cashier-products { gap: 10px !important; }
+  .waiter-product,
+  .cashier-products > article { padding: 12px !important; }
+
+  .report-history-head,
+  .report-history-row { min-width: 780px !important; }
+}
+
+@media (max-width: 480px) {
+  .inventory-metrics,
+  .sales-stats,
+  .analytics-metrics,
+  .cashier-stats { grid-template-columns: 1fr !important; }
+
+  .waiter-tables { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  .waiter-table { min-height: 105px !important; }
+
+  .inventory-tabs,
+  .restaurant-tabs {
+    margin-left: -2px !important;
+    margin-right: -2px !important;
+  }
+
+  .inventory-tabs button,
+  .restaurant-tabs button { min-height: 44px !important; }
+
+  .public-menu-hero-copy h1 { font-size: 34px !important; }
+}
+
+@media (max-width: 350px) {
+  .waiter-tables { grid-template-columns: 1fr !important; }
+}
