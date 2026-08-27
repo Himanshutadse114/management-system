@@ -107,7 +107,7 @@ export default function CashierWorkspace({ token, access }) {
 
   async function checkout() {
     try {
-      if (!cart.length) throw new Error('Add at least one item to the cart.');
+      if (!cart.length) throw new Error('Add at least one item.');
       setBusy(true); setError('');
       const { data } = await api.post(`${salesBase}/checkout`, {
         lines: cart.map((row) => ({ priceOptionId: row.priceOptionId, quantityUnits: row.quantityUnits })),
@@ -118,7 +118,7 @@ export default function CashierWorkspace({ token, access }) {
       setLastReceipt(data.order || null);
       setCart([]); setPaymentReference('');
       await load();
-      flash('Payment completed and receipt created.');
+      flash('Payment received.');
     } catch (err) { setError(err.message || apiErrorMessage(err)); }
     finally { setBusy(false); }
   }
@@ -132,51 +132,55 @@ export default function CashierWorkspace({ token, access }) {
       }, { headers: authHeaders(token) });
       setPaymentReference('');
       await load();
-      flash(`${order.orderNumber} settled successfully.`);
+      flash(`${order.orderNumber} paid.`);
     } catch (err) { setError(apiErrorMessage(err)); }
     finally { setBusy(false); }
   }
 
   if (!assignments.length) {
-    return <div className="cashier-page"><div className="cashier-empty"><Store size={28}/><strong>No cashier assignment</strong><span>Your account does not currently have an active cashier assignment.</span></div></div>;
+    return <div className="cashier-page"><div className="cashier-empty"><Store size={28}/><strong>No branch assigned</strong><span>Please ask your manager to assign this cashier account to a branch.</span></div></div>;
   }
 
   return <div className="cashier-page">
     <section className="cashier-head">
-      <div><div className="cashier-kicker">CASHIER POS</div><h1>{branch?.name || 'Outlet'}</h1><p>Take counter payments and settle restaurant bills. Inventory cost and profit information are intentionally hidden from this role.</p></div>
-      <div className="cashier-head-actions">{assignments.length > 1 && <select value={membership?.membershipId || ''} onChange={(event) => setMembershipId(event.target.value)}>{assignments.map((row) => <option value={row.membershipId} key={row.membershipId}>{row.branch?.name} · {row.branch?.code}</option>)}</select>}<button onClick={load} disabled={busy}><RefreshCw size={15} className={busy ? 'spin' : ''}/>Refresh</button></div>
+      <div><div className="cashier-kicker">Billing</div><h1>{branch?.name || 'Outlet'}</h1><p>Collect restaurant bills and make counter sales. That is all you need on this screen.</p></div>
+      <div className="cashier-head-actions">{assignments.length > 1 && <select aria-label="Branch" value={membership?.membershipId || ''} onChange={(event) => setMembershipId(event.target.value)}>{assignments.map((row) => <option value={row.membershipId} key={row.membershipId}>{row.branch?.name} · {row.branch?.code}</option>)}</select>}<button onClick={load} disabled={busy}><RefreshCw size={15} className={busy ? 'spin' : ''}/>Refresh</button></div>
     </section>
 
     {error && <div className="cashier-message error">{error}</div>}
     {notice && <div className="cashier-message success"><CheckCircle2 size={14}/>{notice}</div>}
 
-    <div className="cashier-stats"><article><span>MY SALES TODAY</span><strong>{formatMoney(summary.salesMinor)}</strong><small>{summary.orderCount || 0} counter transactions</small></article><article><span>RESTAURANT BILLS</span><strong>{settlements.length}</strong><small>{restaurantBase ? 'Awaiting payment' : 'Not applicable to this outlet'}</small></article><article><span>OUTLET TYPE</span><strong>{branch?.type === 'BAR_RESTAURANT' ? 'Restaurant' : 'Wine Shop'}</strong><small>{branch?.code}</small></article></div>
+    <div className="cashier-stats">
+      <article><span>Sales today</span><strong>{formatMoney(summary.salesMinor)}</strong><small>{summary.orderCount || 0} payments</small></article>
+      <article><span>Bills waiting</span><strong>{settlements.length}</strong><small>{restaurantBase ? 'Waiting for payment' : 'No restaurant bills here'}</small></article>
+      <article><span>Branch</span><strong>{branch?.type === 'BAR_RESTAURANT' ? 'Restaurant' : 'Wine Shop'}</strong><small>{branch?.code}</small></article>
+    </div>
 
-    {restaurantBase && <section className="cashier-panel">
-      <div className="cashier-panel-head"><div><span>SETTLEMENT QUEUE</span><h2>Restaurant bills awaiting payment</h2></div><div className="cashier-payment-select"><CreditCard size={14}/><select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option>UPI</option><option>CASH</option><option>CARD</option><option>OTHER</option></select></div></div>
-      {!settlements.length ? <div className="cashier-empty compact"><CheckCircle2 size={22}/><strong>No bills waiting</strong><span>Waiter orders appear here only after they request payment.</span></div> : <div className="cashier-settlements">{settlements.map((order) => <article key={order.id}><div className="cashier-settlement-top"><div><span>{order.table?.name || 'Table'}</span><strong>{order.orderNumber}</strong></div><strong>{formatMoney(order.totalMinor)}</strong></div><div className="cashier-settlement-lines">{(order.lines || []).filter((line) => line.status !== 'CANCELLED').map((line) => <div key={line.id}><span>{line.quantityUnits} × {line.productNameSnapshot} · {line.priceLabelSnapshot}</span><strong>{formatMoney(line.lineSubtotalMinor)}</strong></div>)}</div><button className="cashier-primary" onClick={() => settleRestaurant(order)} disabled={busy}><Banknote size={13}/>Receive {paymentMethod}<ChevronRight size={13}/></button></article>)}</div>}
+    {restaurantBase && <section className="cashier-panel cashier-bills-first">
+      <div className="cashier-panel-head"><div><span>First</span><h2>Bills to collect</h2></div><div className="cashier-payment-select"><CreditCard size={14}/><select aria-label="Payment method" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option>UPI</option><option>CASH</option><option>CARD</option><option>OTHER</option></select></div></div>
+      {!settlements.length ? <div className="cashier-empty compact"><CheckCircle2 size={22}/><strong>No bills waiting</strong><span>When a waiter sends a bill, it will appear here.</span></div> : <div className="cashier-settlements">{settlements.map((order) => <article key={order.id}><div className="cashier-settlement-top"><div><span>{order.table?.name || 'Table'}</span><strong>{order.orderNumber}</strong></div><strong>{formatMoney(order.totalMinor)}</strong></div><div className="cashier-settlement-lines">{(order.lines || []).filter((line) => line.status !== 'CANCELLED').map((line) => <div key={line.id}><span>{line.quantityUnits} × {line.productNameSnapshot} · {line.priceLabelSnapshot}</span><strong>{formatMoney(line.lineSubtotalMinor)}</strong></div>)}</div><button className="cashier-primary" onClick={() => settleRestaurant(order)} disabled={busy}><Banknote size={13}/>Collect {formatMoney(order.totalMinor)}<ChevronRight size={13}/></button></article>)}</div>}
     </section>}
 
     <div className="cashier-pos-layout">
       <section className="cashier-panel cashier-catalogue">
-        <div className="cashier-panel-head"><div><span>COUNTER SALE</span><h2>Product catalogue</h2></div><label className="cashier-search"><Search size={14}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search product, SKU or barcode..."/></label></div>
+        <div className="cashier-panel-head"><div><span>New sale</span><h2>Choose items</h2></div><label className="cashier-search"><Search size={14}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search item or scan barcode..."/></label></div>
         <div className="cashier-products">{filteredProducts.map((product) => <article key={product.id}><div className="cashier-product-copy">{product.imageUrl ? <img src={product.imageUrl} alt=""/> : <div className="cashier-product-image">{product.productType === 'ALCOHOL' ? <Wine size={18}/> : <UtensilsCrossed size={18}/>}</div>}<div><strong>{product.name}</strong><span>{product.brand || product.sku || product.productType}</span></div></div><div className="cashier-price-list">{(product.priceOptions || []).map((price) => <button key={price.id} onClick={() => add(product, price)}><span>{price.label}</span><strong>{formatMoney(price.priceMinor)}</strong><Plus size={12}/></button>)}</div></article>)}</div>
       </section>
 
       <aside className="cashier-panel cashier-cart">
-        <div className="cashier-panel-head"><div><span>CART</span><h2>Current sale</h2></div><ShoppingCart size={18}/></div>
-        {!cart.length ? <div className="cashier-empty compact"><ShoppingCart size={22}/><strong>Cart is empty</strong><span>Select a selling option from the catalogue.</span></div> : <div className="cashier-cart-lines">{cart.map((row) => <div key={row.priceOptionId}><div><strong>{row.productName}</strong><span>{row.priceLabel} · {formatMoney(row.priceMinor)}</span></div><div className="cashier-qty"><button onClick={() => quantity(row.priceOptionId, row.quantityUnits - 1)}><Minus size={11}/></button><span>{row.quantityUnits}</span><button onClick={() => quantity(row.priceOptionId, row.quantityUnits + 1)}><Plus size={11}/></button></div><strong>{formatMoney(BigInt(row.priceMinor || 0) * BigInt(row.quantityUnits))}</strong></div>)}</div>}
+        <div className="cashier-panel-head"><div><span>Current sale</span><h2>Bill</h2></div><ShoppingCart size={18}/></div>
+        {!cart.length ? <div className="cashier-empty compact"><ShoppingCart size={22}/><strong>No items added</strong><span>Tap an item price to add it to the bill.</span></div> : <div className="cashier-cart-lines">{cart.map((row) => <div key={row.priceOptionId}><div><strong>{row.productName}</strong><span>{row.priceLabel} · {formatMoney(row.priceMinor)}</span></div><div className="cashier-qty"><button aria-label="Reduce" onClick={() => quantity(row.priceOptionId, row.quantityUnits - 1)}><Minus size={11}/></button><span>{row.quantityUnits}</span><button aria-label="Add" onClick={() => quantity(row.priceOptionId, row.quantityUnits + 1)}><Plus size={11}/></button></div><strong>{formatMoney(BigInt(row.priceMinor || 0) * BigInt(row.quantityUnits))}</strong></div>)}</div>}
         <div className="cashier-cart-total"><span>Total</span><strong>{formatMoney(totalMinor)}</strong></div>
-        <label className="cashier-field"><span>Payment method</span><select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option>UPI</option><option>CASH</option><option>CARD</option><option>OTHER</option></select></label>
-        <label className="cashier-field"><span>Reference (optional)</span><input value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="UPI / terminal reference"/></label>
-        <button className="cashier-primary" disabled={busy || !cart.length} onClick={checkout}><Banknote size={13}/>Pay {formatMoney(totalMinor)}<ChevronRight size={13}/></button>
+        <label className="cashier-field"><span>How did they pay?</span><select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option>UPI</option><option>CASH</option><option>CARD</option><option>OTHER</option></select></label>
+        <label className="cashier-field"><span>Payment reference (optional)</span><input value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="UPI or card reference"/></label>
+        <button className="cashier-primary" disabled={busy || !cart.length} onClick={checkout}><Banknote size={13}/>Collect {formatMoney(totalMinor)}<ChevronRight size={13}/></button>
         {lastReceipt && <div className="cashier-receipt"><ReceiptText size={14}/><div><strong>{lastReceipt.orderNumber}</strong><span>Paid · {formatMoney(lastReceipt.totalMinor)}</span></div></div>}
       </aside>
     </div>
 
     <section className="cashier-panel">
-      <div className="cashier-panel-head"><div><span>MY SHIFT</span><h2>Recent counter receipts</h2></div><ReceiptText size={18}/></div>
-      {!orders.length ? <div className="cashier-empty compact"><ReceiptText size={22}/><strong>No receipts yet</strong><span>Your own completed counter transactions will appear here.</span></div> : <div className="cashier-recent">{orders.map((order) => <article key={order.id}><div><strong>{order.orderNumber}</strong><span>{new Date(order.createdAt).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'})}</span></div><strong>{formatMoney(order.totalMinor)}</strong></article>)}</div>}
+      <div className="cashier-panel-head"><div><span>Today</span><h2>Recent payments</h2></div><ReceiptText size={18}/></div>
+      {!orders.length ? <div className="cashier-empty compact"><ReceiptText size={22}/><strong>No payments yet</strong><span>Your completed counter sales will appear here.</span></div> : <div className="cashier-recent">{orders.map((order) => <article key={order.id}><div><strong>{order.orderNumber}</strong><span>{new Date(order.createdAt).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'})}</span></div><strong>{formatMoney(order.totalMinor)}</strong></article>)}</div>}
     </section>
   </div>;
 }
