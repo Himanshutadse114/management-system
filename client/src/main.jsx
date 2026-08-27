@@ -5,6 +5,7 @@ import { AuthProvider } from './AuthContext';
 import { LanguageProvider } from './LanguageContext';
 import App from './App';
 import PublicMenu from './PublicMenu';
+import MenuImageManager from './MenuImageManager';
 import './styles.css';
 import './language.css';
 import './responsive.css';
@@ -37,6 +38,7 @@ root.render(
         <GoogleOAuthProvider clientId={googleClientId}>
           <AuthProvider>
             <App />
+            <MenuImageManager />
           </AuthProvider>
         </GoogleOAuthProvider>
       )}
