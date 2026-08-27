@@ -148,7 +148,8 @@ async function getAnalytics({ tenantId, branchId = null, from, to }) {
       FROM orders o LEFT JOIN users u ON u.id=o."waiterUserId" JOIN branches b ON b.id=o."branchId"
       WHERE o."tenantId"=:tenantId ${branchOrderFilter} AND o."orderType"='RESTAURANT'
         AND (o.status IN ('OPEN','SERVED','AWAITING_PAYMENT') OR (o.status='PAID' AND DATE(timezone(COALESCE(b.timezone,'Asia/Kolkata'),COALESCE(o."paidAt",o."createdAt"))) BETWEEN CAST(:from AS date) AND CAST(:to AS date)))
-      GROUP BY o."waiterUserId",u.name,u.email ORDER BY "salesMinor"::numeric DESC`, replacements),
+      GROUP BY o."waiterUserId",u.name,u.email
+      ORDER BY COALESCE(SUM(o."totalMinor") FILTER (WHERE o.status='PAID'),0) DESC`, replacements),
 
     select(`SELECT COALESCE(SUM(e."amountMinor"),0)::text AS "expenseMinor", COUNT(*)::int AS "expenseCount"
       FROM branch_expenses e WHERE e."tenantId"=:tenantId ${branchExpenseFilter} AND e.status='POSTED'
