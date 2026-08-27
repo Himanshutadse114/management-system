@@ -9,19 +9,14 @@ import './styles.css';
 import './language.css';
 import './responsive.css';
 import './simple-ui.css';
+import './simple-polish.css';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 function publicMenuToken() {
   if (typeof window === 'undefined') return null;
-
-  // Render-safe public links use the site root with a query parameter so they
-  // work even when the Static Site SPA rewrite was not configured.
   const queryToken = new URLSearchParams(window.location.search).get('menu');
   if (queryToken) return queryToken.trim() || null;
-
-  // Keep supporting the cleaner /menu/:token route when the Render rewrite
-  // /* -> /index.html is configured.
   const match = window.location.pathname.match(/^\/menu\/([^/]+)\/?$/);
   if (!match) return null;
   try { return decodeURIComponent(match[1]); } catch (_) { return match[1]; }
