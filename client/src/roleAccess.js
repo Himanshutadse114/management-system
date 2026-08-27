@@ -1,20 +1,31 @@
 export const ROLE_LABELS = Object.freeze({
   BRANCH_MANAGER: 'Branch Manager',
-  INVENTORY_MANAGER: 'Inventory Manager',
+  INVENTORY_MANAGER: 'Stock Manager',
   CASHIER: 'Cashier',
   WAITER: 'Waiter',
   AUDITOR: 'Auditor'
 });
 
 export const MODULES = Object.freeze({
-  BRANCH_OVERVIEW: 'Branch Overview',
-  INVENTORY: 'Inventory',
-  SALES: 'Sales & Orders',
-  RESTAURANT_MANAGER: 'Restaurant Management',
-  CASHIER: 'Cashier POS',
-  WAITER: 'Table Service',
-  ANALYTICS: 'Analytics',
+  BRANCH_OVERVIEW: 'Home',
+  INVENTORY: 'Stock',
+  SALES: 'Sales',
+  RESTAURANT_MANAGER: 'Restaurant',
+  CASHIER: 'Billing',
+  WAITER: 'Take Orders',
+  ANALYTICS: 'Sales & Profit',
   REPORTS: 'Reports'
+});
+
+export const MODULE_DESCRIPTIONS = Object.freeze({
+  [MODULES.BRANCH_OVERVIEW]: 'See your branches and choose what you want to do.',
+  [MODULES.INVENTORY]: 'Check stock, add purchases and record wastage or adjustments.',
+  [MODULES.SALES]: 'Create counter sales and see completed sales for your branch.',
+  [MODULES.RESTAURANT_MANAGER]: 'Manage restaurant orders, tables, QR menu and bills.',
+  [MODULES.CASHIER]: 'Collect restaurant bills and create counter sales.',
+  [MODULES.WAITER]: 'Choose a table, add items and send the bill to the cashier.',
+  [MODULES.ANALYTICS]: 'See sales, expenses and profit in simple numbers.',
+  [MODULES.REPORTS]: 'Create and download branch reports.'
 });
 
 const MODULE_ORDER = [
