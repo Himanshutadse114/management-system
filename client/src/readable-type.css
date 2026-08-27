@@ -1,0 +1,381 @@
+/*
+  Readable type scale
+  Loaded last so legacy module styles cannot shrink everyday UI text.
+  No behaviour, permissions or feature logic changes here.
+*/
+
+:root {
+  --type-xs: 12px;
+  --type-sm: 13px;
+  --type-md: 15px;
+  --type-lg: 17px;
+  --type-xl: 20px;
+  --type-2xl: 26px;
+  --type-3xl: 34px;
+}
+
+html { font-size: 16px; }
+body { font-size: var(--type-md) !important; line-height: 1.5 !important; }
+button, input, select, textarea { font-size: 14px !important; }
+
+/* Main navigation and shell */
+.scorm-brand-name,
+.focused-brand strong { font-size: 16px !important; }
+.brand-copy small,
+.focused-brand small { font-size: 12px !important; }
+.scorm-nav-section,
+.focused-nav-label { font-size: 12px !important; }
+.scorm-nav-item,
+.focused-nav button,
+.focused-nav button strong { font-size: 15px !important; }
+.scorm-nav-item,
+.focused-nav button { min-height: 50px !important; }
+.status-title,
+.focused-sidebar-foot strong { font-size: 13px !important; }
+.status-copy,
+.focused-sidebar-foot small { font-size: 12px !important; }
+.topbar-context,
+.focused-context { font-size: 14px !important; }
+.focused-user span { font-size: 13px !important; }
+.focused-user small { font-size: 12px !important; }
+.scorm-sidebar-switch,
+.focused-signout,
+.scorm-theme-toggle,
+.focused-theme,
+.sa-theme-toggle { font-size: 13px !important; }
+
+/* Shared page hierarchy */
+.scorm-display,
+.inventory-hero h2,
+.sales-hero h2,
+.restaurant-hero h2,
+.analytics-hero h2,
+.reports-hero h2,
+.staff-hero h2 { font-size: clamp(28px, 2.2vw, 36px) !important; line-height: 1.15 !important; }
+
+.scorm-page-hero h1,
+.focused-overview-hero h1,
+.waiter-head h1,
+.cashier-head h1 { font-size: clamp(28px, 2vw, 34px) !important; line-height: 1.18 !important; }
+
+.page-hero-copy p,
+.focused-overview-hero p,
+.inventory-hero p,
+.sales-hero p,
+.restaurant-hero p,
+.analytics-hero p,
+.reports-hero p,
+.staff-hero p,
+.waiter-head p,
+.cashier-head p { font-size: 15px !important; line-height: 1.6 !important; }
+
+.scorm-eyebrow,
+.inventory-mini,
+.sales-mini,
+.restaurant-mini,
+.analytics-mini,
+.reports-mini,
+.staff-mini,
+.waiter-kicker,
+.cashier-kicker,
+.focused-kicker,
+.focused-section-title span { font-size: 12px !important; }
+
+.scorm-panel-header h3,
+.inventory-panel-head h3,
+.pos-toolbar h3,
+.cart-head h3,
+.sales-history-head h3,
+.restaurant-panel-head h3,
+.analytics-panel-head h3,
+.reports-panel-head h3,
+.staff-panel-head h3,
+.waiter-section-head h2,
+.cashier-panel-head h2,
+.focused-section-title h2 { font-size: 20px !important; line-height: 1.25 !important; }
+
+/* Branch manager home */
+.focused-branch-grid article > div:nth-child(2) > span { font-size: 12px !important; }
+.focused-branch-grid article > div:nth-child(2) > strong { font-size: 15px !important; }
+.focused-branch-grid article > div:nth-child(2) > small { font-size: 12px !important; }
+.focused-active,
+.focused-live { font-size: 12px !important; }
+.focused-tool-grid strong { font-size: 15px !important; }
+.focused-tool-grid small { font-size: 13px !important; line-height: 1.45 !important; }
+.focused-role-note strong { font-size: 14px !important; }
+.focused-role-note span { font-size: 13px !important; }
+
+/* Buttons and form controls */
+.scorm-button-primary,
+.scorm-button-secondary,
+.waiter-primary,
+.cashier-primary,
+.checkout-button,
+.order-submit,
+.restaurant-submit,
+.report-generate,
+.staff-submit,
+.inventory-submit,
+.waiter-head-actions button,
+.cashier-head-actions button,
+.qr-actions button,
+.qr-actions a { font-size: 14px !important; }
+
+label,
+label > span,
+.inventory-form label,
+.restaurant-form label,
+.report-builder label,
+.staff-form label,
+.analytics-controls label { font-size: 13px !important; }
+
+input,
+select,
+textarea,
+.inventory-scope-inputs select,
+.inventory-form input,
+.inventory-form select,
+.inventory-form textarea,
+.sales-scope select,
+.checkout-fields input,
+.checkout-fields select,
+.pos-search input,
+.restaurant-scope select,
+.restaurant-form input,
+.restaurant-form select,
+.restaurant-form textarea,
+.restaurant-search input,
+.analytics-controls select,
+.analytics-controls input,
+.expense-form input,
+.expense-form textarea,
+.report-builder select,
+.report-builder input,
+.staff-scope select,
+.staff-form input,
+.staff-form select,
+.staff-search input,
+.waiter-head-actions select,
+.waiter-search input,
+.cashier-head-actions select,
+.cashier-search input,
+.cashier-field input,
+.cashier-field select,
+.cashier-payment-select select { font-size: 14px !important; min-height: 46px !important; }
+
+/* Metrics and dashboard cards */
+.scorm-metric-value,
+.inventory-metric strong,
+.sales-stat strong,
+.analytics-metric strong,
+.cashier-stats article strong { font-size: 22px !important; }
+.scorm-metric-label,
+.inventory-metric span,
+.sales-stat span,
+.analytics-metric span,
+.cashier-stats article span { font-size: 13px !important; }
+.analytics-metric small,
+.cashier-stats article small { font-size: 12px !important; }
+
+/* Inventory */
+.inventory-scope-copy strong { font-size: 16px !important; }
+.inventory-scope-copy span,
+.inventory-branch-note { font-size: 13px !important; }
+.inventory-tabs button { font-size: 14px !important; }
+.inventory-table-wrap th,
+.inventory-table-wrap td { font-size: 13px !important; }
+.product-cell strong,
+.product-list-row strong { font-size: 14px !important; }
+.product-cell span,
+.product-list-row span,
+.history-row span { font-size: 12px !important; }
+.inventory-subhead { font-size: 14px !important; }
+.inventory-subhead span,
+.inventory-form label small { font-size: 12px !important; }
+
+/* Sales */
+.sales-scope label span { font-size: 13px !important; }
+.pos-product-top strong { font-size: 15px !important; }
+.pos-product-top span { font-size: 13px !important; }
+.pos-product-top small { font-size: 12px !important; }
+.pos-prices button span { font-size: 12px !important; }
+.pos-prices button strong { font-size: 14px !important; }
+.cart-line-copy strong { font-size: 14px !important; }
+.cart-line-copy span { font-size: 12px !important; }
+.cart-totals span { font-size: 13px !important; }
+.cart-totals strong { font-size: 14px !important; }
+.grand-total span { font-size: 15px !important; }
+.grand-total strong { font-size: 20px !important; }
+.sales-table th,
+.sales-table td { font-size: 13px !important; }
+
+/* Restaurant manager */
+.restaurant-tabs button { font-size: 14px !important; }
+.service-controls label span { font-size: 13px !important; }
+.service-product-copy strong { font-size: 15px !important; }
+.service-product-copy span { font-size: 13px !important; }
+.service-product-copy small { font-size: 12px !important; }
+.service-price-buttons button span { font-size: 12px !important; }
+.service-price-buttons button strong { font-size: 14px !important; }
+.draft-line strong,
+.active-order-top strong { font-size: 14px !important; }
+.draft-line span,
+.active-order-top small,
+.active-order-lines { font-size: 12px !important; }
+.active-order-actions button { font-size: 13px !important; }
+.qr-card strong,
+.menu-admin-row strong { font-size: 14px !important; }
+.qr-card span,
+.qr-card small,
+.menu-admin-row span { font-size: 12px !important; }
+
+/* Waiter */
+.waiter-section-head small { font-size: 13px !important; }
+.waiter-table strong { font-size: 16px !important; }
+.waiter-table span,
+.waiter-table small { font-size: 13px !important; line-height: 1.4 !important; }
+.waiter-product-copy strong { font-size: 15px !important; }
+.waiter-product-copy span { font-size: 13px !important; }
+.waiter-price-list button span { font-size: 12px !important; }
+.waiter-price-list button strong { font-size: 14px !important; }
+.waiter-draft-line strong,
+.waiter-order-top strong { font-size: 14px !important; }
+.waiter-draft-line span,
+.waiter-order-top small,
+.waiter-order-lines,
+.waiter-awaiting { font-size: 12px !important; }
+.waiter-total span { font-size: 14px !important; }
+.waiter-total strong { font-size: 20px !important; }
+.waiter-order-actions button { font-size: 13px !important; }
+
+/* Cashier */
+.cashier-product-copy strong,
+.cashier-settlement-top strong,
+.cashier-cart-lines strong,
+.cashier-recent strong { font-size: 14px !important; }
+.cashier-product-copy span,
+.cashier-cart-lines span,
+.cashier-recent span,
+.cashier-settlement-lines { font-size: 12px !important; }
+.cashier-price-list button span { font-size: 12px !important; }
+.cashier-price-list button strong { font-size: 14px !important; }
+.cashier-cart-total span { font-size: 14px !important; }
+.cashier-cart-total strong { font-size: 20px !important; }
+
+/* Analytics */
+.analytics-controls label span { font-size: 13px !important; }
+.analytics-branch-row strong,
+.analytics-product-row strong,
+.analytics-low-stock strong { font-size: 14px !important; }
+.analytics-branch-row span,
+.analytics-product-row span,
+.analytics-low-stock span { font-size: 12px !important; }
+.analytics-payment-grid span,
+.alcohol-mix span,
+.expense-mix span,
+.control-cards span { font-size: 12px !important; }
+.analytics-payment-grid strong,
+.alcohol-mix strong,
+.expense-mix strong,
+.control-cards strong { font-size: 16px !important; }
+.analytics-payment-grid small,
+.alcohol-mix small,
+.expense-mix small,
+.control-cards small { font-size: 12px !important; }
+.analytics-waiter-head,
+.analytics-waiter-row { font-size: 13px !important; }
+
+/* Reports */
+.report-card strong { font-size: 14px !important; }
+.report-card span,
+.report-description,
+.report-language-note { font-size: 12px !important; line-height: 1.5 !important; }
+.report-history-head,
+.report-history-row { font-size: 13px !important; }
+.report-history-main strong { font-size: 14px !important; }
+.report-history-main span { font-size: 12px !important; }
+
+/* Staff */
+.staff-row strong { font-size: 14px !important; }
+.staff-row span,
+.staff-role-note { font-size: 12px !important; }
+.staff-status,
+.staff-access-action { font-size: 12px !important; }
+
+/* Login */
+.sa-top-note { font-size: 12px !important; }
+.sa-kicker,
+.sa-form-kicker,
+.sa-google-label,
+.sa-notice-title { font-size: 12px !important; }
+.sa-copy { font-size: 15px !important; }
+.sa-point { font-size: 13px !important; }
+.sa-notice { font-size: 13px !important; }
+.sa-form-title { font-size: 34px !important; }
+.sa-form-sub { font-size: 14px !important; }
+.sa-tab { font-size: 13px !important; }
+.sa-google-hint { font-size: 12px !important; }
+.sa-divider { font-size: 12px !important; }
+.sa-access-grid strong { font-size: 14px !important; }
+.sa-access-grid span { font-size: 12px !important; }
+
+/* Public menu */
+.public-menu-brand strong { font-size: 16px !important; }
+.public-menu-brand span,
+.public-menu-table span,
+.public-menu-table small { font-size: 12px !important; }
+.public-menu-table strong { font-size: 16px !important; }
+.public-menu-hero-copy h1 { font-size: clamp(30px, 6vw, 44px) !important; }
+.public-menu-hero-copy p { font-size: 15px !important; }
+.public-menu-sections button { font-size: 13px !important; }
+.public-menu-section-head h2 { font-size: 22px !important; }
+.public-menu-card h3 { font-size: 17px !important; }
+.public-menu-brandline,
+.public-menu-card p,
+.public-menu-prices span { font-size: 13px !important; }
+.public-menu-prices strong { font-size: 15px !important; }
+
+@media (max-width: 760px) {
+  body { font-size: 15px !important; }
+  .scorm-display,
+  .inventory-hero h2,
+  .sales-hero h2,
+  .restaurant-hero h2,
+  .analytics-hero h2,
+  .reports-hero h2,
+  .staff-hero h2,
+  .waiter-head h1,
+  .cashier-head h1,
+  .focused-overview-hero h1 { font-size: 26px !important; }
+
+  .page-hero-copy p,
+  .inventory-hero p,
+  .sales-hero p,
+  .restaurant-hero p,
+  .analytics-hero p,
+  .reports-hero p,
+  .staff-hero p,
+  .waiter-head p,
+  .cashier-head p { font-size: 14px !important; }
+
+  .scorm-mobile-tab,
+  .focused-mobile-tabs button { font-size: 12px !important; }
+
+  button,
+  input,
+  select,
+  textarea { font-size: 14px !important; }
+}
+
+@media (max-width: 380px) {
+  .scorm-display,
+  .inventory-hero h2,
+  .sales-hero h2,
+  .restaurant-hero h2,
+  .analytics-hero h2,
+  .reports-hero h2,
+  .staff-hero h2,
+  .waiter-head h1,
+  .cashier-head h1,
+  .focused-overview-hero h1 { font-size: 24px !important; }
+}
