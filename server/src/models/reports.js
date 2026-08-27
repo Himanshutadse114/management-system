@@ -16,6 +16,8 @@ const GeneratedReport = sequelize.models.GeneratedReport || sequelize.define('Ge
   rangeTo: { type: DataTypes.DATEONLY, allowNull: true },
   status: { type: DataTypes.STRING(24), allowNull: false, defaultValue: 'GENERATING' },
   objectKey: { type: DataTypes.TEXT, allowNull: true },
+  storageMode: { type: DataTypes.STRING(24), allowNull: true },
+  fileData: { type: DataTypes.BLOB, allowNull: true },
   fileName: { type: DataTypes.STRING(240), allowNull: true },
   contentType: { type: DataTypes.STRING(120), allowNull: true },
   sizeBytes: { type: DataTypes.BIGINT, allowNull: true },
