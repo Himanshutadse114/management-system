@@ -12,6 +12,7 @@ import './simple-ui.css';
 import './simple-polish.css';
 import './readable-type.css';
 import './deva-brand.css';
+import './desktop-shell-fix.css';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
