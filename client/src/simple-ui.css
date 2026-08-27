@@ -1,0 +1,769 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/*
+  Simple UI layer
+  ----------------
+  Loaded after all existing styles. It changes presentation only: no feature,
+  API, permission, calculation or workflow is changed here.
+*/
+
+:root {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --simple-red: #C8102E;
+  --simple-red-dark: #9D0B24;
+  --simple-black: #111111;
+  --simple-white: #FFFFFF;
+  --simple-bg: #F6F6F6;
+  --simple-soft: #FAFAFA;
+  --simple-line: #E2E2E2;
+  --simple-muted: #666666;
+  --simple-green: #16843D;
+
+  /* Map the old accent system to the new flat red system. */
+  --ops-orange: #C8102E;
+  --ops-orange-strong: #C8102E;
+  --ops-orange-hover: #9D0B24;
+  --ops-orange-dark: #FFFFFF;
+  --ops-orange-soft: rgba(200, 16, 46, .08);
+  --ops-orange-soft-strong: rgba(200, 16, 46, .12);
+  --ops-orange-line: rgba(200, 16, 46, .38);
+  --ops-orange-line-soft: rgba(200, 16, 46, .20);
+  --ops-bg: #F6F6F6;
+  --ops-bg-deep: #111111;
+  --ops-surface: #FFFFFF;
+  --ops-surface-1: #FFFFFF;
+  --ops-surface-2: #FAFAFA;
+  --ops-surface-3: #F2F2F2;
+  --ops-text: #111111;
+  --ops-body: #3F3F3F;
+  --ops-muted: #6B6B6B;
+  --ops-line: #E2E2E2;
+  --ops-line-soft: #EEEEEE;
+}
+
+html, body, #root { min-width: 320px; min-height: 100%; }
+body { margin: 0; overflow-x: hidden; background: var(--simple-bg); color: var(--simple-black); }
+body, button, input, select, textarea { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif !important; }
+button, input, select, textarea { font-size: 14px; }
+button { -webkit-tap-highlight-color: transparent; }
+
+/* No gradients anywhere in the product UI. */
+.scorm-editorial,
+.scorm-editorial *,
+.scorm-auth-workbench,
+.scorm-auth-workbench *,
+.focused-shell,
+.focused-shell *,
+.focused-single,
+.focused-single *,
+.public-menu-page,
+.public-menu-page * {
+  background-image: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shared controls                                                            */
+/* -------------------------------------------------------------------------- */
+
+.scorm-button-primary,
+.waiter-primary,
+.cashier-primary,
+.checkout-button,
+.order-submit,
+.restaurant-submit,
+.report-generate,
+.staff-submit,
+.inventory-submit {
+  min-height: 44px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--simple-red) !important;
+  background: var(--simple-red) !important;
+  color: var(--simple-white) !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.scorm-button-primary:hover:not(:disabled),
+.waiter-primary:hover:not(:disabled),
+.cashier-primary:hover:not(:disabled),
+.checkout-button:hover:not(:disabled),
+.order-submit:hover:not(:disabled) {
+  background: var(--simple-red-dark) !important;
+  border-color: var(--simple-red-dark) !important;
+  transform: none !important;
+}
+
+.scorm-button-secondary,
+.focused-theme,
+.focused-signout,
+.scorm-theme-toggle,
+.sa-theme-toggle,
+.waiter-head-actions button,
+.cashier-head-actions button,
+.qr-actions button,
+.qr-actions a {
+  min-height: 42px !important;
+  border-radius: 8px !important;
+  border: 1px solid #D8D8D8 !important;
+  background: var(--simple-white) !important;
+  color: var(--simple-black) !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+input,
+select,
+textarea,
+.inventory-scope-inputs select,
+.inventory-form input,
+.inventory-form select,
+.inventory-form textarea,
+.sales-scope select,
+.checkout-fields input,
+.checkout-fields select,
+.pos-search input,
+.restaurant-scope select,
+.restaurant-form input,
+.restaurant-form select,
+.restaurant-form textarea,
+.restaurant-search input,
+.analytics-controls select,
+.analytics-controls input,
+.expense-form input,
+.expense-form textarea,
+.report-builder select,
+.report-builder input,
+.staff-scope select,
+.staff-form input,
+.staff-form select,
+.staff-search input,
+.waiter-head-actions select,
+.waiter-search input,
+.cashier-head-actions select,
+.cashier-search input,
+.cashier-field input,
+.cashier-field select,
+.cashier-payment-select select {
+  min-height: 44px !important;
+  border-radius: 8px !important;
+  border: 1px solid #D7D7D7 !important;
+  background: var(--simple-white) !important;
+  color: var(--simple-black) !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--simple-red) !important;
+  box-shadow: 0 0 0 3px rgba(200,16,46,.10) !important;
+  outline: none !important;
+}
+
+label,
+label span {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Authentication                                                             */
+/* -------------------------------------------------------------------------- */
+
+.scorm-auth-workbench {
+  min-height: 100dvh !important;
+  height: auto !important;
+  overflow: auto !important;
+  background: var(--simple-bg) !important;
+  color: var(--simple-black) !important;
+}
+
+.sa-shell { width: min(960px, calc(100% - 32px)) !important; padding: 24px 0 !important; }
+.sa-top-note { color: var(--simple-muted) !important; font-size: 11px !important; text-transform: none !important; letter-spacing: 0 !important; }
+.sa-card {
+  min-height: 560px !important;
+  max-height: none !important;
+  border: 1px solid #DADADA !important;
+  border-top: 4px solid var(--simple-red) !important;
+  border-radius: 12px !important;
+  background: var(--simple-white) !important;
+  box-shadow: none !important;
+}
+.sa-brand-panel {
+  background: var(--simple-black) !important;
+  color: var(--simple-white) !important;
+  border-right: 0 !important;
+  padding: 46px !important;
+}
+.sa-brand-panel::after { display: none !important; }
+.sa-mark { background: var(--simple-red) !important; color: #fff !important; border: 0 !important; box-shadow: none !important; }
+.sa-kicker { margin-top: 24px !important; color: #FF8699 !important; font-size: 11px !important; letter-spacing: 0 !important; text-transform: none !important; }
+.sa-title { color: #fff !important; font-size: clamp(42px, 5vw, 60px) !important; line-height: .98 !important; }
+.sa-title span { color: #FF8699 !important; }
+.sa-copy { color: #E5E5E5 !important; font-size: 14px !important; line-height: 1.6 !important; }
+.sa-point { color: #D3D3D3 !important; font-size: 12px !important; text-transform: none !important; letter-spacing: 0 !important; }
+.sa-point-dot { background: var(--simple-red) !important; box-shadow: none !important; }
+.sa-notice { border-color: #333 !important; background: #1D1D1D !important; color: #E7E7E7 !important; font-size: 12px !important; }
+.sa-notice-title { color: #fff !important; font-size: 11px !important; text-transform: none !important; letter-spacing: 0 !important; }
+.sa-form-panel { background: var(--simple-white) !important; color: var(--simple-black) !important; padding: 42px !important; }
+.sa-form-kicker { color: var(--simple-red) !important; font-size: 11px !important; text-transform: none !important; letter-spacing: 0 !important; }
+.sa-form-title { color: var(--simple-black) !important; font-size: 32px !important; }
+.sa-form-sub { color: var(--simple-muted) !important; font-size: 13px !important; }
+.sa-tabs { border-color: #DDD !important; background: #F7F7F7 !important; }
+.sa-tab { color: #555 !important; font-size: 12px !important; }
+.sa-tab.is-active { background: var(--simple-red) !important; color: #fff !important; border-color: var(--simple-red) !important; }
+.sa-google-label { color: #555 !important; font-size: 11px !important; text-transform: none !important; letter-spacing: 0 !important; }
+.sa-google-button { background: #fff !important; border-color: #DDD !important; }
+.sa-google-hint { color: #777 !important; font-size: 11px !important; }
+.sa-divider { color: #777 !important; font-size: 10px !important; text-transform: none !important; letter-spacing: 0 !important; }
+.sa-access-grid > div { background: #FAFAFA !important; border-color: #E3E3E3 !important; }
+.sa-access-grid strong { color: #111 !important; font-size: 12px !important; }
+.sa-access-grid span { color: #666 !important; font-size: 11px !important; }
+
+/* -------------------------------------------------------------------------- */
+/* Admin shell                                                                */
+/* -------------------------------------------------------------------------- */
+
+.scorm-editorial { background: var(--simple-bg) !important; color: var(--simple-black) !important; }
+.scorm-sidebar,
+.scorm-mobile-drawer {
+  background: var(--simple-black) !important;
+  border-color: #242424 !important;
+  box-shadow: none !important;
+}
+.scorm-brand-name { color: #fff !important; font-size: 14px !important; }
+.scorm-brand-name em { color: #FF6F86 !important; }
+.brand-copy small { color: #AFAFAF !important; font-size: 10px !important; }
+.scorm-nav-section { color: #8F8F8F !important; font-size: 10px !important; text-transform: none !important; letter-spacing: 0 !important; }
+.scorm-nav-item { color: #D5D5D5 !important; min-height: 44px !important; border-radius: 8px !important; font-size: 13px !important; }
+.scorm-nav-item:hover { background: #1C1C1C !important; color: #fff !important; border-color: #2B2B2B !important; }
+.scorm-nav-active { background: var(--simple-red) !important; border-color: var(--simple-red) !important; color: #fff !important; box-shadow: none !important; }
+.scorm-nav-active .scorm-nav-icon,
+.scorm-nav-icon { background: transparent !important; border: 0 !important; color: currentColor !important; }
+.scorm-nav-chevron { color: currentColor !important; }
+.scorm-sidebar-footer,
+.scorm-brand-wrap { border-color: #2A2A2A !important; }
+.scorm-status-card { background: #181818 !important; border-color: #2D2D2D !important; }
+.status-title { color: #fff !important; font-size: 12px !important; }
+.status-copy { color: #9A9A9A !important; font-size: 10px !important; }
+.scorm-sidebar-switch { background: #181818 !important; border-color: #333 !important; color: #E7E7E7 !important; }
+.scorm-topbar { background: #fff !important; border-color: #E2E2E2 !important; box-shadow: none !important; }
+.topbar-context { color: #555 !important; font-size: 12px !important; }
+.scorm-main { background: var(--simple-bg) !important; }
+.mobile-backdrop { background: rgba(0,0,0,.55) !important; }
+
+/* -------------------------------------------------------------------------- */
+/* Focused staff shell                                                        */
+/* -------------------------------------------------------------------------- */
+
+.focused-shell,
+.focused-single { background: var(--simple-bg) !important; color: var(--simple-black) !important; }
+.focused-sidebar,
+.focused-mobile-drawer { background: var(--simple-black) !important; border-color: #282828 !important; }
+.focused-brand { color: #fff !important; }
+.focused-brand-mark { background: var(--simple-red) !important; color: #fff !important; }
+.focused-brand strong { font-size: 13px !important; }
+.focused-brand small { color: #AAA !important; font-size: 10px !important; }
+.focused-brand em { color: #FF6F86 !important; }
+.focused-nav-label { color: #888 !important; font-size: 10px !important; letter-spacing: 0 !important; }
+.focused-nav button { min-height: 44px !important; color: #D0D0D0 !important; font-size: 13px !important; }
+.focused-nav button strong { font-size: 12px !important; }
+.focused-nav button:hover { background: #1C1C1C !important; color: #fff !important; }
+.focused-nav button.active { background: var(--simple-red) !important; border-color: var(--simple-red) !important; color: #fff !important; }
+.focused-topbar,
+.focused-single-top { background: #fff !important; border-color: #E2E2E2 !important; }
+.focused-main,
+.focused-single-main { background: var(--simple-bg) !important; }
+.focused-context { color: #555 !important; font-size: 12px !important; }
+.focused-user span { color: #111 !important; font-size: 11px !important; }
+.focused-user small { color: #777 !important; font-size: 9px !important; }
+.focused-sidebar-foot { border-color: #292929 !important; }
+.focused-sidebar-foot strong { color: #fff !important; font-size: 11px !important; }
+.focused-sidebar-foot small { color: #999 !important; font-size: 9px !important; }
+.focused-overview-hero,
+.focused-quick,
+.focused-role-note,
+.focused-branch-grid article {
+  background: #fff !important;
+  border-color: #E2E2E2 !important;
+  box-shadow: none !important;
+}
+.focused-kicker,
+.focused-section-title span,
+.focused-branch-grid article>div:nth-child(2)>span { color: var(--simple-red) !important; font-size: 10px !important; letter-spacing: 0 !important; }
+.focused-overview-hero h1 { color: #111 !important; font-size: 28px !important; }
+.focused-overview-hero p { color: #555 !important; font-size: 13px !important; }
+.focused-live { border-color: #E5E5E5 !important; background: #F8F8F8 !important; color: #333 !important; font-size: 10px !important; }
+.focused-tool-grid button { background: #fff !important; border-color: #E2E2E2 !important; color: #111 !important; }
+.focused-tool-grid button:hover { border-color: var(--simple-red) !important; background: #FFF8F9 !important; }
+.focused-tool-grid strong { font-size: 12px !important; }
+.focused-tool-grid small { font-size: 10px !important; color: #666 !important; }
+
+/* -------------------------------------------------------------------------- */
+/* Page hierarchy                                                             */
+/* -------------------------------------------------------------------------- */
+
+.platform-page,
+.inventory-page,
+.sales-page,
+.restaurant-page,
+.analytics-page,
+.reports-page,
+.staff-page {
+  color: #111 !important;
+}
+
+.scorm-page-hero,
+.inventory-hero,
+.sales-hero,
+.restaurant-hero,
+.analytics-hero,
+.reports-hero,
+.staff-hero {
+  background: transparent !important;
+  border-color: #DADADA !important;
+  box-shadow: none !important;
+}
+
+.scorm-display,
+.inventory-hero h2,
+.sales-hero h2,
+.restaurant-hero h2,
+.analytics-hero h2,
+.reports-hero h2,
+.staff-hero h2 {
+  color: #111 !important;
+  font-weight: 750 !important;
+  letter-spacing: -.03em !important;
+}
+
+.wb-accent,
+.scorm-eyebrow,
+.inventory-mini,
+.sales-mini,
+.restaurant-mini,
+.analytics-mini,
+.reports-mini,
+.staff-mini,
+.waiter-kicker,
+.cashier-kicker,
+.waiter-section-head span,
+.cashier-panel-head span {
+  color: var(--simple-red) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.page-hero-copy p,
+.inventory-hero p,
+.sales-hero p,
+.restaurant-hero p,
+.analytics-hero p,
+.reports-hero p,
+.staff-hero p {
+  color: #555 !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+.scorm-health-pill { background: #F7F7F7 !important; color: #444 !important; border-color: #DDD !important; box-shadow: none !important; }
+.scorm-health-dot { background: var(--simple-green) !important; box-shadow: none !important; }
+
+/* Flat cards everywhere */
+.scorm-panel,
+.scorm-metric-card,
+.inventory-scope-card,
+.inventory-metric,
+.inventory-panel,
+.sales-scope,
+.sales-stat,
+.pos-catalogue,
+.pos-cart,
+.sales-history,
+.restaurant-scope,
+.restaurant-panel,
+.analytics-controls,
+.analytics-metric,
+.analytics-panel,
+.reports-panel,
+.staff-scope,
+.staff-panel,
+.staff-empty,
+.waiter-head,
+.waiter-section,
+.cashier-head,
+.cashier-panel,
+.cashier-stats article {
+  background: #fff !important;
+  border-color: #E2E2E2 !important;
+  box-shadow: none !important;
+}
+
+.scorm-panel-header,
+.inventory-panel-head,
+.pos-toolbar,
+.cart-head,
+.sales-history-head,
+.restaurant-panel-head,
+.analytics-panel-head,
+.reports-panel-head,
+.staff-panel-head,
+.cashier-panel-head {
+  background: #FAFAFA !important;
+  border-color: #E2E2E2 !important;
+}
+
+.scorm-panel-header h3,
+.inventory-panel-head h3,
+.pos-toolbar h3,
+.cart-head h3,
+.sales-history-head h3,
+.restaurant-panel-head h3,
+.analytics-panel-head h3,
+.reports-panel-head h3,
+.staff-panel-head h3,
+.waiter-section-head h2,
+.cashier-panel-head h2 {
+  color: #111 !important;
+  font-size: 18px !important;
+}
+
+/* Make tiny informational text readable */
+.scorm-metric-label,
+.inventory-scope-copy span,
+.inventory-branch-note,
+.inventory-form label,
+.inventory-form label small,
+.product-cell span,
+.history-row span,
+.sales-stat span,
+.pos-product-top span,
+.pos-product-top small,
+.cart-line-copy span,
+.sales-table td,
+.restaurant-form label,
+.service-controls label,
+.service-product-copy span,
+.service-product-copy small,
+.active-order-top small,
+.menu-admin-row span,
+.analytics-controls label,
+.analytics-metric span,
+.analytics-metric small,
+.analytics-branch-row span,
+.analytics-product-row span,
+.report-builder label,
+.report-card span,
+.report-history-row,
+.staff-form label,
+.staff-row span {
+  font-size: 10px !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Waiter: designed as a simple 3-step job flow                                */
+/* -------------------------------------------------------------------------- */
+
+.waiter-page { gap: 14px !important; }
+.waiter-head { padding: 20px !important; }
+.waiter-head h1 { color: #111 !important; font-size: 26px !important; }
+.waiter-head p { color: #555 !important; font-size: 13px !important; }
+.waiter-section { padding: 16px !important; }
+.waiter-section-head h2 { margin-top: 4px !important; }
+.waiter-section-head small { color: #666 !important; font-size: 11px !important; }
+.waiter-tables { gap: 10px !important; }
+.waiter-table {
+  min-height: 118px !important;
+  border: 1px solid #DDD !important;
+  background: #fff !important;
+  color: #111 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+.waiter-table:hover:not(:disabled) { border-color: var(--simple-red) !important; transform: none !important; }
+.waiter-table.selected { border: 2px solid var(--simple-red) !important; box-shadow: none !important; }
+.waiter-table.occupied { background: #F3F3F3 !important; color: #777 !important; }
+.waiter-table-icon { background: #FFF1F3 !important; color: var(--simple-red) !important; }
+.waiter-table strong { font-size: 14px !important; }
+.waiter-table span, .waiter-table small { color: #666 !important; font-size: 11px !important; }
+.waiter-product,
+.waiter-draft-line,
+.waiter-order { background: #fff !important; border-color: #E0E0E0 !important; }
+.waiter-product-copy strong { color: #111 !important; font-size: 13px !important; }
+.waiter-product-copy span { color: #666 !important; font-size: 11px !important; }
+.waiter-price-list button,
+.waiter-qty button,
+.waiter-order-actions button {
+  min-height: 38px !important;
+  border-color: #D8D8D8 !important;
+  background: #fff !important;
+  color: #111 !important;
+  border-radius: 8px !important;
+}
+.waiter-price-list button:hover,
+.waiter-order-actions button.bill { border-color: var(--simple-red) !important; color: var(--simple-red) !important; background: #FFF8F9 !important; }
+.waiter-price-list button span { color: #555 !important; font-size: 10px !important; }
+.waiter-price-list button strong { color: #111 !important; font-size: 12px !important; }
+.waiter-draft-line strong { color: #111 !important; font-size: 12px !important; }
+.waiter-draft-line span { color: #666 !important; font-size: 10px !important; }
+.waiter-total span { color: #555 !important; font-size: 12px !important; }
+.waiter-total strong { color: #111 !important; }
+.waiter-order-top strong { color: #111 !important; font-size: 13px !important; }
+.waiter-order-top span { color: var(--simple-red) !important; font-size: 10px !important; }
+.waiter-order-top small,
+.waiter-order-lines { color: #666 !important; font-size: 10px !important; }
+.waiter-awaiting { color: var(--simple-red) !important; font-size: 10px !important; }
+
+/* -------------------------------------------------------------------------- */
+/* Cashier: bills first, then counter sale                                     */
+/* -------------------------------------------------------------------------- */
+
+.cashier-page { gap: 14px !important; }
+.cashier-head { padding: 20px !important; }
+.cashier-head h1 { color: #111 !important; font-size: 26px !important; }
+.cashier-head p { color: #555 !important; font-size: 13px !important; }
+.cashier-stats article span { color: #666 !important; font-size: 10px !important; letter-spacing: 0 !important; }
+.cashier-stats article strong { color: #111 !important; }
+.cashier-stats article small { color: #777 !important; font-size: 10px !important; }
+.cashier-panel { padding: 16px !important; }
+.cashier-panel-head { margin: -16px -16px 14px !important; padding: 14px 16px !important; }
+.cashier-settlements>article,
+.cashier-products>article,
+.cashier-cart-lines>div,
+.cashier-recent article { background: #fff !important; border-color: #E0E0E0 !important; }
+.cashier-settlement-top strong,
+.cashier-product-copy strong,
+.cashier-cart-lines strong,
+.cashier-recent strong { color: #111 !important; font-size: 12px !important; }
+.cashier-product-copy span,
+.cashier-cart-lines span,
+.cashier-recent span,
+.cashier-settlement-lines { color: #666 !important; font-size: 10px !important; }
+.cashier-price-list button,
+.cashier-qty button { background: #fff !important; border-color: #D8D8D8 !important; color: #111 !important; min-height: 38px !important; }
+.cashier-price-list button:hover { border-color: var(--simple-red) !important; background: #FFF8F9 !important; }
+.cashier-cart-total span { color: #555 !important; font-size: 12px !important; }
+.cashier-cart-total strong { color: #111 !important; }
+
+/* -------------------------------------------------------------------------- */
+/* Inventory / sales / restaurant / reports / staff                           */
+/* -------------------------------------------------------------------------- */
+
+.inventory-tabs,
+.restaurant-tabs { background: #fff !important; border-color: #DDD !important; }
+.inventory-tabs button,
+.restaurant-tabs button { min-height: 42px !important; color: #555 !important; font-size: 12px !important; }
+.inventory-tabs button.is-active,
+.restaurant-tabs button.is-active { background: var(--simple-red) !important; color: #fff !important; border-color: var(--simple-red) !important; }
+
+.inventory-table-wrap th,
+.sales-table th,
+.report-history-head,
+.analytics-waiter-head { background: #F6F6F6 !important; color: #555 !important; }
+.inventory-table-wrap td,
+.sales-table td,
+.report-history-row { color: #333 !important; }
+
+.product-placeholder,
+.pos-product-placeholder,
+.service-product-placeholder,
+.staff-avatar,
+.inventory-metric-icon,
+.analytics-metric-icon,
+.cart-icon,
+.scorm-action-icon {
+  background: #FFF1F3 !important;
+  color: var(--simple-red) !important;
+  border-color: #F1C7CF !important;
+}
+
+.pos-product,
+.service-product,
+.active-order,
+.qr-card,
+.report-card,
+.analytics-payment-grid>div,
+.alcohol-mix>div,
+.expense-mix>div,
+.control-cards>div,
+.staff-access-action,
+.report-description {
+  background: #fff !important;
+  border-color: #E1E1E1 !important;
+  color: #111 !important;
+}
+
+.pos-prices button,
+.service-price-buttons button,
+.report-card.active,
+.menu-price-chips small,
+.price-chips > span {
+  background: #FFF5F6 !important;
+  color: var(--simple-red) !important;
+  border-color: #F0CCD2 !important;
+}
+
+.active-order { border-left-color: var(--simple-red) !important; }
+.active-order.status-served { border-left-color: #222 !important; }
+.active-order.status-awaiting_payment { border-left-color: var(--simple-red) !important; }
+
+.analytics-bar,
+.analytics-trend-track { background: #EEEEEE !important; }
+.analytics-bar i,
+.analytics-trend-track i { background: var(--simple-red) !important; }
+
+.staff-role-note,
+.report-language-note,
+.sales-info,
+.guidance-callout { background: #FFF5F6 !important; border-color: #F0CCD2 !important; color: #444 !important; }
+
+/* -------------------------------------------------------------------------- */
+/* Public QR menu                                                             */
+/* -------------------------------------------------------------------------- */
+
+.public-menu-page { background: #F6F6F6 !important; color: #111 !important; }
+.public-menu-hero { background: #111 !important; border-bottom-color: var(--simple-red) !important; }
+.public-menu-mark { background: var(--simple-red) !important; color: #fff !important; }
+.public-menu-kicker,
+.public-menu-table span,
+.public-menu-section-head span { color: #FF8A9D !important; }
+.public-menu-toolbar { background: rgba(255,255,255,.97) !important; border-color: #DDD !important; }
+.public-menu-search input { background: #fff !important; border-color: #D8D8D8 !important; color: #111 !important; }
+.public-menu-sections button { background: #fff !important; border-color: #DDD !important; color: #444 !important; min-height: 38px !important; font-size: 11px !important; }
+.public-menu-sections button.is-active { background: var(--simple-red) !important; border-color: var(--simple-red) !important; color: #fff !important; }
+.public-menu-card { background: #fff !important; border-color: #E1E1E1 !important; box-shadow: none !important; }
+.public-menu-card.is-featured { border-color: #DFA6B0 !important; box-shadow: none !important; }
+.public-menu-card h3 { color: #111 !important; }
+.public-menu-brandline,
+.public-menu-prices strong { color: var(--simple-red) !important; }
+.public-menu-featured { background: #FFF1F3 !important; color: var(--simple-red) !important; }
+.public-menu-footer { background: #111 !important; }
+.public-menu-loading,
+.public-menu-error { background: #111 !important; }
+
+/* -------------------------------------------------------------------------- */
+/* Mobile-first safety                                                        */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 1023px) {
+  .scorm-topbar,
+  .focused-topbar { min-height: 58px !important; }
+  .scorm-main,
+  .focused-main,
+  .focused-single-main { padding-left: 14px !important; padding-right: 14px !important; }
+  .scorm-mobile-tabbar,
+  .focused-mobile-tabs { background: #111 !important; border-color: #292929 !important; box-shadow: none !important; }
+  .scorm-mobile-tab,
+  .focused-mobile-tabs button { color: #BEBEBE !important; }
+  .scorm-mobile-tab.is-active,
+  .focused-mobile-tabs button.active { background: var(--simple-red) !important; color: #fff !important; }
+}
+
+@media (max-width: 760px) {
+  .sa-shell { width: min(100% - 20px, 620px) !important; padding: 10px 0 20px !important; }
+  .sa-card { display: block !important; }
+  .sa-brand-panel { padding: 28px 22px !important; }
+  .sa-title { font-size: 38px !important; }
+  .sa-copy { font-size: 13px !important; }
+  .sa-points { display: none !important; }
+  .sa-form-panel { padding: 28px 22px !important; }
+  .sa-form-title { font-size: 27px !important; }
+  .sa-topbar { min-height: 48px !important; }
+  .sa-topbar > .sa-top-note { display: none !important; }
+
+  .focused-overview-hero { display: block !important; padding: 18px !important; }
+  .focused-live { margin-top: 14px !important; width: max-content !important; }
+
+  .waiter-head,
+  .cashier-head { padding: 16px !important; }
+  .waiter-head h1,
+  .cashier-head h1 { font-size: 23px !important; }
+  .waiter-section,
+  .cashier-panel { padding: 12px !important; }
+  .cashier-panel-head { margin: -12px -12px 12px !important; }
+
+  .inventory-page,
+  .sales-page,
+  .restaurant-page,
+  .analytics-page,
+  .reports-page,
+  .staff-page { padding-left: 10px !important; padding-right: 10px !important; }
+
+  .inventory-scope-card,
+  .sales-scope,
+  .restaurant-scope,
+  .staff-scope { grid-template-columns: 1fr !important; }
+  .inventory-scope-inputs,
+  .service-controls,
+  .analytics-controls { grid-template-columns: 1fr !important; }
+  .inventory-two-column,
+  .restaurant-two-column,
+  .reports-layout,
+  .staff-layout,
+  .analytics-grid-two,
+  .pos-layout,
+  .cashier-pos-layout,
+  .waiter-order-layout { grid-template-columns: 1fr !important; }
+  .pos-cart,
+  .cashier-cart,
+  .waiter-draft,
+  .order-draft { position: static !important; }
+
+  .form-grid.two,
+  .form-grid.three,
+  .form-grid.four,
+  .form-pair,
+  .field-pair,
+  .report-pair { grid-template-columns: 1fr !important; }
+
+  .scorm-button-primary,
+  .scorm-button-secondary,
+  .waiter-primary,
+  .cashier-primary { min-height: 46px !important; }
+}
+
+@media (max-width: 520px) {
+  .topbar-secondary,
+  .scorm-theme-toggle span:not(.theme-toggle-track),
+  .focused-theme span { display: none !important; }
+
+  .metric-grid,
+  .inventory-metrics,
+  .sales-stats,
+  .analytics-metrics,
+  .cashier-stats { grid-template-columns: 1fr 1fr !important; }
+
+  .waiter-tables { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+  .waiter-table { min-height: 108px !important; }
+  .waiter-price-list button,
+  .cashier-price-list button { min-width: calc(50% - 4px) !important; flex: 1 !important; }
+
+  .product-pos-grid,
+  .service-products,
+  .order-card-grid,
+  .qr-grid,
+  .report-card-grid,
+  .cashier-settlements { grid-template-columns: 1fr !important; }
+
+  .public-menu-card { display: block !important; }
+  .public-menu-card>img,
+  .public-menu-image-placeholder { width: 100% !important; height: 170px !important; min-height: 0 !important; }
+}
+
+@media (max-width: 380px) {
+  .metric-grid,
+  .inventory-metrics,
+  .sales-stats,
+  .analytics-metrics,
+  .cashier-stats,
+  .waiter-tables { grid-template-columns: 1fr !important; }
+  .sa-title { font-size: 34px !important; }
+  .focused-overview-hero h1 { font-size: 24px !important; }
+}
