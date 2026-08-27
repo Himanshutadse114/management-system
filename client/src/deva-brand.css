@@ -1,0 +1,99 @@
+/* Deva brand layer - loaded last. */
+
+.scorm-brand-mark,
+.focused-brand-mark,
+.sa-mark {
+  background-color: transparent !important;
+  background-image: url('/deva-mark.svg') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.scorm-brand-mark svg,
+.focused-brand-mark svg,
+.sa-mark svg {
+  opacity: 0 !important;
+}
+
+.scorm-brand-mark,
+.focused-brand-mark {
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  border-radius: 11px !important;
+}
+
+.sa-mark {
+  width: 58px !important;
+  min-width: 58px !important;
+  height: 58px !important;
+  border-radius: 14px !important;
+}
+
+/* Replace the old shell wordmark visually while leaving role labels intact. */
+.scorm-brand-name,
+.focused-brand > span:last-child > strong {
+  font-size: 0 !important;
+  line-height: 1 !important;
+}
+
+.scorm-brand-name::after,
+.focused-brand > span:last-child > strong::after {
+  content: 'Deva';
+  display: inline-block;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #FFFFFF;
+}
+
+/* Login brand title */
+.sa-title {
+  font-size: 0 !important;
+  line-height: 1 !important;
+}
+.sa-title::after {
+  content: 'Deva';
+  display: block;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(54px, 6vw, 76px);
+  line-height: .96;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: #FFFFFF;
+}
+.sa-title span { display: none !important; }
+
+/* Pending access header */
+.pending-shell .sa-top-note {
+  font-size: 0 !important;
+}
+.pending-shell .sa-top-note::after {
+  content: 'Deva';
+  font-size: 14px;
+  font-weight: 700;
+  color: #111111;
+}
+
+/* Slightly more room for the new brand on small screens. */
+@media (max-width: 760px) {
+  .scorm-brand-mark,
+  .focused-brand-mark {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+  }
+  .scorm-brand-name::after,
+  .focused-brand > span:last-child > strong::after {
+    font-size: 18px;
+  }
+  .sa-title::after {
+    font-size: 48px;
+  }
+}
