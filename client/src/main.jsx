@@ -8,6 +8,7 @@ import PublicMenu from './PublicMenu';
 import './styles.css';
 import './language.css';
 import './responsive.css';
+import './simple-ui.css';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
