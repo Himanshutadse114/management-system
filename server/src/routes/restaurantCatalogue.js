@@ -8,9 +8,15 @@ const READ_ROLES = ['BRANCH_MANAGER', 'WAITER', 'CASHIER', 'AUDITOR'];
 
 router.use(authenticate, requireApproved);
 
-function mediaUrl(objectKey) {
-  const base = String(process.env.PUBLIC_MEDIA_BASE_URL || '').trim().replace(/\/$/, '');
-  return base && objectKey ? `${base}/${objectKey}` : null;
+function mediaUrl(objectKey, productId) {
+  if (!objectKey) return null;
+  const publicBase = String(process.env.PUBLIC_MEDIA_BASE_URL || '').trim().replace(/\/$/, '');
+  if (publicBase) return `${publicBase}/${objectKey}`;
+  let backend = String(process.env.RENDER_EXTERNAL_URL || '').trim().replace(/\/$/, '');
+  if (!backend && String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+    backend = `http://localhost:${Number(process.env.PORT || 5001)}`;
+  }
+  return backend && productId ? `${backend}/api/public/products/${encodeURIComponent(productId)}/image` : null;
 }
 
 router.get('/tenants/:tenantId/branches/:branchId/catalogue', requireBranchRoles(...READ_ROLES), async (req, res, next) => {
@@ -66,7 +72,7 @@ router.get('/tenants/:tenantId/branches/:branchId/catalogue', requireBranchRoles
           productType: value.productType,
           inventoryUnit: value.inventoryUnit,
           bottleVolumeMl: value.bottleVolumeMl,
-          imageUrl: mediaUrl(value.imageObjectKey),
+          imageUrl: mediaUrl(value.imageObjectKey, value.id),
           availableQuantityBase: value.inventoryBalances?.[0]?.quantityBase || '0.000',
           priceOptions: value.priceOptions || []
         };
