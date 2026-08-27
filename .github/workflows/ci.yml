@@ -51,6 +51,7 @@ jobs:
       JWT_SECRET: test-only-jwt-secret-with-more-than-32-characters
       SUPER_ADMIN_EMAIL: superadmin@example.com
       GOOGLE_CLIENT_ID: test-client.apps.googleusercontent.com
+      STORAGE_DRIVER: local
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -61,3 +62,5 @@ jobs:
         run: find src tests -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Run critical flow tests
         run: npm test
+      - name: Generate and download a report
+        run: node tests/report-smoke.js
