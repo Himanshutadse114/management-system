@@ -10,6 +10,7 @@ import './language.css';
 import './responsive.css';
 import './simple-ui.css';
 import './simple-polish.css';
+import './readable-type.css';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
