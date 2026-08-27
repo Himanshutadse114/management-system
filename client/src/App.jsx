@@ -32,7 +32,7 @@ import AnalyticsWorkspace from './AnalyticsWorkspace';
 import ReportsWorkspace from './ReportsWorkspace';
 import FocusedWorkspaceShell from './FocusedWorkspaceShell';
 
-const THEME_KEY = 'managementSystemTheme';
+const THEME_KEY = 'managementSystemSimpleTheme';
 const SECTION_KEYS = {
   Overview: 'nav.overview',
   Tenants: 'nav.tenants',
@@ -45,9 +45,30 @@ const SECTION_KEYS = {
   Staff: 'nav.staff'
 };
 
+const SIMPLE_SECTION_LABELS = {
+  Overview: 'Home',
+  Tenants: 'Businesses',
+  Branches: 'Branches',
+  Inventory: 'Stock',
+  'Sales & Orders': 'Sales',
+  Restaurant: 'Restaurant',
+  Analytics: 'Sales & Profit',
+  Reports: 'Reports',
+  Staff: 'Staff'
+};
+
+const SIMPLE_SECTION_COPY = {
+  Inventory: 'Check stock, add purchases, manage suppliers and record wastage.',
+  'Sales & Orders': 'Create sales and review completed orders for your branches.',
+  Restaurant: 'Manage restaurant orders, tables, QR menu and bills.',
+  Analytics: 'See sales, expenses and profit in simple business numbers.',
+  Reports: 'Create and download business or branch reports.',
+  Staff: 'Add staff and choose the branch job each person can use.'
+};
+
 function readTheme() {
-  try { return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'; }
-  catch (_) { return 'dark'; }
+  try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; }
+  catch (_) { return 'light'; }
 }
 
 function usePlatformTheme() {
@@ -69,7 +90,7 @@ function getGoogleButtonWidth() {
 
 function LoginScreen() {
   const { loginWithGoogle } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [theme, toggleTheme] = usePlatformTheme();
   const [googleButtonWidth, setGoogleButtonWidth] = useState(getGoogleButtonWidth);
   const [error, setError] = useState('');
@@ -88,21 +109,35 @@ function LoginScreen() {
     finally { setBusy(false); }
   }
 
+  const english = locale === 'en';
   return <div className={`scorm-auth-workbench scorm-theme-${theme}`}>
     <div className="sa-shell">
-      <div className="sa-topbar"><div className="sa-top-note">{t('auth.top')}</div><div className="sa-top-actions"><LanguageSwitcher compact/><div className="sa-top-note">{t('auth.securityTop')}</div><ThemeToggle theme={theme} onToggle={toggleTheme} auth/></div></div>
+      <div className="sa-topbar"><div className="sa-top-note">{english ? 'Restaurant · Bar · Store Management' : t('auth.top')}</div><div className="sa-top-actions"><LanguageSwitcher compact/><ThemeToggle theme={theme} onToggle={toggleTheme} auth/></div></div>
       <main className="sa-card auth-enter">
         <section className="sa-brand-panel">
-          <div className="sa-mark"><Layers3 size={22}/></div><div className="sa-kicker">{t('auth.kicker')}</div><h1 className="sa-title">OUTLET <span>OS</span></h1><p className="sa-copy">{t('auth.copy')}</p>
-          <div className="sa-points"><div className="sa-point"><span className="sa-point-dot"/> {t('auth.point1')}</div><div className="sa-point"><span className="sa-point-dot"/> {t('auth.point2')}</div><div className="sa-point"><span className="sa-point-dot"/> {t('auth.point3')}</div></div>
-          <div className="sa-notice"><div className="sa-notice-title"><ShieldCheck size={14}/> {t('auth.secureTitle')}</div><div>{t('auth.secureBody')}</div></div>
+          <div className="sa-mark"><Layers3 size={22}/></div>
+          <div className="sa-kicker">{english ? 'Simple day-to-day management' : t('auth.kicker')}</div>
+          <h1 className="sa-title">OUTLET <span>MANAGEMENT</span></h1>
+          <p className="sa-copy">{english ? 'Manage orders, payments, stock, staff and reports from one simple system.' : t('auth.copy')}</p>
+          <div className="sa-points">
+            <div className="sa-point"><span className="sa-point-dot"/> {english ? 'Take orders and collect payments' : t('auth.point1')}</div>
+            <div className="sa-point"><span className="sa-point-dot"/> {english ? 'Keep stock and purchases in one place' : t('auth.point2')}</div>
+            <div className="sa-point"><span className="sa-point-dot"/> {english ? 'See sales, profit and reports' : t('auth.point3')}</div>
+          </div>
+          <div className="sa-notice"><div className="sa-notice-title"><ShieldCheck size={14}/> {english ? 'Secure sign in' : t('auth.secureTitle')}</div><div>{english ? 'Sign in with the Google account your admin has assigned to you. You will only see the work meant for your role.' : t('auth.secureBody')}</div></div>
         </section>
         <section className="sa-form-panel">
-          <div className="sa-form-kicker">{t('auth.platformAccess')}</div><h2 className="sa-form-title">{t('auth.signIn')}</h2><p className="sa-form-sub">{t('auth.signInCopy')}</p>
-          <div className="sa-tabs"><button type="button" className="sa-tab is-active">{t('auth.google')}</button><button type="button" className="sa-tab" disabled>{t('auth.managed')}</button></div>
+          <div className="sa-form-kicker">{english ? 'Welcome' : t('auth.platformAccess')}</div>
+          <h2 className="sa-form-title">{english ? 'Sign in' : t('auth.signIn')}</h2>
+          <p className="sa-form-sub">{english ? 'Use your assigned Google account to continue.' : t('auth.signInCopy')}</p>
           {error && <div className="sa-error">{error}</div>}
-          <div className={busy ? 'sa-google-block is-busy' : 'sa-google-block'}><div className="sa-google-label"><ShieldCheck size={13}/> {t('auth.googleAccount')}</div><div className="sa-google-button"><GoogleLogin onSuccess={handleCredential} onError={() => setError('Google Sign-In failed. Please try again.')} theme="outline" size="large" shape="rectangular" text="continue_with" width={String(googleButtonWidth)}/></div><div className="sa-google-hint">{t('auth.pendingHint')}</div></div>
-          <div className="sa-divider"><span>{t('auth.accessModel')}</span></div><div className="sa-access-grid"><div><Building2 size={16}/><strong>{t('auth.superAdmin')}</strong><span>Platform administration only</span></div><div><Store size={16}/><strong>{t('auth.tenantAdmin')}</strong><span>Full business and branch administration</span></div><div><UsersRound size={16}/><strong>{t('auth.branchStaff')}</strong><span>Job-specific branch workspaces</span></div></div>
+          <div className={busy ? 'sa-google-block is-busy' : 'sa-google-block'}><div className="sa-google-label"><ShieldCheck size={13}/> {english ? 'Continue with Google' : t('auth.googleAccount')}</div><div className="sa-google-button"><GoogleLogin onSuccess={handleCredential} onError={() => setError('Google Sign-In failed. Please try again.')} theme="outline" size="large" shape="rectangular" text="continue_with" width={String(googleButtonWidth)}/></div><div className="sa-google-hint">{english ? 'The system opens the correct screen for your assigned job automatically.' : t('auth.pendingHint')}</div></div>
+          <div className="sa-divider"><span>{english ? 'What you see depends on your job' : t('auth.accessModel')}</span></div>
+          <div className="sa-access-grid">
+            <div><Building2 size={16}/><strong>{english ? 'Business Admin' : t('auth.tenantAdmin')}</strong><span>{english ? 'Branches, staff, stock, sales and reports' : t('auth.tenantAdminCopy')}</span></div>
+            <div><Store size={16}/><strong>{english ? 'Branch Manager' : t('auth.branchStaff')}</strong><span>{english ? 'Only the branches they manage' : t('auth.branchStaffCopy')}</span></div>
+            <div><UsersRound size={16}/><strong>{english ? 'Waiter / Cashier / Stock Staff' : t('auth.branchStaff')}</strong><span>{english ? 'Only the simple screen needed for their job' : t('auth.branchStaffCopy')}</span></div>
+          </div>
         </section>
       </main>
     </div>
@@ -111,7 +146,7 @@ function LoginScreen() {
 
 function PendingScreen() {
   const { session, refresh, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [theme, toggleTheme] = usePlatformTheme();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -122,7 +157,8 @@ function PendingScreen() {
     finally { setBusy(false); }
   }
 
-  return <div className={`scorm-auth-workbench scorm-theme-${theme}`}><div className="sa-shell pending-shell"><div className="sa-topbar"><div className="sa-top-note">{t('auth.top')}</div><div className="sa-top-actions"><LanguageSwitcher compact/><ThemeToggle theme={theme} onToggle={toggleTheme} auth/></div></div><main className="pending-card auth-enter"><div className="pending-mark"><ShieldCheck size={26}/></div><div className="sa-kicker">{t('auth.identityVerified')}</div><h1>{t('auth.waiting')}</h1><p><strong>{session?.user?.email}</strong> — {t('auth.waitingCopy')}</p><p>{t('auth.waitingCopy2')}</p>{message && <div className="sa-notice pending-message">{message}</div>}<div className="pending-actions"><button className="scorm-button-primary" onClick={checkAgain} disabled={busy}><RefreshCw size={15} className={busy ? 'spin' : ''}/> {busy ? t('common.loading') : t('auth.refreshAccess')}</button><button className="scorm-button-secondary" onClick={logout}><LogOut size={15}/> {t('common.signOut')}</button></div></main></div></div>;
+  const english = locale === 'en';
+  return <div className={`scorm-auth-workbench scorm-theme-${theme}`}><div className="sa-shell pending-shell"><div className="sa-topbar"><div className="sa-top-note">{english ? 'Outlet Management' : t('auth.top')}</div><div className="sa-top-actions"><LanguageSwitcher compact/><ThemeToggle theme={theme} onToggle={toggleTheme} auth/></div></div><main className="pending-card auth-enter"><div className="pending-mark"><ShieldCheck size={26}/></div><div className="sa-kicker">{english ? 'Google account verified' : t('auth.identityVerified')}</div><h1>{english ? 'Your access is not assigned yet' : t('auth.waiting')}</h1><p><strong>{session?.user?.email}</strong></p><p>{english ? 'Ask your admin to assign your business, branch and job role. Then use Refresh Access.' : t('auth.waitingCopy2')}</p>{message && <div className="sa-notice pending-message">{message}</div>}<div className="pending-actions"><button className="scorm-button-primary" onClick={checkAgain} disabled={busy}><RefreshCw size={15} className={busy ? 'spin' : ''}/> {busy ? t('common.loading') : (english ? 'Refresh access' : t('auth.refreshAccess'))}</button><button className="scorm-button-secondary" onClick={logout}><LogOut size={15}/> {t('common.signOut')}</button></div></main></div></div>;
 }
 
 function SectionHeader({ eyebrow, title, count, icon: Icon }) {
@@ -130,7 +166,7 @@ function SectionHeader({ eyebrow, title, count, icon: Icon }) {
 }
 
 function PlatformTenants({ token }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [tenants, setTenants] = useState([]);
   const [name, setName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -150,11 +186,12 @@ function PlatformTenants({ token }) {
     finally { setBusy(false); }
   }
 
-  return <section className="scorm-panel ops-management-panel"><SectionHeader eyebrow={t('tenant.platformAdmin')} title={t('tenant.management')} count={`${tenants.length}`} icon={Building2}/><div className="ops-admin-grid"><form className="ops-form" onSubmit={createTenant}><div className="ops-form-heading"><div className="scorm-action-icon"><Plus size={17}/></div><div><div className="scorm-eyebrow">{t('auth.superAdmin')}</div><h4>{t('tenant.create')}</h4></div></div><label>{t('tenant.groupName')}<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Sunrise Hospitality" required/></label><label>{t('tenant.firstAdmin')}<input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="owner@example.com"/></label><button className="scorm-button-primary ops-submit" disabled={busy}>{busy ? t('common.loading') : t('tenant.create')}<ChevronRight size={15}/></button>{error && <div className="ops-error">{error}</div>}</form><div className="ops-list"><div className="ops-list-head"><span>{t('common.business')}</span><span>{t('common.status')}</span></div>{!tenants.length && <div className="ops-empty"><div className="scorm-empty-icon"><Building2 size={18}/></div><strong>{t('tenant.noTenants')}</strong><span>{t('tenant.noTenantsCopy')}</span></div>}{tenants.map((tenant) => <div className="ops-row" key={tenant.id}><div className="ops-entity"><div className="ops-avatar">{tenant.name.slice(0,2).toUpperCase()}</div><div><strong>{tenant.name}</strong><span>{tenant.slug}</span></div></div><span className={`ops-status ${tenant.status === 'ACTIVE' ? 'is-active' : ''}`}>{tenant.status}</span></div>)}</div></div></section>;
+  const english = locale === 'en';
+  return <section className="scorm-panel ops-management-panel"><SectionHeader eyebrow={english ? 'Businesses' : t('tenant.platformAdmin')} title={english ? 'Businesses' : t('tenant.management')} count={`${tenants.length}`} icon={Building2}/><div className="ops-admin-grid"><form className="ops-form" onSubmit={createTenant}><div className="ops-form-heading"><div className="scorm-action-icon"><Plus size={17}/></div><div><div className="scorm-eyebrow">{english ? 'New business' : t('auth.superAdmin')}</div><h4>{english ? 'Add business' : t('tenant.create')}</h4></div></div><label>{english ? 'Business name' : t('tenant.groupName')}<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Sunrise Hospitality" required/></label><label>{english ? 'Business Admin email' : t('tenant.firstAdmin')}<input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="owner@example.com"/></label><button className="scorm-button-primary ops-submit" disabled={busy}>{busy ? t('common.loading') : (english ? 'Add business' : t('tenant.create'))}<ChevronRight size={15}/></button>{error && <div className="ops-error">{error}</div>}</form><div className="ops-list"><div className="ops-list-head"><span>{t('common.business')}</span><span>{t('common.status')}</span></div>{!tenants.length && <div className="ops-empty"><div className="scorm-empty-icon"><Building2 size={18}/></div><strong>{english ? 'No businesses yet' : t('tenant.noTenants')}</strong><span>{english ? 'Add the first business to begin.' : t('tenant.noTenantsCopy')}</span></div>}{tenants.map((tenant) => <div className="ops-row" key={tenant.id}><div className="ops-entity"><div className="ops-avatar">{tenant.name.slice(0,2).toUpperCase()}</div><div><strong>{tenant.name}</strong><span>{tenant.slug}</span></div></div><span className={`ops-status ${tenant.status === 'ACTIVE' ? 'is-active' : ''}`}>{tenant.status}</span></div>)}</div></div></section>;
 }
 
 function TenantBranches({ token, membership }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const tenantId = membership?.tenantId;
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({ name:'', code:'', type:'BAR_RESTAURANT' });
@@ -175,26 +212,33 @@ function TenantBranches({ token, membership }) {
     finally { setBusy(false); }
   }
 
-  return <section className="scorm-panel ops-management-panel"><SectionHeader eyebrow={membership?.tenant?.name || t('auth.tenantAdmin')} title={t('branch.management')} count={`${branches.length}`} icon={Store}/><div className="ops-admin-grid"><form className="ops-form" onSubmit={createBranch}><div className="ops-form-heading"><div className="scorm-action-icon"><Plus size={17}/></div><div><div className="scorm-eyebrow">{t('auth.tenantAdmin')}</div><h4>{t('branch.add')}</h4></div></div><label>{t('branch.name')}<input value={form.name} onChange={(e) => setForm({...form,name:e.target.value})} placeholder="Central Bar & Kitchen" required/></label><label>{t('branch.code')}<input value={form.code} onChange={(e) => setForm({...form,code:e.target.value})} placeholder="CBK-01" required/></label><label>{t('branch.type')}<select value={form.type} onChange={(e) => setForm({...form,type:e.target.value})}><option value="BAR_RESTAURANT">{t('branch.bar')}</option><option value="WINE_SHOP">{t('branch.wineShop')}</option></select></label><button className="scorm-button-primary ops-submit" disabled={busy}>{busy ? t('common.loading') : t('branch.add')}<ChevronRight size={15}/></button>{error && <div className="ops-error">{error}</div>}</form><div className="ops-list"><div className="ops-list-head"><span>{t('common.branch')}</span><span>{t('common.status')}</span></div>{!branches.length && <div className="ops-empty"><div className="scorm-empty-icon"><Store size={18}/></div><strong>{t('branch.noBranches')}</strong><span>{t('branch.noBranchesCopy')}</span></div>}{branches.map((branch) => <div className="ops-row" key={branch.id}><div className="ops-entity"><div className="ops-avatar">{branch.type === 'BAR_RESTAURANT' ? <Wine size={16}/> : <Store size={16}/>}</div><div><strong>{branch.name}</strong><span>{branch.code} · {branch.type === 'BAR_RESTAURANT' ? t('branch.bar') : t('branch.wineShop')}</span></div></div><span className="ops-status is-active">{branch.status}</span></div>)}</div></div></section>;
+  const english = locale === 'en';
+  return <section className="scorm-panel ops-management-panel"><SectionHeader eyebrow={membership?.tenant?.name || t('auth.tenantAdmin')} title={english ? 'Branches' : t('branch.management')} count={`${branches.length}`} icon={Store}/><div className="ops-admin-grid"><form className="ops-form" onSubmit={createBranch}><div className="ops-form-heading"><div className="scorm-action-icon"><Plus size={17}/></div><div><div className="scorm-eyebrow">{english ? 'New branch' : t('auth.tenantAdmin')}</div><h4>{english ? 'Add branch' : t('branch.add')}</h4></div></div><label>{english ? 'Branch name' : t('branch.name')}<input value={form.name} onChange={(e) => setForm({...form,name:e.target.value})} placeholder="Central Bar & Kitchen" required/></label><label>{english ? 'Short branch code' : t('branch.code')}<input value={form.code} onChange={(e) => setForm({...form,code:e.target.value})} placeholder="CBK-01" required/></label><label>{english ? 'Business type' : t('branch.type')}<select value={form.type} onChange={(e) => setForm({...form,type:e.target.value})}><option value="BAR_RESTAURANT">{t('branch.bar')}</option><option value="WINE_SHOP">{t('branch.wineShop')}</option></select></label><button className="scorm-button-primary ops-submit" disabled={busy}>{busy ? t('common.loading') : (english ? 'Add branch' : t('branch.add'))}<ChevronRight size={15}/></button>{error && <div className="ops-error">{error}</div>}</form><div className="ops-list"><div className="ops-list-head"><span>{t('common.branch')}</span><span>{t('common.status')}</span></div>{!branches.length && <div className="ops-empty"><div className="scorm-empty-icon"><Store size={18}/></div><strong>{english ? 'No branches yet' : t('branch.noBranches')}</strong><span>{english ? 'Add the first branch to start.' : t('branch.noBranchesCopy')}</span></div>}{branches.map((branch) => <div className="ops-row" key={branch.id}><div className="ops-entity"><div className="ops-avatar">{branch.type === 'BAR_RESTAURANT' ? <Wine size={16}/> : <Store size={16}/>}</div><div><strong>{branch.name}</strong><span>{branch.code} · {branch.type === 'BAR_RESTAURANT' ? t('branch.bar') : t('branch.wineShop')}</span></div></div><span className="ops-status is-active">{branch.status}</span></div>)}</div></div></section>;
 }
 
 function SuperAdminOverview({ token, onOpen }) {
-  return <div className="platform-page"><section className="scorm-page-hero"><div className="page-hero-row"><div className="page-hero-copy"><div className="hero-meta-row"><span className="scorm-eyebrow">PLATFORM ADMINISTRATION</span><span className="scorm-health-pill is-online"><span className="scorm-health-dot"/> LIVE ACCESS</span></div><h2 className="scorm-display"><span>Tenant control,</span> <span className="wb-accent">not outlet operations.</span></h2><p>Create business tenants and assign their first Tenant Admin. Day-to-day branch operations remain inside each tenant's own administrative boundary.</p></div><div className="hero-actions"><button className="scorm-button-primary" onClick={() => onOpen('Tenants')}><Plus size={15}/>Create tenant</button></div></div></section><PlatformTenants token={token}/></div>;
+  return <div className="platform-page"><section className="scorm-page-hero"><div className="page-hero-row"><div className="page-hero-copy"><div className="hero-meta-row"><span className="scorm-eyebrow">Home</span></div><h2 className="scorm-display">Manage businesses</h2><p>Add a business and choose its first Business Admin. Branch work is handled by that business team.</p></div><div className="hero-actions"><button className="scorm-button-primary" onClick={() => onOpen('Tenants')}><Plus size={15}/>Add business</button></div></div></section><PlatformTenants token={token}/></div>;
 }
 
-function TenantAdminOverview({ token, access, membership, onOpen }) {
+function TenantAdminOverview({ token, membership, onOpen }) {
   const stats = [
-    ['Business', membership?.tenant?.name || 'Tenant', Building2],
-    ['Role', 'Tenant Admin', ShieldCheck],
-    ['Operations', 'All branches', Store],
-    ['Inventory base', 'ML', PackageSearch]
+    ['Business', membership?.tenant?.name || 'Business', Building2],
+    ['Access', 'Business Admin', ShieldCheck],
+    ['Branches', 'All branches', Store],
+    ['Stock', 'ML & bottles', PackageSearch]
   ];
-  return <div className="platform-page"><section className="scorm-page-hero"><div className="page-hero-row"><div className="page-hero-copy"><div className="hero-meta-row"><span className="scorm-eyebrow">BUSINESS ADMINISTRATION</span><span className="scorm-health-pill is-online"><span className="scorm-health-dot"/> LIVE ACCESS</span></div><h2 className="scorm-display"><span>Control the business,</span> <span className="wb-accent">branch by branch.</span></h2><p>Create outlets, assign staff, manage stock, sales, restaurant operations, analytics and reports for this tenant only.</p></div><div className="hero-actions"><button className="scorm-button-secondary" onClick={() => onOpen('Reports')}><FileText size={15}/>Reports</button><button className="scorm-button-primary" onClick={() => onOpen('Branches')}><Plus size={15}/>Add branch</button></div></div></section><div className="metric-grid">{stats.map(([label,value,Icon]) => <div className="scorm-metric-card scorm-metric-orange" key={label}><div className="metric-inner"><div><div className="scorm-metric-value">{value}</div><div className="scorm-metric-label">{label}</div></div><div className="scorm-metric-icon"><Icon size={17}/></div></div></div>)}</div><div className="overview-grid"><TenantBranches token={token} membership={membership}/><section className="scorm-panel quick-panel"><SectionHeader eyebrow="YOUR BUSINESS" title="Quick access"/><div className="quick-list"><button onClick={() => onOpen('Inventory')}><PackageSearch size={15}/><span><strong>Inventory</strong><small>Products, purchases, stock and wastage</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Restaurant')}><UtensilsCrossed size={15}/><span><strong>Restaurant</strong><small>Tables, QR menus and manager reconciliation</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Analytics')}><BarChart3 size={15}/><span><strong>Analytics</strong><small>Consolidated and branch performance</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Staff')}><UsersRound size={15}/><span><strong>Staff</strong><small>Assign job-specific branch access</small></span><ChevronRight size={14}/></button></div></section></div></div>;
+  return <div className="platform-page"><section className="scorm-page-hero"><div className="page-hero-row"><div className="page-hero-copy"><div className="hero-meta-row"><span className="scorm-eyebrow">Home</span></div><h2 className="scorm-display">Manage your business</h2><p>Use the menu to manage branches, stock, sales, restaurant work, staff and reports.</p></div><div className="hero-actions"><button className="scorm-button-secondary" onClick={() => onOpen('Reports')}><FileText size={15}/>Reports</button><button className="scorm-button-primary" onClick={() => onOpen('Branches')}><Plus size={15}/>Add branch</button></div></div></section><div className="metric-grid">{stats.map(([label,value,Icon]) => <div className="scorm-metric-card scorm-metric-orange" key={label}><div className="metric-inner"><div><div className="scorm-metric-value">{value}</div><div className="scorm-metric-label">{label}</div></div><div className="scorm-metric-icon"><Icon size={17}/></div></div></div>)}</div><div className="overview-grid"><TenantBranches token={token} membership={membership}/><section className="scorm-panel quick-panel"><SectionHeader eyebrow="Quick actions" title="What do you want to do?"/><div className="quick-list"><button onClick={() => onOpen('Inventory')}><PackageSearch size={15}/><span><strong>Stock</strong><small>Products, purchases and wastage</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Restaurant')}><UtensilsCrossed size={15}/><span><strong>Restaurant</strong><small>Orders, tables and QR menu</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Analytics')}><BarChart3 size={15}/><span><strong>Sales & Profit</strong><small>Sales, expenses and profit</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Staff')}><UsersRound size={15}/><span><strong>Staff</strong><small>Add people and assign jobs</small></span><ChevronRight size={14}/></button></div></section></div></div>;
+}
+
+function SimpleAdminSectionIntro({ section }) {
+  const copy = SIMPLE_SECTION_COPY[section];
+  if (!copy) return null;
+  return <section className="simple-module-intro"><div><span>{SIMPLE_SECTION_LABELS[section]}</span><h1>{SIMPLE_SECTION_LABELS[section]}</h1><p>{copy}</p></div></section>;
 }
 
 function AdminDashboard() {
   const { token, session, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [theme, toggleTheme] = usePlatformTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('Overview');
@@ -202,6 +246,7 @@ function AdminDashboard() {
   const isSuperAdmin = Boolean(access.isSuperAdmin);
   const tenantAdmin = (access.tenants || []).find((row) => row.role === 'TENANT_ADMIN');
   const primaryRole = isSuperAdmin ? t('auth.superAdmin') : t('auth.tenantAdmin');
+  const english = locale === 'en';
 
   const groups = useMemo(() => {
     if (isSuperAdmin) return [{ key:'nav.platform', items:[{label:'Overview',icon:BarChart3},{label:'Tenants',icon:Building2}] }];
@@ -214,29 +259,30 @@ function AdminDashboard() {
   const allowedSections = useMemo(() => new Set(groups.flatMap((group) => group.items.map((item) => item.label))), [groups]);
   useEffect(() => { if (!allowedSections.has(activeSection)) setActiveSection('Overview'); }, [allowedSections, activeSection]);
 
+  function sectionLabel(label) { return english ? SIMPLE_SECTION_LABELS[label] : t(SECTION_KEYS[label]); }
   function openSection(section) { if (allowedSections.has(section)) setActiveSection(section); setMobileOpen(false); }
-  function Brand() { return <button type="button" className="scorm-brand" onClick={() => openSection('Overview')}><span className="scorm-brand-mark"><Layers3 size={19}/></span><span className="brand-copy"><strong className="scorm-brand-name">OUTLET <em>OS</em></strong><small>{primaryRole}</small></span></button>; }
-  function Navigation() { return <nav className="scorm-nav">{groups.map((group,index) => <div className={index ? 'nav-group nav-group-spaced' : 'nav-group'} key={group.key}><div className="scorm-nav-section">{t(group.key)}</div><div className="nav-items">{group.items.map(({label,icon:Icon}) => { const active = activeSection === label; return <button key={label} type="button" className={`scorm-nav-item ${active ? 'scorm-nav-active' : ''}`} onClick={() => openSection(label)}><span className="scorm-nav-icon"><Icon size={16}/></span><span>{t(SECTION_KEYS[label])}</span>{active && <ChevronRight size={14} className="scorm-nav-chevron"/>}</button>; })}</div></div>)}</nav>; }
+  function Brand() { return <button type="button" className="scorm-brand" onClick={() => openSection('Overview')}><span className="scorm-brand-mark"><Layers3 size={19}/></span><span className="brand-copy"><strong className="scorm-brand-name">OUTLET <em>MANAGEMENT</em></strong><small>{primaryRole}</small></span></button>; }
+  function Navigation() { return <nav className="scorm-nav">{groups.map((group,index) => <div className={index ? 'nav-group nav-group-spaced' : 'nav-group'} key={group.key}><div className="scorm-nav-section">{english ? (index ? 'Manage' : 'Main') : t(group.key)}</div><div className="nav-items">{group.items.map(({label,icon:Icon}) => { const active = activeSection === label; return <button key={label} type="button" className={`scorm-nav-item ${active ? 'scorm-nav-active' : ''}`} onClick={() => openSection(label)}><span className="scorm-nav-icon"><Icon size={16}/></span><span>{sectionLabel(label)}</span>{active && <ChevronRight size={14} className="scorm-nav-chevron"/>}</button>; })}</div></div>)}</nav>; }
 
   const tenantAccess = tenantAdmin ? { ...access, isSuperAdmin:false } : access;
 
   return <div className={`scorm-editorial scorm-theme-${theme}`}>
-    <aside className="scorm-sidebar"><div className="scorm-brand-wrap"><Brand/></div><Navigation/><div className="scorm-sidebar-footer"><div className="scorm-status-card"><div className="status-title"><span className="scorm-status-dot"/>{primaryRole}</div><div className="status-copy">{session?.user?.email}</div></div><button type="button" onClick={logout} className="scorm-sidebar-switch"><span><LogOut size={14}/> {t('common.signOut')}</span><ChevronRight size={13}/></button></div></aside>
+    <aside className="scorm-sidebar"><div className="scorm-brand-wrap"><Brand/></div><Navigation/><div className="scorm-sidebar-footer"><div className="scorm-status-card"><div className="status-title">{primaryRole}</div><div className="status-copy">{session?.user?.email}</div></div><button type="button" onClick={logout} className="scorm-sidebar-switch"><span><LogOut size={14}/> {t('common.signOut')}</span><ChevronRight size={13}/></button></div></aside>
     {mobileOpen && <div className="mobile-overlay"><button aria-label="Close navigation" className="mobile-backdrop" onClick={() => setMobileOpen(false)}/><div className="scorm-mobile-drawer"><div className="drawer-head"><Brand/><button className="scorm-drawer-close" onClick={() => setMobileOpen(false)}><X size={17}/></button></div><Navigation/><div className="drawer-foot"><LanguageSwitcher/><button type="button" onClick={logout} className="scorm-sidebar-switch"><span><LogOut size={14}/> {t('common.signOut')}</span><ChevronRight size={13}/></button></div></div></div>}
-    <div className="scorm-shell-content"><header className="scorm-topbar"><button type="button" onClick={() => setMobileOpen(true)} className="scorm-topbar-icon mobile-menu-trigger"><Menu size={18}/></button><div className="topbar-context"><ShieldCheck size={12}/> Live access · {primaryRole}</div><div className="topbar-actions"><LanguageSwitcher compact/><ThemeToggle theme={theme} onToggle={toggleTheme}/>{!isSuperAdmin && <button className="scorm-button-secondary topbar-secondary" onClick={() => openSection('Reports')}><FileText size={14}/> Reports</button>}<button className="scorm-button-primary" onClick={() => openSection(isSuperAdmin ? 'Tenants' : 'Branches')}><Plus size={14}/><span>{isSuperAdmin ? 'Create tenant' : 'Add branch'}</span></button></div></header>
+    <div className="scorm-shell-content"><header className="scorm-topbar"><button type="button" onClick={() => setMobileOpen(true)} className="scorm-topbar-icon mobile-menu-trigger"><Menu size={18}/></button><div className="topbar-context">{primaryRole}</div><div className="topbar-actions"><LanguageSwitcher compact/><ThemeToggle theme={theme} onToggle={toggleTheme}/>{!isSuperAdmin && <button className="scorm-button-secondary topbar-secondary" onClick={() => openSection('Reports')}><FileText size={14}/> Reports</button>}<button className="scorm-button-primary" onClick={() => openSection(isSuperAdmin ? 'Tenants' : 'Branches')}><Plus size={14}/><span>{isSuperAdmin ? (english ? 'Add business' : t('tenant.create')) : (english ? 'Add branch' : t('branch.add'))}</span></button></div></header>
       <main className="scorm-main">
-        {activeSection === 'Overview' && (isSuperAdmin ? <SuperAdminOverview token={token} onOpen={openSection}/> : <TenantAdminOverview token={token} access={tenantAccess} membership={tenantAdmin} onOpen={openSection}/>)}
+        {activeSection === 'Overview' && (isSuperAdmin ? <SuperAdminOverview token={token} onOpen={openSection}/> : <TenantAdminOverview token={token} membership={tenantAdmin} onOpen={openSection}/>)}
         {activeSection === 'Tenants' && isSuperAdmin && <div className="platform-page standalone-page"><PlatformTenants token={token}/></div>}
         {activeSection === 'Branches' && tenantAdmin && <div className="platform-page standalone-page"><TenantBranches token={token} membership={tenantAdmin}/></div>}
-        {activeSection === 'Inventory' && tenantAdmin && <InventoryWorkspace token={token} access={tenantAccess}/>} 
-        {activeSection === 'Sales & Orders' && tenantAdmin && <SalesWorkspace token={token} access={tenantAccess}/>} 
-        {activeSection === 'Restaurant' && tenantAdmin && <RestaurantManagerWorkspace token={token} access={tenantAccess}/>} 
-        {activeSection === 'Analytics' && tenantAdmin && <AnalyticsWorkspace token={token} access={tenantAccess}/>} 
-        {activeSection === 'Reports' && tenantAdmin && <ReportsWorkspace token={token} access={tenantAccess}/>} 
-        {activeSection === 'Staff' && tenantAdmin && <StaffWorkspace token={token} access={tenantAccess}/>} 
+        {activeSection === 'Inventory' && tenantAdmin && <><SimpleAdminSectionIntro section="Inventory"/><InventoryWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Sales & Orders' && tenantAdmin && <><SimpleAdminSectionIntro section="Sales & Orders"/><SalesWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Restaurant' && tenantAdmin && <><SimpleAdminSectionIntro section="Restaurant"/><RestaurantManagerWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Analytics' && tenantAdmin && <><SimpleAdminSectionIntro section="Analytics"/><AnalyticsWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Reports' && tenantAdmin && <><SimpleAdminSectionIntro section="Reports"/><ReportsWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Staff' && tenantAdmin && <><SimpleAdminSectionIntro section="Staff"/><StaffWorkspace token={token} access={tenantAccess}/></>}
       </main>
     </div>
-    <div className="scorm-mobile-tabbar">{(isSuperAdmin ? [{label:'Overview',icon:BarChart3},{label:'Tenants',icon:Building2}] : [{label:'Overview',icon:BarChart3},{label:'Inventory',icon:PackageSearch},{label:'Sales & Orders',icon:ClipboardList},{label:'Restaurant',icon:UtensilsCrossed}]).map(({label,icon:Icon}) => <button key={label} className={`scorm-mobile-tab ${activeSection === label ? 'is-active' : ''}`} onClick={() => openSection(label)}><Icon size={17}/><span>{t(SECTION_KEYS[label])}</span></button>)}</div>
+    <div className="scorm-mobile-tabbar">{(isSuperAdmin ? [{label:'Overview',icon:BarChart3},{label:'Tenants',icon:Building2}] : [{label:'Overview',icon:BarChart3},{label:'Inventory',icon:PackageSearch},{label:'Sales & Orders',icon:ClipboardList},{label:'Restaurant',icon:UtensilsCrossed}]).map(({label,icon:Icon}) => <button key={label} className={`scorm-mobile-tab ${activeSection === label ? 'is-active' : ''}`} onClick={() => openSection(label)}><Icon size={17}/><span>{sectionLabel(label)}</span></button>)}</div>
   </div>;
 }
 
