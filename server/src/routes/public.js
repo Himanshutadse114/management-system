@@ -1,14 +1,59 @@
+const path = require('path');
 const express = require('express');
 const { Op } = require('sequelize');
 const { Branch, Product, ProductPriceOption } = require('../models');
 const { RestaurantTable, MenuItem } = require('../models/restaurant');
+const { getObjectStorage } = require('../storage/objectStorage');
 
 const router = express.Router();
 
-function mediaUrl(objectKey) {
-  const base = String(process.env.PUBLIC_MEDIA_BASE_URL || '').trim().replace(/\/$/, '');
-  return base && objectKey ? `${base}/${objectKey}` : null;
+function backendBaseUrl() {
+  const configured = String(process.env.RENDER_EXTERNAL_URL || '').trim().replace(/\/$/, '');
+  if (configured) return configured;
+  if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+    return `http://localhost:${Number(process.env.PORT || 5001)}`;
+  }
+  return '';
 }
+
+function mediaUrl(objectKey, productId) {
+  if (!objectKey) return null;
+  const publicBase = String(process.env.PUBLIC_MEDIA_BASE_URL || '').trim().replace(/\/$/, '');
+  if (publicBase) return `${publicBase}/${objectKey}`;
+  const backend = backendBaseUrl();
+  return backend && productId ? `${backend}/api/public/products/${encodeURIComponent(productId)}/image` : null;
+}
+
+function contentTypeForKey(objectKey) {
+  switch (path.extname(String(objectKey || '')).toLowerCase()) {
+    case '.jpg':
+    case '.jpeg': return 'image/jpeg';
+    case '.png': return 'image/png';
+    case '.webp': return 'image/webp';
+    default: return 'application/octet-stream';
+  }
+}
+
+router.get('/products/:productId/image', async (req, res, next) => {
+  try {
+    const product = await Product.findOne({
+      where: { id: req.params.productId, status: 'ACTIVE' },
+      attributes: ['id', 'imageObjectKey']
+    });
+    if (!product?.imageObjectKey) return res.status(404).end();
+
+    const buffer = await getObjectStorage().getObjectBuffer(product.imageObjectKey);
+    res.setHeader('Content-Type', contentTypeForKey(product.imageObjectKey));
+    res.setHeader('Content-Length', String(buffer.length));
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
+    res.end(buffer);
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error?.name === 'NoSuchKey' || error?.$metadata?.httpStatusCode === 404) {
+      return res.status(404).end();
+    }
+    next(error);
+  }
+});
 
 router.get('/menu/:qrToken', async (req, res, next) => {
   try {
@@ -61,7 +106,7 @@ router.get('/menu/:qrToken', async (req, res, next) => {
             name: product.name,
             brand: product.brand,
             productType: product.productType,
-            imageUrl: mediaUrl(product.imageObjectKey),
+            imageUrl: mediaUrl(product.imageObjectKey, product.id),
             priceOptions: (product.priceOptions || []).map((price) => ({
               id: price.id,
               label: price.label,
