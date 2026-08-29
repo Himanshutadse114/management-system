@@ -3,20 +3,14 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   Banknote,
   CheckCircle2,
-  ChevronRight,
   ClipboardList,
   Copy,
   ExternalLink,
-  GlassWater,
   LayoutGrid,
-  Minus,
   Plus,
   QrCode,
   RefreshCw,
-  Search,
-  Trash2,
   UtensilsCrossed,
-  Wine,
   X
 } from 'lucide-react';
 import { api, apiErrorMessage, authHeaders } from './api';
@@ -99,12 +93,6 @@ export default function RestaurantManagerWorkspace({ token, access }) {
   const [menuItems, setMenuItems] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [waiters, setWaiters] = useState([]);
-  const [search, setSearch] = useState('');
-  const [draftLines, setDraftLines] = useState([]);
-  const [tableId, setTableId] = useState('');
-  const [waiterUserId, setWaiterUserId] = useState('');
-  const [targetOrderId, setTargetOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [tableForm, setTableForm] = useState({ name: '', code: '', seats: '4' });
   const [menuForm, setMenuForm] = useState({ productId: '', displayName: '', sectionName: 'Food & Drinks', description: '', featured: false });
@@ -121,66 +109,27 @@ export default function RestaurantManagerWorkspace({ token, access }) {
     try {
       setBusy(true); setError('');
       const headers = authHeaders(token);
-      const [tableResult, menuResult, catalogueResult, orderResult, waiterResult] = await Promise.all([
+      const [tableResult, menuResult, catalogueResult, orderResult] = await Promise.all([
         api.get(`${base}/tables`, { headers }),
         api.get(`${base}/menu`, { headers }),
         api.get(`${base}/catalogue`, { headers }),
-        api.get(`${base}/orders`, { headers }),
-        api.get(`${base}/waiters`, { headers })
+        api.get(`${base}/orders`, { headers })
       ]);
       setTables(tableResult.data.tables || []);
       setMenuItems(menuResult.data.items || []);
       setProducts(catalogueResult.data.products || []);
       setOrders(orderResult.data.orders || []);
-      setWaiters(waiterResult.data.waiters || []);
     } catch (err) { setError(apiErrorMessage(err)); }
     finally { setBusy(false); }
   }
 
   useEffect(() => {
-    setDraftLines([]); setTargetOrderId(''); setTableId(''); setWaiterUserId('');
     loadAll();
   }, [base]);
 
   function flash(message) { setNotice(message); window.setTimeout(() => setNotice(''), 2500); }
 
   const activeOrders = useMemo(() => orders.filter((order) => ['OPEN','SERVED','AWAITING_PAYMENT'].includes(order.status)), [orders]);
-  const filteredProducts = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return products.filter((product) => !query || [product.name, product.brand, product.sku].some((value) => String(value || '').toLowerCase().includes(query)));
-  }, [products, search]);
-
-  function addDraft(product, price) {
-    setDraftLines((current) => {
-      const existing = current.find((line) => line.priceOptionId === price.id);
-      if (existing) return current.map((line) => line.priceOptionId === price.id ? { ...line, quantityUnits: line.quantityUnits + 1 } : line);
-      return [...current, { priceOptionId: price.id, productName: product.name, priceLabel: price.label, priceMinor: price.priceMinor, quantityUnits: 1 }];
-    });
-  }
-  function changeDraft(priceOptionId, quantity) {
-    if (quantity <= 0) return setDraftLines((current) => current.filter((line) => line.priceOptionId !== priceOptionId));
-    setDraftLines((current) => current.map((line) => line.priceOptionId === priceOptionId ? { ...line, quantityUnits: quantity } : line));
-  }
-  const draftTotal = useMemo(() => draftLines.reduce((sum, line) => sum + BigInt(line.priceMinor || 0) * BigInt(line.quantityUnits), 0n), [draftLines]);
-
-  async function submitDraft() {
-    try {
-      if (!draftLines.length) throw new Error('Add at least one item.');
-      setBusy(true); setError('');
-      const payload = { lines: draftLines.map((line) => ({ priceOptionId: line.priceOptionId, quantityUnits: line.quantityUnits })) };
-      if (targetOrderId) {
-        await api.post(`${base}/orders/${targetOrderId}/lines`, payload, { headers: authHeaders(token) });
-        flash('Items added to order.');
-      } else {
-        if (!tableId) throw new Error('Choose a table.');
-        await api.post(`${base}/orders`, { ...payload, tableId, waiterUserId: waiterUserId || undefined, idempotencyKey: crypto.randomUUID() }, { headers: authHeaders(token) });
-        flash('Order placed.');
-      }
-      setDraftLines([]); setTableId(''); setTargetOrderId('');
-      await loadAll();
-    } catch (err) { setError(err.message || apiErrorMessage(err)); }
-    finally { setBusy(false); }
-  }
 
   async function changeStatus(order, status) {
     try { setError(''); await api.post(`${base}/orders/${order.id}/status`, { status }, { headers: authHeaders(token) }); await loadAll(); flash(status === 'SERVED' ? 'Order marked served.' : 'Bill sent for payment.'); }
@@ -229,10 +178,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
     {error && <div className="restaurant-error">{error}</div>}{notice && <div className="restaurant-notice">{notice}</div>}
     <div className="restaurant-tabs">{[{label:'Orders',icon:ClipboardList},{label:'Tables',icon:QrCode},{label:'Menu',icon:UtensilsCrossed}].map(({label,icon:Icon}) => <button key={label} className={tab===label?'is-active':''} onClick={() => setTab(label)}><Icon size={15}/>{label}</button>)}</div>
 
-    {tab === 'Orders' && <>
-      <div className="service-layout"><section className="restaurant-panel service-catalogue"><div className="restaurant-panel-head"><div><div className="restaurant-mini">Create or update order</div><h3>{targetOrderId?'Add items':'New table order'}</h3></div><label className="restaurant-search"><Search size={14}/><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search food or drinks..."/></label></div><div className="service-controls"><label><span>Order</span><select value={targetOrderId} onChange={(e)=>{setTargetOrderId(e.target.value);if(e.target.value)setTableId('')}}><option value="">New order</option>{activeOrders.filter((order)=>['OPEN','SERVED'].includes(order.status)).map((order)=><option value={order.id} key={order.id}>{order.orderNumber} · {order.table?.name || 'Table'} · {order.status}</option>)}</select></label>{!targetOrderId&&<label><span>Table</span><select value={tableId} onChange={(e)=>setTableId(e.target.value)}><option value="">Choose table</option>{tables.filter((table)=>table.status==='ACTIVE'&&!table.activeOrder).map((table)=><option value={table.id} key={table.id}>{table.name} · {table.code}</option>)}</select></label>}{!targetOrderId&&<label><span>Waiter</span><select value={waiterUserId} onChange={(e)=>setWaiterUserId(e.target.value)}><option value="">Manager</option>{waiters.map((row)=><option key={row.membershipId} value={row.userId}>{row.user?.name || row.email}</option>)}</select></label>}</div><div className="service-products">{filteredProducts.map((product)=><article className="service-product" key={product.id}><div className="service-product-copy">{product.imageUrl?<img src={product.imageUrl} alt=""/>:<div className="service-product-placeholder"><Wine size={17}/></div>}<div><strong>{product.name}</strong><span>{product.brand||product.productType}</span><small>{Number(product.availableQuantityBase||0).toLocaleString('en-IN',{maximumFractionDigits:3})} {product.inventoryUnit} in stock</small></div></div><div className="service-price-buttons">{(product.priceOptions||[]).map((price)=><button key={price.id} onClick={()=>addDraft(product,price)}><span>{price.label}</span><strong>{formatMoney(price.priceMinor)}</strong><Plus size={12}/></button>)}</div></article>)}</div></section><aside className="restaurant-panel order-draft"><div className="restaurant-panel-head"><div><div className="restaurant-mini">Current order</div><h3>Selected items</h3></div><span className="draft-count">{draftLines.reduce((sum,line)=>sum+line.quantityUnits,0)}</span></div><div className="draft-lines">{!draftLines.length&&<Empty icon={GlassWater} title="No items added" body="Tap a price to add an item."/>}{draftLines.map((line)=><div className="draft-line" key={line.priceOptionId}><div><strong>{line.productName}</strong><span>{line.priceLabel} · {formatMoney(line.priceMinor)}</span></div><div className="draft-qty"><button onClick={()=>changeDraft(line.priceOptionId,line.quantityUnits-1)}><Minus size={11}/></button><span>{line.quantityUnits}</span><button onClick={()=>changeDraft(line.priceOptionId,line.quantityUnits+1)}><Plus size={11}/></button></div><strong>{formatMoney(BigInt(line.priceMinor||0)*BigInt(line.quantityUnits))}</strong><button className="draft-trash" onClick={()=>changeDraft(line.priceOptionId,0)}><Trash2 size={12}/></button></div>)}</div><div className="draft-total"><span>Total</span><strong>{formatMoney(draftTotal)}</strong></div><button className="scorm-button-primary order-submit" disabled={!draftLines.length||busy} onClick={submitDraft}>{targetOrderId?'Add items':'Place order'}<ChevronRight size={14}/></button></aside></div>
-      <section className="restaurant-panel active-orders"><div className="restaurant-panel-head"><div><div className="restaurant-mini">Open orders</div><h3>Orders & bills</h3></div><div className="payment-method"><span>Payment method</span><select value={paymentMethod} onChange={(e)=>setPaymentMethod(e.target.value)}><option>UPI</option><option>CASH</option><option>CARD</option><option>OTHER</option></select></div></div>{!activeOrders.length?<Empty icon={CheckCircle2} title="No open orders" body="All table orders are complete."/>:<div className="order-card-grid">{activeOrders.map((order)=><article className={`active-order status-${String(order.status).toLowerCase()}`} key={order.id}><div className="active-order-top"><div><span className="order-status">{String(order.status).replaceAll('_',' ')}</span><strong>{order.orderNumber}</strong><small>{order.table?.name || 'Table'} · {order.waiter?.name || order.waiter?.email || 'Manager'}</small></div><strong className="order-total">{formatMoney(order.totalMinor)}</strong></div><div className="active-order-lines">{(order.lines||[]).filter((line)=>line.status!=='CANCELLED').map((line)=><div key={line.id}><span>{line.quantityUnits} × {line.productNameSnapshot} · {line.priceLabelSnapshot}</span><strong>{formatMoney(line.lineSubtotalMinor)}</strong></div>)}</div><div className="active-order-actions">{order.status==='OPEN'&&<button onClick={()=>changeStatus(order,'SERVED')}>Mark served</button>}{['OPEN','SERVED'].includes(order.status)&&<button onClick={()=>changeStatus(order,'AWAITING_PAYMENT')}>Send bill</button>}{order.status==='AWAITING_PAYMENT'&&<button className="pay" onClick={()=>pay(order)}><Banknote size={12}/>Mark paid · {paymentMethod}</button>}<button className="cancel" onClick={()=>{setCancelTarget(order);setCancelReason('')}}>Cancel order</button></div></article>)}</div>}</section>
-    </>}
+    {tab === 'Orders' && <section className="restaurant-panel active-orders"><div className="restaurant-panel-head"><div><div className="restaurant-mini">Open orders</div><h3>Orders & bills</h3><p className="restaurant-panel-note">Waiters take the order at the table. This view is for serving status, bills and payment.</p></div><div className="payment-method"><span>Payment method</span><select value={paymentMethod} onChange={(e)=>setPaymentMethod(e.target.value)}><option>UPI</option><option>CASH</option><option>CARD</option><option>OTHER</option></select></div></div>{!activeOrders.length?<Empty icon={CheckCircle2} title="No open orders" body="All table orders are complete."/>:<div className="order-card-grid">{activeOrders.map((order)=><article className={`active-order status-${String(order.status).toLowerCase()}`} key={order.id}><div className="active-order-top"><div><span className="order-status">{String(order.status).replaceAll('_',' ')}</span><strong>{order.orderNumber}</strong><small>{order.table?.name || 'Table'} · {order.waiter?.name || order.waiter?.email || 'Manager'}</small></div><strong className="order-total">{formatMoney(order.totalMinor)}</strong></div><div className="active-order-lines">{(order.lines||[]).filter((line)=>line.status!=='CANCELLED').map((line)=><div key={line.id}><span>{line.quantityUnits} × {line.productNameSnapshot} · {line.priceLabelSnapshot}</span><strong>{formatMoney(line.lineSubtotalMinor)}</strong></div>)}</div><div className="active-order-actions">{order.status==='OPEN'&&<button onClick={()=>changeStatus(order,'SERVED')}>Mark served</button>}{['OPEN','SERVED'].includes(order.status)&&<button onClick={()=>changeStatus(order,'AWAITING_PAYMENT')}>Send bill</button>}{order.status==='AWAITING_PAYMENT'&&<button className="pay" onClick={()=>pay(order)}><Banknote size={12}/>Mark paid · {paymentMethod}</button>}<button className="cancel" onClick={()=>{setCancelTarget(order);setCancelReason('')}}>Cancel order</button></div></article>)}</div>}</section>}
 
     {tab === 'Tables' && <div className="restaurant-two-column"><form className="restaurant-panel restaurant-form" onSubmit={createTable}><div className="restaurant-panel-head"><div><div className="restaurant-mini">Add table</div><h3>New table</h3></div><LayoutGrid size={18}/></div><label><span>Table name</span><input value={tableForm.name} onChange={(e)=>setTableForm({...tableForm,name:e.target.value})} placeholder="Table 01" required/></label><div className="form-pair"><label><span>Short code</span><input value={tableForm.code} onChange={(e)=>setTableForm({...tableForm,code:e.target.value})} placeholder="T01" required/></label><label><span>Seats</span><input type="number" min="1" max="50" value={tableForm.seats} onChange={(e)=>setTableForm({...tableForm,seats:e.target.value})}/></label></div><button className="scorm-button-primary restaurant-submit"><Plus size={14}/>Add table & QR</button></form><section className="restaurant-panel"><div className="restaurant-panel-head"><div><div className="restaurant-mini">Table menu QR</div><h3>QR codes</h3></div><span>{tables.length} tables</span></div><div className="qr-grid">{tables.map((table)=>{const url=publicMenuUrl(table.qrToken);return <article className="qr-card" key={table.id}><div className="qr-canvas"><QRCodeSVG value={url} size={116} level="M" bgColor="#ffffff" fgColor="#111111"/></div><div><strong>{table.name}</strong><span>{table.code} · {table.seats} seats</span><small>{table.activeOrder?`Order: ${table.activeOrder.orderNumber}`:'Available'}</small></div><div className="qr-actions"><button type="button" onClick={()=>copyLink(table)}><Copy size={13}/>Copy link</button><a href={url} target="_blank" rel="noreferrer"><ExternalLink size={13}/>Open menu</a></div></article>})}</div></section></div>}
 

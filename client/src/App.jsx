@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import {
+  AlertTriangle,
+  Banknote,
   BarChart3,
   Building2,
   ChevronRight,
@@ -16,6 +18,7 @@ import {
   ShieldCheck,
   Store,
   Sun,
+  TrendingUp,
   UsersRound,
   UtensilsCrossed,
   Wine,
@@ -220,14 +223,44 @@ function SuperAdminOverview({ token, onOpen }) {
   return <div className="platform-page"><section className="scorm-page-hero"><div className="page-hero-row"><div className="page-hero-copy"><div className="hero-meta-row"><span className="scorm-eyebrow">Home</span></div><h2 className="scorm-display">Manage businesses</h2><p>Add a business and choose its first Business Admin. Branch work is handled by that business team.</p></div><div className="hero-actions"><button className="scorm-button-primary" onClick={() => onOpen('Tenants')}><Plus size={15}/>Add business</button></div></div></section><PlatformTenants token={token}/></div>;
 }
 
+function formatMoney(value) {
+  try {
+    const amount = BigInt(value || 0);
+    return `₹${(amount / 100n).toLocaleString('en-IN')}`;
+  } catch (_) { return '₹0'; }
+}
+
+function todayIso() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function TenantAdminOverview({ token, membership, onOpen }) {
-  const stats = [
-    ['Business', membership?.tenant?.name || 'Business', Building2],
-    ['Access', 'Business Admin', ShieldCheck],
-    ['Branches', 'All branches', Store],
-    ['Stock', 'ML & bottles', PackageSearch]
-  ];
-  return <div className="platform-page"><section className="scorm-page-hero"><div className="page-hero-row"><div className="page-hero-copy"><div className="hero-meta-row"><span className="scorm-eyebrow">Home</span></div><h2 className="scorm-display">Manage your business</h2><p>Use the menu to manage branches, stock, sales, restaurant work, staff and reports.</p></div><div className="hero-actions"><button className="scorm-button-secondary" onClick={() => onOpen('Reports')}><FileText size={15}/>Reports</button><button className="scorm-button-primary" onClick={() => onOpen('Branches')}><Plus size={15}/>Add branch</button></div></div></section><div className="metric-grid">{stats.map(([label,value,Icon]) => <div className="scorm-metric-card scorm-metric-orange" key={label}><div className="metric-inner"><div><div className="scorm-metric-value">{value}</div><div className="scorm-metric-label">{label}</div></div><div className="scorm-metric-icon"><Icon size={17}/></div></div></div>)}</div><div className="overview-grid"><TenantBranches token={token} membership={membership}/><section className="scorm-panel quick-panel"><SectionHeader eyebrow="Quick actions" title="What do you want to do?"/><div className="quick-list"><button onClick={() => onOpen('Inventory')}><PackageSearch size={15}/><span><strong>Stock</strong><small>Products, purchases and wastage</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Restaurant')}><UtensilsCrossed size={15}/><span><strong>Restaurant</strong><small>Orders, tables and QR menu</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Analytics')}><BarChart3 size={15}/><span><strong>Sales & Profit</strong><small>Sales, expenses and profit</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Staff')}><UsersRound size={15}/><span><strong>Staff</strong><small>Add people and assign jobs</small></span><ChevronRight size={14}/></button></div></section></div></div>;
+  const tenantId = membership?.tenantId;
+  const [snapshot, setSnapshot] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const today = todayIso();
+    api.get(`/analytics/tenants/${tenantId}/overview`, { params: { from: today, to: today }, headers: authHeaders(token) })
+      .then(({ data }) => setSnapshot(data))
+      .catch((err) => setError(apiErrorMessage(err)));
+  }, [tenantId, token]);
+
+  const todayStats = snapshot ? [
+    ['Sales today', formatMoney(snapshot.today?.salesMinor), `${snapshot.today?.paidOrders || 0} paid orders`, Banknote],
+    ['Gross profit today', formatMoney(snapshot.today?.grossProfitMinor), 'Sales minus stock cost', TrendingUp],
+    ['Unresolved orders', String(snapshot.unresolved?.orderCount || 0), 'Open or awaiting payment', ClipboardList],
+    ['Low stock items', String(snapshot.lowStock?.length || 0), 'Near or below reorder level', AlertTriangle]
+  ] : null;
+
+  return <div className="platform-page">
+    <section className="scorm-page-hero"><div className="page-hero-row"><div className="page-hero-copy"><div className="hero-meta-row"><span className="scorm-eyebrow">Home</span></div><h2 className="scorm-display">{membership?.tenant?.name || 'Your business'}</h2><p>Today's business snapshot. Use the menu for branches, stock, sales, restaurant work, staff and reports.</p></div><div className="hero-actions"><button className="scorm-button-secondary" onClick={() => onOpen('Reports')}><FileText size={15}/>Reports</button><button className="scorm-button-primary" onClick={() => onOpen('Analytics')}><BarChart3 size={15}/>Full analytics</button></div></div></section>
+    {error && <div className="ops-error">{error}</div>}
+    <div className="metric-grid">{(todayStats || [['Sales today','—','Loading…',Banknote],['Gross profit today','—','Loading…',TrendingUp],['Unresolved orders','—','Loading…',ClipboardList],['Low stock items','—','Loading…',AlertTriangle]]).map(([label,value,note,Icon]) => <div className="scorm-metric-card scorm-metric-orange" key={label}><div className="metric-inner"><div><div className="scorm-metric-value">{value}</div><div className="scorm-metric-label">{label}</div><div className="scorm-metric-note">{note}</div></div><div className="scorm-metric-icon"><Icon size={17}/></div></div></div>)}</div>
+    <div className="overview-grid"><TenantBranches token={token} membership={membership}/><section className="scorm-panel quick-panel"><SectionHeader eyebrow="Quick actions" title="What do you want to do?"/><div className="quick-list"><button onClick={() => onOpen('Analytics')}><BarChart3 size={15}/><span><strong>Sales & Profit</strong><small>Full analytics, expenses and payment mix</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Inventory')}><PackageSearch size={15}/><span><strong>Stock</strong><small>Products, purchases and wastage</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Restaurant')}><UtensilsCrossed size={15}/><span><strong>Restaurant</strong><small>Order oversight, tables and QR menu</small></span><ChevronRight size={14}/></button><button onClick={() => onOpen('Staff')}><UsersRound size={15}/><span><strong>Staff</strong><small>Add people and assign jobs</small></span><ChevronRight size={14}/></button></div></section></div>
+  </div>;
 }
 
 function SimpleAdminSectionIntro({ section }) {
