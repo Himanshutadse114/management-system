@@ -88,6 +88,7 @@ function Stat({ label, value, icon: Icon }) {
 
 export default function SalesWorkspace({ token, access }) {
   const [scope, setScope] = useState({ tenantId: '', branchId: '' });
+  const [tab, setTab] = useState('Sell');
   const [branch, setBranch] = useState(null);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -189,7 +190,9 @@ export default function SalesWorkspace({ token, access }) {
 
       <div className="sales-stats"><Stat label="Paid orders today" value={summary.orderCount || 0} icon={ReceiptText} /><Stat label="Sales today" value={formatMoney(summary.salesMinor)} icon={Banknote} /><Stat label="Cost of sold items" value={formatMoney(summary.cogsMinor)} icon={PackageSearch} /><Stat label="Gross profit" value={formatMoney(summary.grossProfitMinor)} icon={BarChart3} /></div>
 
-      <div className="pos-layout">
+      <div className="workspace-tabs">{[{label:'Sell',icon:CreditCard},{label:'History',icon:ReceiptText}].map(({label,icon:Icon}) => <button key={label} className={tab===label?'is-active':''} onClick={() => setTab(label)}><Icon size={15}/>{label}</button>)}</div>
+
+      {tab === 'Sell' && <div className="pos-layout">
         <section className="pos-catalogue">
           <div className="pos-toolbar"><div><div className="sales-mini">Step 1</div><h3>Choose items</h3></div><label className="pos-search"><Search size={14} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search item, brand or barcode..." /></label></div>
           <div className="product-pos-grid">{!filteredProducts.length && <div className="sales-empty"><Wine size={20} /><strong>No items available</strong><span>Add items and selling prices under Stock.</span></div>}{filteredProducts.map((product) => <article className="pos-product" key={product.id}><div className="pos-product-top">{product.imageUrl ? <img src={product.imageUrl} alt="" /> : <div className="pos-product-placeholder"><Wine size={20} /></div>}<div><strong>{product.name}</strong><span>{product.brand || product.productType}</span><small>In stock: {Number(product.availableQuantityBase || 0).toLocaleString('en-IN', { maximumFractionDigits: 3 })} {product.inventoryUnit}</small></div></div><div className="pos-prices">{(product.priceOptions || []).map((price) => <button key={price.id} onClick={() => addToCart(product, price)}><span>{price.label}</span><strong>{formatMoney(price.priceMinor)}</strong><Plus size={13} /></button>)}</div></article>)}</div>
@@ -202,9 +205,9 @@ export default function SalesWorkspace({ token, access }) {
           <div className="cart-totals"><div><span>Items</span><strong>{formatMoney(subtotalMinor)}</strong></div><div><span>Discount</span><strong>-{formatMoney(discountMinor)}</strong></div><div><span>Tax</span><strong>{formatMoney(taxMinor)}</strong></div><div className="grand-total"><span>Total</span><strong>{formatMoney(totalMinor)}</strong></div></div>
           <button className="scorm-button-primary checkout-button" disabled={paying || !cart.length || totalMinor < 0n} onClick={checkout}><CreditCard size={15} /> {paying ? 'Saving payment…' : `Collect ${formatMoney(totalMinor)}`}</button>
         </aside>
-      </div>
+      </div>}
 
-      <section className="sales-history"><div className="sales-history-head"><div><div className="sales-mini">Today</div><h3>Recent sales</h3></div><span>{orders.length} latest</span></div>{!orders.length ? <div className="sales-empty"><ReceiptText size={21} /><strong>No sales yet</strong><span>Paid sales will appear here.</span></div> : <div className="sales-table"><table><thead><tr><th>Bill</th><th>Time</th><th>Items</th><th>Payment</th><th>Sales</th><th>Item cost</th><th>Profit</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><strong>{order.orderNumber}</strong></td><td>{new Date(order.paidAt || order.createdAt).toLocaleString('en-IN')}</td><td>{order.lines?.reduce((sum, line) => sum + Number(line.quantityUnits || 0), 0) || 0}</td><td>{order.payments?.[0]?.method || '—'}</td><td><strong>{formatMoney(order.totalMinor)}</strong></td><td>{formatMoney(order.cogsMinor)}</td><td className="profit-cell">{formatMoney(order.grossProfitMinor)}</td></tr>)}</tbody></table></div>}</section>
+      {tab === 'History' && <section className="sales-history"><div className="sales-history-head"><div><div className="sales-mini">Today</div><h3>Recent sales</h3></div><span>{orders.length} latest</span></div>{!orders.length ? <div className="sales-empty"><ReceiptText size={21} /><strong>No sales yet</strong><span>Paid sales will appear here.</span></div> : <div className="sales-table"><table><thead><tr><th>Bill</th><th>Time</th><th>Items</th><th>Payment</th><th>Sales</th><th>Item cost</th><th>Profit</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><strong>{order.orderNumber}</strong></td><td>{new Date(order.paidAt || order.createdAt).toLocaleString('en-IN')}</td><td>{order.lines?.reduce((sum, line) => sum + Number(line.quantityUnits || 0), 0) || 0}</td><td>{order.payments?.[0]?.method || '—'}</td><td><strong>{formatMoney(order.totalMinor)}</strong></td><td>{formatMoney(order.cogsMinor)}</td><td className="profit-cell">{formatMoney(order.grossProfitMinor)}</td></tr>)}</tbody></table></div>}</section>}
 
       {lastReceipt && <div className="receipt-toast"><ReceiptText size={17} /><div><strong>Payment saved</strong><span>{lastReceipt.orderNumber} · {formatMoney(lastReceipt.totalMinor)}</span></div><button onClick={() => setLastReceipt(null)}>×</button></div>}
     </div>

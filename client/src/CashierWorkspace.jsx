@@ -30,6 +30,7 @@ function cashierAssignments(access) {
 
 export default function CashierWorkspace({ token, access }) {
   const assignments = useMemo(() => cashierAssignments(access), [access]);
+  const [tab, setTab] = useState('Sell');
   const [membershipId, setMembershipId] = useState(assignments[0]?.membershipId || '');
   const membership = assignments.find((row) => row.membershipId === membershipId) || assignments[0] || null;
   const tenantId = membership?.tenantId || '';
@@ -156,6 +157,9 @@ export default function CashierWorkspace({ token, access }) {
       <article><span>Branch</span><strong>{branch?.type === 'BAR_RESTAURANT' ? 'Restaurant' : 'Wine Shop'}</strong><small>{branch?.code}</small></article>
     </div>
 
+    <div className="workspace-tabs">{[{label:'Sell',icon:Banknote},{label:'History',icon:ReceiptText}].map(({label,icon:Icon}) => <button key={label} className={tab===label?'is-active':''} onClick={() => setTab(label)}><Icon size={15}/>{label}</button>)}</div>
+
+    {tab === 'Sell' && <>
     {restaurantBase && <section className="cashier-panel cashier-bills-first">
       <div className="cashier-panel-head"><div><span>First</span><h2>Bills to collect</h2></div><div className="cashier-payment-select"><CreditCard size={14}/><select aria-label="Payment method" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option>UPI</option><option>CASH</option><option>CARD</option><option>OTHER</option></select></div></div>
       {!settlements.length ? <div className="cashier-empty compact"><CheckCircle2 size={22}/><strong>No bills waiting</strong><span>When a waiter sends a bill, it will appear here.</span></div> : <div className="cashier-settlements">{settlements.map((order) => <article key={order.id}><div className="cashier-settlement-top"><div><span>{order.table?.name || 'Table'}</span><strong>{order.orderNumber}</strong></div><strong>{formatMoney(order.totalMinor)}</strong></div><div className="cashier-settlement-lines">{(order.lines || []).filter((line) => line.status !== 'CANCELLED').map((line) => <div key={line.id}><span>{line.quantityUnits} × {line.productNameSnapshot} · {line.priceLabelSnapshot}</span><strong>{formatMoney(line.lineSubtotalMinor)}</strong></div>)}</div><button className="cashier-primary" onClick={() => settleRestaurant(order)} disabled={busy}><Banknote size={13}/>Collect {formatMoney(order.totalMinor)}<ChevronRight size={13}/></button></article>)}</div>}
@@ -177,10 +181,11 @@ export default function CashierWorkspace({ token, access }) {
         {lastReceipt && <div className="cashier-receipt"><ReceiptText size={14}/><div><strong>{lastReceipt.orderNumber}</strong><span>Paid · {formatMoney(lastReceipt.totalMinor)}</span></div></div>}
       </aside>
     </div>
+    </>}
 
-    <section className="cashier-panel">
+    {tab === 'History' && <section className="cashier-panel">
       <div className="cashier-panel-head"><div><span>Today</span><h2>Recent payments</h2></div><ReceiptText size={18}/></div>
       {!orders.length ? <div className="cashier-empty compact"><ReceiptText size={22}/><strong>No payments yet</strong><span>Your completed counter sales will appear here.</span></div> : <div className="cashier-recent">{orders.map((order) => <article key={order.id}><div><strong>{order.orderNumber}</strong><span>{new Date(order.createdAt).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'})}</span></div><strong>{formatMoney(order.totalMinor)}</strong></article>)}</div>}
-    </section>
+    </section>}
   </div>;
 }
