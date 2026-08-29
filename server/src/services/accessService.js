@@ -146,6 +146,7 @@ async function accessSnapshot(user) {
 }
 
 async function canManageTenant(user, tenantId) {
+  if (isSuperAdmin(user.email)) return true;
   return Boolean(await TenantMembership.findOne({
     where: {
       tenantId,

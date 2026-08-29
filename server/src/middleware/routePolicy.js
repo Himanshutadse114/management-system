@@ -100,14 +100,8 @@ function policyGuard(req, res, next) {
   if (!required && !operational) return next();
 
   return authenticateOnce(req, res, () => requireApproved(req, res, () => {
-    // Platform Admin is a control-plane role. It manages tenant lifecycle through
-    // /api/platform and does not inherit customer operational data access.
-    if (req.access?.isSuperAdmin) {
-      return res.status(403).json({
-        message: 'Platform administrators do not have tenant operational access.',
-        code: 'PLATFORM_OPERATION_SCOPE_DENIED'
-      });
-    }
+    // Super Admin has full operational access across every tenant and branch.
+    if (req.access?.isSuperAdmin) return next();
 
     // Tenant-wide routes (branches list, consolidated analytics/reports) perform
     // their own tenant membership checks inside the router.

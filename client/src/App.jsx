@@ -249,10 +249,11 @@ function AdminDashboard() {
   const english = locale === 'en';
 
   const groups = useMemo(() => {
-    if (isSuperAdmin) return [{ key:'nav.platform', items:[{label:'Overview',icon:BarChart3},{label:'Tenants',icon:Building2}] }];
+    const operations = { key:'nav.operations', items:[{label:'Inventory',icon:PackageSearch},{label:'Sales & Orders',icon:ClipboardList},{label:'Restaurant',icon:UtensilsCrossed},{label:'Analytics',icon:BarChart3},{label:'Reports',icon:FileText},{label:'Staff',icon:UsersRound}] };
+    if (isSuperAdmin) return [{ key:'nav.platform', items:[{label:'Overview',icon:BarChart3},{label:'Tenants',icon:Building2}] }, operations];
     return [
       { key:'nav.platform', items:[{label:'Overview',icon:BarChart3},{label:'Branches',icon:Store}] },
-      { key:'nav.operations', items:[{label:'Inventory',icon:PackageSearch},{label:'Sales & Orders',icon:ClipboardList},{label:'Restaurant',icon:UtensilsCrossed},{label:'Analytics',icon:BarChart3},{label:'Reports',icon:FileText},{label:'Staff',icon:UsersRound}] }
+      operations
     ];
   }, [isSuperAdmin]);
 
@@ -269,20 +270,20 @@ function AdminDashboard() {
   return <div className={`scorm-editorial scorm-theme-${theme}`}>
     <aside className="scorm-sidebar"><div className="scorm-brand-wrap"><Brand/></div><Navigation/><div className="scorm-sidebar-footer"><div className="scorm-status-card"><div className="status-title">{primaryRole}</div><div className="status-copy">{session?.user?.email}</div></div><button type="button" onClick={logout} className="scorm-sidebar-switch"><span><LogOut size={14}/> {t('common.signOut')}</span><ChevronRight size={13}/></button></div></aside>
     {mobileOpen && <div className="mobile-overlay"><button aria-label="Close navigation" className="mobile-backdrop" onClick={() => setMobileOpen(false)}/><div className="scorm-mobile-drawer"><div className="drawer-head"><Brand/><button className="scorm-drawer-close" onClick={() => setMobileOpen(false)}><X size={17}/></button></div><Navigation/><div className="drawer-foot"><LanguageSwitcher/><button type="button" onClick={logout} className="scorm-sidebar-switch"><span><LogOut size={14}/> {t('common.signOut')}</span><ChevronRight size={13}/></button></div></div></div>}
-    <div className="scorm-shell-content"><header className="scorm-topbar"><button type="button" onClick={() => setMobileOpen(true)} className="scorm-topbar-icon mobile-menu-trigger"><Menu size={18}/></button><div className="topbar-context">{primaryRole}</div><div className="topbar-actions"><LanguageSwitcher compact/><ThemeToggle theme={theme} onToggle={toggleTheme}/>{!isSuperAdmin && <button className="scorm-button-secondary topbar-secondary" onClick={() => openSection('Reports')}><FileText size={14}/> Reports</button>}<button className="scorm-button-primary" onClick={() => openSection(isSuperAdmin ? 'Tenants' : 'Branches')}><Plus size={14}/><span>{isSuperAdmin ? (english ? 'Add business' : t('tenant.create')) : (english ? 'Add branch' : t('branch.add'))}</span></button></div></header>
+    <div className="scorm-shell-content"><header className="scorm-topbar"><button type="button" onClick={() => setMobileOpen(true)} className="scorm-topbar-icon mobile-menu-trigger"><Menu size={18}/></button><div className="topbar-context">{primaryRole}</div><div className="topbar-actions"><LanguageSwitcher compact/><ThemeToggle theme={theme} onToggle={toggleTheme}/>{allowedSections.has('Reports') && <button className="scorm-button-secondary topbar-secondary" onClick={() => openSection('Reports')}><FileText size={14}/> Reports</button>}<button className="scorm-button-primary" onClick={() => openSection(isSuperAdmin ? 'Tenants' : 'Branches')}><Plus size={14}/><span>{isSuperAdmin ? (english ? 'Add business' : t('tenant.create')) : (english ? 'Add branch' : t('branch.add'))}</span></button></div></header>
       <main className="scorm-main">
         {activeSection === 'Overview' && (isSuperAdmin ? <SuperAdminOverview token={token} onOpen={openSection}/> : <TenantAdminOverview token={token} membership={tenantAdmin} onOpen={openSection}/>)}
         {activeSection === 'Tenants' && isSuperAdmin && <div className="platform-page standalone-page"><PlatformTenants token={token}/></div>}
         {activeSection === 'Branches' && tenantAdmin && <div className="platform-page standalone-page"><TenantBranches token={token} membership={tenantAdmin}/></div>}
-        {activeSection === 'Inventory' && tenantAdmin && <><SimpleAdminSectionIntro section="Inventory"/><InventoryWorkspace token={token} access={tenantAccess}/></>}
-        {activeSection === 'Sales & Orders' && tenantAdmin && <><SimpleAdminSectionIntro section="Sales & Orders"/><SalesWorkspace token={token} access={tenantAccess}/></>}
-        {activeSection === 'Restaurant' && tenantAdmin && <><SimpleAdminSectionIntro section="Restaurant"/><RestaurantManagerWorkspace token={token} access={tenantAccess}/></>}
-        {activeSection === 'Analytics' && tenantAdmin && <><SimpleAdminSectionIntro section="Analytics"/><AnalyticsWorkspace token={token} access={tenantAccess}/></>}
-        {activeSection === 'Reports' && tenantAdmin && <><SimpleAdminSectionIntro section="Reports"/><ReportsWorkspace token={token} access={tenantAccess}/></>}
-        {activeSection === 'Staff' && tenantAdmin && <><SimpleAdminSectionIntro section="Staff"/><StaffWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Inventory' && (tenantAdmin || isSuperAdmin) && <><SimpleAdminSectionIntro section="Inventory"/><InventoryWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Sales & Orders' && (tenantAdmin || isSuperAdmin) && <><SimpleAdminSectionIntro section="Sales & Orders"/><SalesWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Restaurant' && (tenantAdmin || isSuperAdmin) && <><SimpleAdminSectionIntro section="Restaurant"/><RestaurantManagerWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Analytics' && (tenantAdmin || isSuperAdmin) && <><SimpleAdminSectionIntro section="Analytics"/><AnalyticsWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Reports' && (tenantAdmin || isSuperAdmin) && <><SimpleAdminSectionIntro section="Reports"/><ReportsWorkspace token={token} access={tenantAccess}/></>}
+        {activeSection === 'Staff' && (tenantAdmin || isSuperAdmin) && <><SimpleAdminSectionIntro section="Staff"/><StaffWorkspace token={token} access={tenantAccess}/></>}
       </main>
     </div>
-    <div className="scorm-mobile-tabbar">{(isSuperAdmin ? [{label:'Overview',icon:BarChart3},{label:'Tenants',icon:Building2}] : [{label:'Overview',icon:BarChart3},{label:'Inventory',icon:PackageSearch},{label:'Sales & Orders',icon:ClipboardList},{label:'Restaurant',icon:UtensilsCrossed}]).map(({label,icon:Icon}) => <button key={label} className={`scorm-mobile-tab ${activeSection === label ? 'is-active' : ''}`} onClick={() => openSection(label)}><Icon size={17}/><span>{sectionLabel(label)}</span></button>)}</div>
+    <div className="scorm-mobile-tabbar">{(isSuperAdmin ? [{label:'Overview',icon:BarChart3},{label:'Tenants',icon:Building2},{label:'Inventory',icon:PackageSearch},{label:'Reports',icon:FileText}] : [{label:'Overview',icon:BarChart3},{label:'Inventory',icon:PackageSearch},{label:'Sales & Orders',icon:ClipboardList},{label:'Restaurant',icon:UtensilsCrossed}]).map(({label,icon:Icon}) => <button key={label} className={`scorm-mobile-tab ${activeSection === label ? 'is-active' : ''}`} onClick={() => openSection(label)}><Icon size={17}/><span>{sectionLabel(label)}</span></button>)}</div>
   </div>;
 }
 
