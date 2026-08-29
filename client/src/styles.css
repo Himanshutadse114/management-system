@@ -397,7 +397,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .scorm-sidebar-switch { width: 100%; padding: 0 12px; justify-content: space-between; background: var(--ops-surface); border-color: var(--scorm-line); color: var(--ops-body); box-shadow: none; }
 .scorm-sidebar-switch span { display: flex; align-items: center; gap: 8px; }
 .scorm-sidebar-switch:hover { background: var(--ops-surface-2); border-color: var(--ops-orange-line-soft); color: var(--ops-text); }
-.scorm-shell-content { min-height: 100vh; padding-left: 268px; }
+.scorm-shell-content { min-height: 100vh; }
 .scorm-topbar {
   position: sticky;
   top: 0;
@@ -644,7 +644,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 @media (max-width: 1023px) {
   .scorm-sidebar { display: none; }
-  .scorm-shell-content { padding-left: 0; }
   .mobile-menu-trigger { display: inline-flex; }
   .topbar-context { display: none; }
   .platform-page { padding-bottom: 94px; }

@@ -30,23 +30,29 @@ textarea {
 .scorm-editorial,
 .scorm-shell-content,
 .scorm-main,
-.platform-page,
 .focused-shell,
 .focused-content,
-.focused-main,
 .focused-single,
-.focused-single-main,
 .inventory-page,
-.sales-page,
-.restaurant-page,
-.analytics-page,
-.reports-page,
-.staff-page,
 .waiter-page,
 .cashier-page,
 .public-menu-page {
   min-width: 0;
   max-width: 100%;
+}
+
+/* These pages already cap and center themselves (max-width + margin: 0 auto
+   in their own stylesheet). min-width: 0 alone keeps them safe as flex/grid
+   children on narrow viewports without overriding that desktop cap. */
+.platform-page,
+.focused-main,
+.focused-single-main,
+.sales-page,
+.restaurant-page,
+.analytics-page,
+.reports-page,
+.staff-page {
+  min-width: 0;
 }
 
 .inventory-table-wrap,
