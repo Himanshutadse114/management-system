@@ -4,7 +4,7 @@ const backend = String(import.meta.env.VITE_BACKEND_URL || 'http://localhost:500
 
 export const api = axios.create({
   baseURL: `${backend}/api`,
-  timeout: 20000
+  timeout: 30000
 });
 
 export function authHeaders(token) {

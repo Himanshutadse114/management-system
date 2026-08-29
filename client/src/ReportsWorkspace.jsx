@@ -38,9 +38,9 @@ export default function ReportsWorkspace({ token, access }) {
 
   function flash(msg){setNotice(msg);window.setTimeout(()=>setNotice(''),2800);}
 
-  async function generate(event){event.preventDefault();try{setBusy(true);setError('');const{data}=await api.post(`/reports/tenants/${tenantId}/generate`,{...form,branchId:branchId||null},{headers:authHeaders(token)});await loadHistory();flash(`${reportName(catalog.reports,data.report.reportType)} is ready.`);}catch(err){setError(apiErrorMessage(err));}finally{setBusy(false);}}
+  async function generate(event){event.preventDefault();try{setBusy(true);setError('');const{data}=await api.post(`/reports/tenants/${tenantId}/generate`,{...form,branchId:branchId||null},{headers:authHeaders(token),timeout:130000});await loadHistory();flash(`${reportName(catalog.reports,data.report.reportType)} is ready.`);}catch(err){setError(apiErrorMessage(err));}finally{setBusy(false);}}
 
-  async function download(report){try{setDownloading(report.id);setError('');const response=await api.get(`/reports/tenants/${report.tenantId}/${report.id}/download`,{headers:authHeaders(token),responseType:'blob'});const url=URL.createObjectURL(response.data);const anchor=document.createElement('a');anchor.href=url;anchor.download=report.fileName||`report.${report.format==='XLSX'?'xlsx':'pdf'}`;document.body.appendChild(anchor);anchor.click();anchor.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(err){setError(apiErrorMessage(err));}finally{setDownloading('');}}
+  async function download(report){try{setDownloading(report.id);setError('');const response=await api.get(`/reports/tenants/${report.tenantId}/${report.id}/download`,{headers:authHeaders(token),responseType:'blob',timeout:60000});const url=URL.createObjectURL(response.data);const anchor=document.createElement('a');anchor.href=url;anchor.download=report.fileName||`report.${report.format==='XLSX'?'xlsx':'pdf'}`;document.body.appendChild(anchor);anchor.click();anchor.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(err){setError(apiErrorMessage(err));}finally{setDownloading('');}}
 
   const selected=catalog.reports.find((row)=>row.id===form.reportType);
   const canUseTenantScope=hasTenantView;
