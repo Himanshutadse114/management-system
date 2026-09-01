@@ -18,7 +18,7 @@ const {
 const router = express.Router();
 
 const DEVA_ANDROID_GOOGLE_CLIENT_ID =
-  '1001652255296-bp21ikesu61ccbgtgf04e4p7kh22iqef.apps.googleusercontent.com';
+  '1001652255296-bp21jkesu61ccbgtgf04e4p7kh22iqef.apps.googleusercontent.com';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
