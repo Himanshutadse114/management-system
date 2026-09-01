@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
   ChevronRight,
+  LogIn,
   Mail,
   RefreshCw,
   Search,
@@ -11,6 +12,7 @@ import {
   UsersRound
 } from 'lucide-react';
 import { api, apiErrorMessage, authHeaders } from './api';
+import { useAuth } from './AuthContext';
 import './staff.css';
 
 const ROLES = [
@@ -27,9 +29,11 @@ function prettyRole(value) {
 }
 
 export default function StaffWorkspace({ token, access }) {
+  const { startImpersonation } = useAuth();
   const isSuperAdmin = Boolean(access?.isSuperAdmin);
   const tenantAdmin = (access?.tenants || []).find((row) => row.role === 'TENANT_ADMIN');
   const canManage = isSuperAdmin || Boolean(tenantAdmin);
+  const canWorkAsStaff = Boolean(tenantAdmin) && !isSuperAdmin;
   const [tenants, setTenants] = useState([]);
   const [branches, setBranches] = useState([]);
   const [members, setMembers] = useState([]);
@@ -38,6 +42,7 @@ export default function StaffWorkspace({ token, access }) {
   const [form, setForm] = useState({ email: '', role: 'WAITER' });
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
+  const [workingAs, setWorkingAs] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -111,6 +116,18 @@ export default function StaffWorkspace({ token, access }) {
     } catch (err) { setError(apiErrorMessage(err)); }
   }
 
+  async function workAsStaff(member) {
+    try {
+      setWorkingAs(member.id);
+      setError('');
+      await startImpersonation(tenantId, member.id);
+    } catch (err) {
+      setError(apiErrorMessage(err));
+    } finally {
+      setWorkingAs('');
+    }
+  }
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return members;
@@ -122,7 +139,7 @@ export default function StaffWorkspace({ token, access }) {
   const selectedBranch = branches.find((row) => row.id === branchId);
 
   return <div className="staff-page">
-    <section className="staff-hero"><div><div className="staff-mini">Staff</div><h2>Add people & choose their job</h2><p>Add each person with their own Google email. The system will automatically show them only the screens needed for their job.</p></div><button className="scorm-button-secondary" onClick={loadMembers} disabled={busy}><RefreshCw size={14} className={busy?'spin':''}/>Refresh</button></section>
+    <section className="staff-hero"><div><div className="staff-mini">Staff</div><h2>Add people & choose their job</h2><p>Add each person with their own Google email. Business Admins can also temporarily work as a staff member for monitoring or emergency cover.</p></div><button className="scorm-button-secondary" onClick={loadMembers} disabled={busy}><RefreshCw size={14} className={busy?'spin':''}/>Refresh</button></section>
 
     <div className="staff-scope"><label><span>Business</span><select value={tenantId} onChange={(e)=>{setTenantId(e.target.value);setBranchId('')}}>{!tenants.length&&<option value="">No business</option>}{tenants.map((row)=><option value={row.id} key={row.id}>{row.name}</option>)}</select></label><label><span>Branch</span><select value={branchId} onChange={(e)=>setBranchId(e.target.value)}>{!branches.length&&<option value="">No branch</option>}{branches.map((row)=><option value={row.id} key={row.id}>{row.name} · {row.code}</option>)}</select></label></div>
     {error&&<div className="staff-error">{error}</div>}{notice&&<div className="staff-notice">{notice}</div>}
@@ -132,14 +149,14 @@ export default function StaffWorkspace({ token, access }) {
         <div className="staff-panel-head"><div><div className="staff-mini">{selectedBranch?.name || 'Selected branch'}</div><h3>Add staff member</h3></div><UserPlus size={18}/></div>
         <label><span>Google email</span><div className="staff-input-icon"><Mail size={14}/><input type="email" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} placeholder="person@example.com" required/></div></label>
         <label><span>What is their job?</span><select value={form.role} onChange={(e)=>setForm({...form,role:e.target.value})}>{ROLES.map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
-        <div className="staff-role-note"><ShieldCheck size={15}/><span>Use a separate email for each person. This keeps every order, payment and stock change linked to the correct staff member.</span></div>
+        <div className="staff-role-note"><ShieldCheck size={15}/><span>Use a separate email for each person. Staff sessions keep the selected role and branch restrictions, and Deva records when a Business Admin starts and ends a staff session.</span></div>
         <button className="scorm-button-primary staff-submit" disabled={busy}><UserPlus size={14}/>Add staff member</button>
       </form>
 
       <section className="staff-panel">
         <div className="staff-panel-head"><div><div className="staff-mini">{selectedBranch?.name || 'Branch'}</div><h3>People working here</h3></div><span className="staff-count"><UsersRound size={13}/>{members.length}</span></div>
         <label className="staff-search"><Search size={14}/><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search by email or job..."/></label>
-        {!visible.length ? <div className="staff-empty compact"><UsersRound size={21}/><strong>No staff added yet</strong><span>Add a manager, waiter, cashier, stock manager or auditor.</span></div> : <div className="staff-list">{visible.map((member)=><article className="staff-row" key={member.id}><div className="staff-avatar">{member.email?.slice(0,2).toUpperCase()}</div><div className="staff-identity"><strong>{member.email}</strong><span>{prettyRole(member.role)} · {member.userId?'Ready to use':'Waiting for first sign in'}</span></div><span className={`staff-status ${member.status==='ACTIVE'?'active':member.status==='INVITED'?'invited':'suspended'}`}>{member.status==='ACTIVE'?<CheckCircle2 size={11}/>:null}{member.status==='INVITED'?'WAITING':member.status}</span><button className="staff-access-action" onClick={()=>toggleStatus(member)} disabled={member.status==='INVITED'}>{member.status==='SUSPENDED'?'Restore':'Suspend'}<ChevronRight size={12}/></button></article>)}</div>}
+        {!visible.length ? <div className="staff-empty compact"><UsersRound size={21}/><strong>No staff added yet</strong><span>Add a manager, waiter, cashier, stock manager or auditor.</span></div> : <div className="staff-list">{visible.map((member)=><article className="staff-row" key={member.id}><div className="staff-avatar">{member.email?.slice(0,2).toUpperCase()}</div><div className="staff-identity"><strong>{member.email}</strong><span>{prettyRole(member.role)} · {member.userId?'Ready to use':'Ready for admin cover'}</span></div><span className={`staff-status ${member.status==='ACTIVE'?'active':member.status==='INVITED'?'invited':'suspended'}`}>{member.status==='ACTIVE'?<CheckCircle2 size={11}/>:null}{member.status==='INVITED'?'WAITING':member.status}</span><div className="staff-row-actions">{canWorkAsStaff && member.status !== 'SUSPENDED' && <button className="staff-work-as" onClick={()=>workAsStaff(member)} disabled={Boolean(workingAs)}><LogIn size={12}/>{workingAs===member.id?'Opening…':'Work as'}</button>}<button className="staff-access-action" onClick={()=>toggleStatus(member)} disabled={member.status==='INVITED'}>{member.status==='SUSPENDED'?'Restore':'Suspend'}<ChevronRight size={12}/></button></div></article>)}</div>}
       </section>
     </div>}
   </div>;
