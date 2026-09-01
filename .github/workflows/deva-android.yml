@@ -4,12 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       api_url:
-        description: Live Deva backend URL, for example https://your-backend.onrender.com
+        description: Live Deva backend URL
         required: false
+        default: https://management-system-pvmc.onrender.com
         type: string
       google_server_client_id:
-        description: Google Web OAuth client ID used by the Deva backend
+        description: Google Web OAuth client ID used by Deva
         required: false
+        default: 1001652255296-5b3dgdi1am0187r1k681kfjuv7hilei3.apps.googleusercontent.com
         type: string
   push:
     branches: [main]
@@ -25,8 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      DEVA_API_URL: ${{ inputs.api_url || vars.DEVA_API_URL }}
-      DEVA_GOOGLE_SERVER_CLIENT_ID: ${{ inputs.google_server_client_id || vars.DEVA_GOOGLE_SERVER_CLIENT_ID }}
+      DEVA_API_URL: ${{ inputs.api_url || vars.DEVA_API_URL || 'https://management-system-pvmc.onrender.com' }}
+      DEVA_GOOGLE_SERVER_CLIENT_ID: ${{ inputs.google_server_client_id || vars.DEVA_GOOGLE_SERVER_CLIENT_ID || '1001652255296-5b3dgdi1am0187r1k681kfjuv7hilei3.apps.googleusercontent.com' }}
 
     steps:
       - name: Checkout
@@ -49,11 +51,11 @@ jobs:
         shell: bash
         run: |
           if [ -z "$DEVA_API_URL" ]; then
-            echo "::error::Set repository variable DEVA_API_URL or provide api_url when running this workflow manually."
+            echo "::error::DEVA_API_URL is required."
             exit 1
           fi
           if [ -z "$DEVA_GOOGLE_SERVER_CLIENT_ID" ]; then
-            echo "::error::Set repository variable DEVA_GOOGLE_SERVER_CLIENT_ID or provide google_server_client_id when running this workflow manually."
+            echo "::error::DEVA_GOOGLE_SERVER_CLIENT_ID is required."
             exit 1
           fi
           if [[ "$DEVA_API_URL" == *"example.invalid"* ]] || [[ "$DEVA_GOOGLE_SERVER_CLIENT_ID" == placeholder* ]]; then
