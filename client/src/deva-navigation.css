@@ -1,0 +1,273 @@
+/* Deva navigation polish — loaded last so the shell has one consistent menu language. */
+
+.scorm-sidebar,
+.scorm-mobile-drawer,
+.focused-sidebar,
+.focused-mobile-drawer {
+  background: var(--ops-surface-3) !important;
+  border-color: var(--ops-line) !important;
+  box-shadow: none !important;
+}
+
+.scorm-brand-wrap {
+  min-height: 82px !important;
+  padding: 16px 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  border-bottom: 1px solid var(--ops-line) !important;
+}
+
+.scorm-brand {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  text-align: left !important;
+}
+
+.scorm-brand-mark,
+.focused-brand-mark {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  border-radius: 11px !important;
+}
+
+.scorm-brand-name::after,
+.focused-brand > span:last-child > strong::after {
+  font-size: 19px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.035em !important;
+}
+
+.brand-copy small,
+.focused-brand small {
+  margin-top: 4px !important;
+  font-size: 10px !important;
+  line-height: 1.25 !important;
+  color: var(--ops-muted) !important;
+}
+
+.scorm-nav {
+  padding: 16px 12px 20px !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ops-line) transparent;
+}
+
+.nav-group-spaced { margin-top: 22px !important; }
+
+.scorm-nav-section,
+.focused-nav-label {
+  padding: 0 10px 8px !important;
+  color: var(--ops-muted) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  letter-spacing: .04em !important;
+  text-transform: uppercase !important;
+}
+
+.nav-items,
+.focused-nav {
+  gap: 5px !important;
+}
+
+.scorm-nav-item,
+.focused-nav button {
+  width: 100% !important;
+  min-height: 46px !important;
+  padding: 7px 10px !important;
+  border: 1px solid transparent !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+  color: var(--ops-body) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  box-shadow: none !important;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease !important;
+}
+
+.scorm-nav-item:hover,
+.focused-nav button:hover {
+  background: var(--ops-surface-2) !important;
+  border-color: var(--ops-line) !important;
+  color: var(--ops-text) !important;
+  transform: none !important;
+}
+
+.scorm-nav-icon,
+.focused-nav button > span:first-child {
+  width: 31px !important;
+  min-width: 31px !important;
+  height: 31px !important;
+  padding: 0 !important;
+  border: 1px solid var(--ops-line) !important;
+  border-radius: 9px !important;
+  background: var(--ops-surface) !important;
+  color: var(--ops-muted) !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.scorm-nav-active,
+.scorm-theme-light .scorm-nav-active,
+.focused-nav button.active {
+  background: var(--ops-orange-soft) !important;
+  border-color: var(--ops-orange-line) !important;
+  color: var(--ops-orange-strong) !important;
+  box-shadow: none !important;
+}
+
+.scorm-nav-active::before,
+.focused-nav button.active::before {
+  content: '';
+  width: 3px;
+  height: 22px;
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 0 999px 999px 0;
+  background: var(--ops-orange);
+}
+
+.focused-nav button { position: relative !important; }
+
+.scorm-nav-active .scorm-nav-icon,
+.focused-nav button.active > span:first-child {
+  background: var(--ops-orange-soft-strong) !important;
+  border-color: var(--ops-orange-line) !important;
+  color: var(--ops-orange-strong) !important;
+}
+
+.scorm-nav-chevron,
+.focused-nav button > svg:last-child {
+  margin-left: auto !important;
+  color: currentColor !important;
+}
+
+.scorm-sidebar-footer,
+.focused-sidebar-foot {
+  padding: 12px !important;
+  border-top: 1px solid var(--ops-line) !important;
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.scorm-status-card,
+.focused-sidebar-foot > div {
+  padding: 11px 12px !important;
+  border: 1px solid var(--ops-line) !important;
+  border-radius: 11px !important;
+  background: var(--ops-surface-2) !important;
+  box-shadow: none !important;
+}
+
+.status-title,
+.focused-sidebar-foot strong {
+  color: var(--ops-text) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.status-copy,
+.focused-sidebar-foot small {
+  color: var(--ops-muted) !important;
+  font-size: 9.5px !important;
+  line-height: 1.4 !important;
+}
+
+.scorm-sidebar-switch,
+.focused-sidebar-foot > button,
+.drawer-foot .scorm-sidebar-switch {
+  min-height: 42px !important;
+  padding: 0 11px !important;
+  border: 1px solid var(--ops-line) !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: var(--ops-body) !important;
+  box-shadow: none !important;
+}
+
+.scorm-sidebar-switch:hover,
+.focused-sidebar-foot > button:hover {
+  background: var(--ops-surface-2) !important;
+  color: var(--ops-text) !important;
+  border-color: var(--ops-line) !important;
+}
+
+.drawer-head,
+.focused-drawer-head {
+  min-height: 76px !important;
+  padding: 0 14px !important;
+  border-bottom: 1px solid var(--ops-line) !important;
+}
+
+.scorm-mobile-drawer,
+.focused-mobile-drawer {
+  width: min(318px, 88vw) !important;
+}
+
+.scorm-drawer-close,
+.focused-drawer-head > button {
+  width: 38px !important;
+  min-width: 38px !important;
+  height: 38px !important;
+  padding: 0 !important;
+  border: 1px solid var(--ops-line) !important;
+  border-radius: 10px !important;
+  background: var(--ops-surface) !important;
+  color: var(--ops-body) !important;
+}
+
+.drawer-foot,
+.focused-drawer-tools {
+  padding: 12px !important;
+  border-top: 1px solid var(--ops-line) !important;
+  background: var(--ops-surface-3) !important;
+}
+
+.focused-mobile-tabs {
+  padding: 7px 8px max(7px, env(safe-area-inset-bottom)) !important;
+  border-top: 1px solid var(--ops-line) !important;
+  background: var(--ops-surface) !important;
+  box-shadow: none !important;
+}
+
+.focused-mobile-tabs button {
+  min-height: 49px !important;
+  border-radius: 10px !important;
+  color: var(--ops-muted) !important;
+}
+
+.focused-mobile-tabs button.active {
+  background: var(--ops-orange-soft) !important;
+  color: var(--ops-orange-strong) !important;
+}
+
+@media (min-width: 1024px) {
+  .scorm-sidebar { width: 252px !important; }
+  .scorm-shell-content { margin-left: 252px !important; }
+}
+
+@media (max-width: 1023px) {
+  .scorm-mobile-drawer .scorm-brand-wrap,
+  .drawer-head .scorm-brand-wrap {
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .scorm-mobile-drawer .scorm-nav,
+  .focused-mobile-drawer .focused-nav {
+    padding-top: 14px !important;
+  }
+}
