@@ -28,9 +28,13 @@ flutter create . --platforms=android --project-name=deva
 flutter pub get
 ```
 
-After generation, set the Android application ID to the production package name you register for Deva in Google Cloud.
+After generation:
 
-For `flutter_secure_storage`, keep Android backup disabled in `android/app/src/main/AndroidManifest.xml`:
+1. Set the Android application ID to the production package name registered for Deva in Google Cloud.
+2. Use Android API 23 or newer as the minimum SDK because secure token storage requires it.
+3. Keep Android backup disabled for the application so authentication material is not included in device backups.
+
+In `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <application
