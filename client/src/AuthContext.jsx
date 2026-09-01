@@ -2,8 +2,8 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { api, authHeaders } from './api';
 
 const AuthContext = createContext(null);
-const TOKEN_KEY = 'managementSystemToken';
-const SESSION_KEY = 'managementSystemSession';
+const TOKEN_KEY = 'devaToken';
+const SESSION_KEY = 'devaSession';
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
@@ -26,6 +26,15 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem(SESSION_KEY);
   }
 
+  function sessionFromData(data) {
+    return {
+      user: data.user,
+      access: data.access,
+      pendingApproval: data.pendingApproval,
+      impersonation: data.impersonation || null
+    };
+  }
+
   async function refresh() {
     if (!token) {
       setLoading(false);
@@ -33,7 +42,7 @@ export function AuthProvider({ children }) {
     }
     try {
       const { data } = await api.get('/auth/status', { headers: authHeaders(token) });
-      const next = { user: data.user, access: data.access, pendingApproval: data.pendingApproval };
+      const next = sessionFromData(data);
       persist(token, next);
       return next;
     } catch (error) {
@@ -52,7 +61,23 @@ export function AuthProvider({ children }) {
 
   async function loginWithGoogle(credential) {
     const { data } = await api.post('/auth/google', { credential });
-    const next = { user: data.user, access: data.access, pendingApproval: data.pendingApproval };
+    const next = sessionFromData(data);
+    persist(data.token, next);
+    return next;
+  }
+
+  async function startImpersonation(tenantId, membershipId) {
+    if (!token) throw new Error('Sign in again before opening a staff account.');
+    const { data } = await api.post('/auth/impersonate', { tenantId, membershipId }, { headers: authHeaders(token) });
+    const next = sessionFromData(data);
+    persist(data.token, next);
+    return next;
+  }
+
+  async function stopImpersonation() {
+    if (!token) throw new Error('The staff session is no longer available.');
+    const { data } = await api.post('/auth/impersonation/stop', {}, { headers: authHeaders(token) });
+    const next = sessionFromData(data);
     persist(data.token, next);
     return next;
   }
@@ -66,6 +91,8 @@ export function AuthProvider({ children }) {
     session,
     loading,
     loginWithGoogle,
+    startImpersonation,
+    stopImpersonation,
     refresh,
     logout
   }), [token, session, loading]);
