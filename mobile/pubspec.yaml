@@ -10,7 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
   dio: ^5.11.0
-  flutter_secure_storage: ^11.0.0
+  # 11.x currently requires Android compileSdk 37 while the stable Flutter
+  # Android template used by CI targets SDK 36. Keep secure encrypted storage
+  # on the latest compatible 9.x line until the stable Android toolchain moves.
+  flutter_secure_storage: 9.2.4
   google_sign_in: ^7.2.0
 
 dev_dependencies:
