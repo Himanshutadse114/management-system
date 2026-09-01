@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 20
     env:
       DEVA_API_URL: ${{ inputs.api_url || vars.DEVA_API_URL || 'https://management-system-pvmc.onrender.com' }}
+      DEVA_GOOGLE_SERVER_CLIENT_ID: '1001652255296-5b3dgdi1am0187r1k681kfjuv7hilei3.apps.googleusercontent.com'
       DEVA_ANDROID_SHA1: 'F1:4D:5A:DD:99:AA:BC:1B:33:62:34:CD:99:4A:32:48:F4:59:E4:21'
 
     steps:
@@ -42,6 +43,7 @@ jobs:
         shell: bash
         run: |
           test -n "$DEVA_API_URL" || { echo "::error::DEVA_API_URL is required."; exit 1; }
+          test -n "$DEVA_GOOGLE_SERVER_CLIENT_ID" || { echo "::error::DEVA_GOOGLE_SERVER_CLIENT_ID is required."; exit 1; }
           if [[ "$DEVA_API_URL" == *"example.invalid"* ]]; then
             echo "::error::Placeholder Android configuration is not allowed."
             exit 1
@@ -84,6 +86,35 @@ jobs:
           manifest.write_text(text)
           PY
 
+      - name: Prepare Google backend ID-token authentication
+        working-directory: mobile
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('lib/main.dart')
+          text = path.read_text()
+
+          api_marker = """  static const _apiUrl = String.fromEnvironment(\n    'DEVA_API_URL',\n    defaultValue: 'http://10.0.2.2:5001',\n  );\n"""
+          client_marker = api_marker + """  static const _googleServerClientId = String.fromEnvironment(\n    'DEVA_GOOGLE_SERVER_CLIENT_ID',\n    defaultValue: '',\n  );\n"""
+          if '_googleServerClientId' not in text:
+              assert api_marker in text, 'Could not find Deva API config block.'
+              text = text.replace(api_marker, client_marker, 1)
+
+          old_google = """  final GoogleSignIn _google = GoogleSignIn(\n    scopes: const <String>['email', 'profile', 'openid'],\n  );\n"""
+          new_google = """  final GoogleSignIn _google = GoogleSignIn(\n    scopes: const <String>['email', 'profile', 'openid'],\n    serverClientId: _googleServerClientId,\n  );\n"""
+          if old_google in text:
+              text = text.replace(old_google, new_google, 1)
+          else:
+              assert 'serverClientId: _googleServerClientId' in text, 'Could not configure Google server client ID.'
+
+          old_auth = """      final authentication = await account.authentication;\n      final accessToken = authentication.accessToken;\n      if (accessToken == null || accessToken.isEmpty) {\n        throw StateError('Google Sign-In did not return an access token.');\n      }\n\n      final response = await _dio.post<Map<String, dynamic>>(\n        '/auth/google',\n        data: {'accessToken': accessToken},\n      );\n"""
+          new_auth = """      final authentication = await account.authentication;\n      final idToken = authentication.idToken;\n      if (idToken == null || idToken.isEmpty) {\n        throw StateError('Google Sign-In did not return a server identity token.');\n      }\n\n      final response = await _dio.post<Map<String, dynamic>>(\n        '/auth/google',\n        data: {'credential': idToken},\n      );\n"""
+          assert old_auth in text, 'Could not find the temporary access-token auth flow.'
+          text = text.replace(old_auth, new_auth, 1)
+          path.write_text(text)
+          PY
+
       - name: Install dependencies
         working-directory: mobile
         run: flutter pub get
@@ -105,8 +136,9 @@ jobs:
       - name: Build debug APK
         working-directory: mobile
         run: >-
-          flutter build apk --debug
+          flutter build apk --debug --build-number=4
           --dart-define=DEVA_API_URL="$DEVA_API_URL"
+          --dart-define=DEVA_GOOGLE_SERVER_CLIENT_ID="$DEVA_GOOGLE_SERVER_CLIENT_ID"
 
       - name: Verify finished APK signing SHA-1
         working-directory: mobile
