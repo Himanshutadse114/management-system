@@ -1,7 +1,7 @@
 name: deva
 description: Deva mobile app for shared outlet operations.
 publish_to: "none"
-version: 0.1.0+1
+version: 0.1.0+2
 
 environment:
   sdk: ">=3.7.0 <4.0.0"
@@ -10,11 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
   dio: ^5.11.0
-  # 11.x currently requires Android compileSdk 37 while the stable Flutter
-  # Android template used by CI targets SDK 36. Keep secure encrypted storage
-  # on the latest compatible 9.x line until the stable Android toolchain moves.
   flutter_secure_storage: 9.2.4
-  google_sign_in: ^7.2.0
+  # Keep Android on the pre-Credential-Manager sign-in path for now. The 7.x
+  # Android implementation can surface Google Credential Manager's ambiguous
+  # "[16] Account reauth failed" error on some devices/configurations.
+  google_sign_in: 6.3.0
 
 dev_dependencies:
   flutter_test:
