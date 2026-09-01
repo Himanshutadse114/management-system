@@ -145,6 +145,19 @@ async function accessSnapshot(user) {
   };
 }
 
+function scopeAccessToTenant(access, tenantId) {
+  const id = String(tenantId || '');
+  const tenants = (access?.tenants || []).filter((row) => String(row.tenantId) === id);
+  const branches = (access?.branches || []).filter((row) => String(row.tenantId) === id);
+  return {
+    platformRole: 'USER',
+    isSuperAdmin: false,
+    approved: tenants.length > 0 || branches.length > 0,
+    tenants,
+    branches
+  };
+}
+
 async function canManageTenant(user, tenantId) {
   // Platform-level access is deliberately isolated from tenant operations.
   // A platform account manages businesses through /api/platform and must not
@@ -182,6 +195,7 @@ module.exports = {
   activateMatchingInvitations,
   capturePendingRequest,
   accessSnapshot,
+  scopeAccessToTenant,
   canManageTenant,
   hasBranchRole
 };
