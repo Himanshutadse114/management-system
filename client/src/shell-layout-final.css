@@ -1,0 +1,66 @@
+/*
+  Final desktop shell geometry
+  ----------------------------
+  Navigation styling must not own layout offsets. desktop-shell-fix.css reserves
+  the fixed sidebar width on the outer shell; the content pane therefore starts
+  at zero inside that reserved area. This file is intentionally loaded last to
+  prevent older navigation rules from adding a second sidebar offset.
+*/
+
+@media (min-width: 821px) {
+  .scorm-editorial,
+  .focused-shell {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .scorm-shell-content,
+  .focused-content {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .scorm-topbar,
+  .scorm-main,
+  .focused-topbar,
+  .focused-main {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (min-width: 1101px) {
+  .scorm-editorial,
+  .focused-shell {
+    padding-left: 268px !important;
+  }
+
+  .scorm-sidebar,
+  .focused-sidebar {
+    width: 268px !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1100px) {
+  .scorm-editorial,
+  .focused-shell {
+    padding-left: 228px !important;
+  }
+
+  .scorm-sidebar,
+  .focused-sidebar {
+    width: 228px !important;
+  }
+}
+
+@media (max-width: 820px) {
+  .scorm-shell-content,
+  .focused-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
