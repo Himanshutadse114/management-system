@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -76,14 +77,13 @@ class AuthController extends ChangeNotifier {
     'DEVA_API_URL',
     defaultValue: 'http://10.0.2.2:5001',
   );
-  static const _googleServerClientId = String.fromEnvironment(
-    'DEVA_GOOGLE_SERVER_CLIENT_ID',
-  );
 
   final FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(),
   );
-  final GoogleSignIn _google = GoogleSignIn.instance;
+  final GoogleSignIn _google = GoogleSignIn(
+    scopes: const <String>['email', 'profile', 'openid'],
+  );
   late final Dio _dio;
 
   bool loading = true;
@@ -110,12 +110,6 @@ class AuthController extends ChangeNotifier {
       headers: const {'Accept': 'application/json'},
     ));
 
-    if (_googleServerClientId.isNotEmpty) {
-      await _google.initialize(serverClientId: _googleServerClientId);
-    } else {
-      await _google.initialize();
-    }
-
     token = await _storage.read(key: _tokenKey);
     if (token != null) {
       try {
@@ -136,15 +130,23 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final account = await _google.authenticate();
-      final credential = account.authentication.idToken;
-      if (credential == null || credential.isEmpty) {
-        throw StateError('Google Sign-In did not return an ID token.');
+      final account = await _google.signIn();
+      if (account == null) {
+        throw PlatformException(
+          code: 'sign_in_cancelled',
+          message: 'Google Sign-In was cancelled.',
+        );
+      }
+
+      final authentication = await account.authentication;
+      final accessToken = authentication.accessToken;
+      if (accessToken == null || accessToken.isEmpty) {
+        throw StateError('Google Sign-In did not return an access token.');
       }
 
       final response = await _dio.post<Map<String, dynamic>>(
         '/auth/google',
-        data: {'credential': credential},
+        data: {'accessToken': accessToken},
       );
       final data = response.data ?? const <String, dynamic>{};
       final nextToken = data['token'] as String?;
@@ -210,12 +212,16 @@ class AuthController extends ChangeNotifier {
       if (data is Map && data['message'] != null) return '${data['message']}';
       if (exception.type == DioExceptionType.connectionError ||
           exception.type == DioExceptionType.connectionTimeout) {
-        return 'Could not connect to Deva. Check the API URL and your internet connection.';
+        return 'Could not connect to Deva. Check your internet connection and try again.';
       }
       return exception.message ?? 'Sign-in failed. Please try again.';
     }
-    if (exception is GoogleSignInException) {
-      return exception.description ?? 'Google Sign-In failed. Please try again.';
+    if (exception is PlatformException) {
+      final detail = '${exception.code} ${exception.message ?? ''} ${exception.details ?? ''}';
+      if (detail.contains('10')) {
+        return 'Google still does not recognise this Deva Android installation. Check the Android OAuth client package and SHA-1 in Google Cloud.';
+      }
+      return exception.message ?? 'Google Sign-In failed. Please try again.';
     }
     return exception.toString().replaceFirst('Bad state: ', '');
   }
