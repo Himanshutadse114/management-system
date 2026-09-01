@@ -146,7 +146,10 @@ async function accessSnapshot(user) {
 }
 
 async function canManageTenant(user, tenantId) {
-  if (isSuperAdmin(user.email)) return true;
+  // Platform-level access is deliberately isolated from tenant operations.
+  // A platform account manages businesses through /api/platform and must not
+  // inherit TENANT_ADMIN privileges inside an individual business.
+  if (isSuperAdmin(user.email)) return false;
   return Boolean(await TenantMembership.findOne({
     where: {
       tenantId,
@@ -158,6 +161,8 @@ async function canManageTenant(user, tenantId) {
 }
 
 async function hasBranchRole(user, branch, allowedRoles = []) {
+  // Tenant Admin may manage its own branches, but a platform-level account
+  // cannot inherit branch roles merely because it manages the platform.
   if (await canManageTenant(user, branch.tenantId)) return true;
   return Boolean(await BranchMembership.findOne({
     where: {
