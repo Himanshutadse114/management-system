@@ -2,6 +2,15 @@ name: Deva Android
 
 on:
   workflow_dispatch:
+    inputs:
+      api_url:
+        description: Live Deva backend URL, for example https://your-backend.onrender.com
+        required: false
+        type: string
+      google_server_client_id:
+        description: Google Web OAuth client ID used by the Deva backend
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -15,10 +24,42 @@ jobs:
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DEVA_API_URL: ${{ inputs.api_url || vars.DEVA_API_URL }}
+      DEVA_GOOGLE_SERVER_CLIENT_ID: ${{ inputs.google_server_client_id || vars.DEVA_GOOGLE_SERVER_CLIENT_ID }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install stable Deva debug signing key
+        working-directory: mobile
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          base64 --decode android-signing/deva-debug.keystore.b64 > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+          echo "Deva Android OAuth certificate fingerprints for package com.deva.deva:"
+          keytool -list -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey | grep -E 'SHA1:|SHA256:'
+
+      - name: Validate live Deva configuration
+        shell: bash
+        run: |
+          if [ -z "$DEVA_API_URL" ]; then
+            echo "::error::Set repository variable DEVA_API_URL or provide api_url when running this workflow manually."
+            exit 1
+          fi
+          if [ -z "$DEVA_GOOGLE_SERVER_CLIENT_ID" ]; then
+            echo "::error::Set repository variable DEVA_GOOGLE_SERVER_CLIENT_ID or provide google_server_client_id when running this workflow manually."
+            exit 1
+          fi
+          if [[ "$DEVA_API_URL" == *"example.invalid"* ]] || [[ "$DEVA_GOOGLE_SERVER_CLIENT_ID" == placeholder* ]]; then
+            echo "::error::Placeholder Android configuration is not allowed."
+            exit 1
+          fi
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -71,8 +112,8 @@ jobs:
         working-directory: mobile
         run: >-
           flutter build apk --debug
-          --dart-define=DEVA_API_URL=https://example.invalid
-          --dart-define=DEVA_GOOGLE_SERVER_CLIENT_ID=placeholder.apps.googleusercontent.com
+          --dart-define=DEVA_API_URL="$DEVA_API_URL"
+          --dart-define=DEVA_GOOGLE_SERVER_CLIENT_ID="$DEVA_GOOGLE_SERVER_CLIENT_ID"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
