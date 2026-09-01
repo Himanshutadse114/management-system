@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -82,7 +80,7 @@ class AuthController extends ChangeNotifier {
     'DEVA_GOOGLE_SERVER_CLIENT_ID',
   );
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+  final FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(),
   );
   final GoogleSignIn _google = GoogleSignIn.instance;
@@ -418,7 +416,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 28),
             const Text('Your workspace', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -.6)),
             const SizedBox(height: 6),
-            Text('These modules are derived from the same permissions used by the web app.', style: TextStyle(color: Colors.grey.shade650, height: 1.45)),
+            Text('These modules are derived from the same permissions used by the web app.', style: TextStyle(color: Colors.grey.shade600, height: 1.45)),
             const SizedBox(height: 16),
             GridView.builder(
               shrinkWrap: true,
@@ -450,7 +448,7 @@ class HomeScreen extends StatelessWidget {
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('${branch['name'] ?? 'Branch'}', style: const TextStyle(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 3),
-                        Text('${branch['code'] ?? ''} · ${_roleLabel('${row['role'] ?? ''}')}', style: TextStyle(fontSize: 12, color: Colors.grey.shade650)),
+                        Text('${branch['code'] ?? ''} · ${_roleLabel('${row['role'] ?? ''}')}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                       ])),
                       const Icon(Icons.chevron_right, color: Color(0xFF8B918B)),
                     ],
@@ -504,7 +502,7 @@ class ModuleCard extends StatelessWidget {
               const Spacer(),
               Text(module.label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
               const SizedBox(height: 3),
-              Text(module.caption, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, height: 1.35, color: Colors.grey.shade650)),
+              Text(module.caption, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, height: 1.35, color: Colors.grey.shade600)),
             ],
           ),
         ),
