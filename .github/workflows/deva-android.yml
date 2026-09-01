@@ -76,6 +76,46 @@ jobs:
           flutter create . --platforms=android --project-name=deva --org=com.deva
           rm -f test/widget_test.dart
 
+      - name: Use legacy Google Play Services sign-in
+        working-directory: mobile
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('lib/main.dart')
+          text = path.read_text()
+          text = text.replace(
+              "import 'package:flutter/material.dart';\n",
+              "import 'package:flutter/material.dart';\nimport 'package:flutter/services.dart';\n",
+              1,
+          )
+          text = text.replace(
+              '  final GoogleSignIn _google = GoogleSignIn.instance;',
+              '  late final GoogleSignIn _google;',
+          )
+          text = text.replace(
+              "    if (_googleServerClientId.isNotEmpty) {\n      await _google.initialize(serverClientId: _googleServerClientId);\n    } else {\n      await _google.initialize();\n    }",
+              "    _google = GoogleSignIn(\n      serverClientId: _googleServerClientId.isEmpty ? null : _googleServerClientId,\n    );",
+          )
+          text = text.replace(
+              "      final account = await _google.authenticate();\n      final credential = account.authentication.idToken;",
+              "      final account = await _google.signIn();\n      if (account == null) {\n        throw const PlatformException(code: 'sign_in_cancelled', message: 'Google Sign-In was cancelled.');\n      }\n      final authentication = await account.authentication;\n      final credential = authentication.idToken;",
+          )
+          text = text.replace(
+              "    if (exception is GoogleSignInException) {\n      return exception.description ?? 'Google Sign-In failed. Please try again.';\n    }",
+              "    if (exception is PlatformException) {\n      final detail = '${exception.code} ${exception.message ?? ''} ${exception.details ?? ''}';\n      if (detail.contains('10')) {\n        return 'Google Android OAuth is not registered for this Deva APK. Add package com.deva.deva with the Deva SHA-1 in Google Cloud, then try again.';\n      }\n      return exception.message ?? 'Google Sign-In failed. Please try again.';\n    }",
+          )
+          required = [
+              'late final GoogleSignIn _google;',
+              'final account = await _google.signIn();',
+              'Google Android OAuth is not registered for this Deva APK.'
+          ]
+          missing = [item for item in required if item not in text]
+          if missing:
+              raise SystemExit(f'Legacy Google Sign-In patch failed: {missing}')
+          path.write_text(text)
+          PY
+
       - name: Enforce secure Android settings
         working-directory: mobile
         shell: bash
