@@ -17,6 +17,9 @@ const {
 
 const router = express.Router();
 
+const DEVA_ANDROID_GOOGLE_CLIENT_ID =
+  '1001652255296-bp21ikesu61ccbgtgf04e4p7kh22iqef.apps.googleusercontent.com';
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 30,
@@ -29,6 +32,10 @@ function googleClientId() {
   const value = String(process.env.GOOGLE_CLIENT_ID || '').trim();
   if (!value) throw new Error('GOOGLE_CLIENT_ID is required.');
   return value;
+}
+
+function googleAndroidClientId() {
+  return String(process.env.GOOGLE_ANDROID_CLIENT_ID || DEVA_ANDROID_GOOGLE_CLIENT_ID).trim();
 }
 
 function issueToken(user, claims = {}, expiresIn = null) {
@@ -62,24 +69,83 @@ function impersonationPayload(req) {
   };
 }
 
+async function googleIdentityFromIdToken(credential) {
+  const client = new OAuth2Client(googleClientId());
+  const ticket = await client.verifyIdToken({
+    idToken: credential,
+    audience: googleClientId()
+  });
+  const payload = ticket.getPayload() || {};
+  return {
+    googleId: String(payload.sub || ''),
+    email: normalizeEmail(payload.email),
+    emailVerified: payload.email_verified === true,
+    name: String(payload.name || '').trim(),
+    avatarUrl: payload.picture || null
+  };
+}
+
+async function googleIdentityFromAccessToken(accessToken) {
+  const client = new OAuth2Client();
+  const tokenInfo = await client.getTokenInfo(accessToken);
+  const allowedAudiences = new Set([googleAndroidClientId(), googleClientId()]);
+
+  if (!allowedAudiences.has(String(tokenInfo.aud || '').trim())) {
+    const error = new Error('Google token was not issued to an approved Deva OAuth client.');
+    error.code = 'GOOGLE_OAUTH_AUDIENCE_REJECTED';
+    throw error;
+  }
+
+  let name = '';
+  let avatarUrl = null;
+  try {
+    client.setCredentials({ access_token: accessToken });
+    const profileResponse = await client.request({
+      url: 'https://openidconnect.googleapis.com/v1/userinfo'
+    });
+    const profile = profileResponse.data || {};
+    if (profile.sub && tokenInfo.sub && String(profile.sub) !== String(tokenInfo.sub)) {
+      throw new Error('Google profile identity did not match the access token.');
+    }
+    name = String(profile.name || '').trim();
+    avatarUrl = profile.picture || null;
+  } catch (error) {
+    console.warn('[auth/google] Google profile lookup skipped:', error.message);
+  }
+
+  return {
+    googleId: String(tokenInfo.sub || tokenInfo.user_id || ''),
+    email: normalizeEmail(tokenInfo.email),
+    emailVerified: tokenInfo.email_verified === true,
+    name,
+    avatarUrl
+  };
+}
+
+async function resolveGoogleIdentity(req) {
+  const credential = String(req.body?.credential || '').trim();
+  const accessToken = String(req.body?.accessToken || '').trim();
+  if (credential) return googleIdentityFromIdToken(credential);
+  if (accessToken) return googleIdentityFromAccessToken(accessToken);
+  return null;
+}
+
 router.post('/google', authLimiter, async (req, res) => {
   try {
-    const credential = String(req.body?.credential || '');
-    if (!credential) return res.status(400).json({ message: 'Google credential is required.' });
+    const identity = await resolveGoogleIdentity(req);
+    if (!identity) {
+      return res.status(400).json({ message: 'Google credential is required.' });
+    }
 
-    const client = new OAuth2Client(googleClientId());
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: googleClientId()
-    });
-    const payload = ticket.getPayload() || {};
+    const {
+      googleId,
+      email,
+      emailVerified,
+      name,
+      avatarUrl
+    } = identity;
 
-    const googleId = String(payload.sub || '');
-    const email = normalizeEmail(payload.email);
-    const name = String(payload.name || '').trim();
-    const avatarUrl = payload.picture || null;
-
-    if (!googleId || !email || payload.email_verified !== true) {
+    if (!googleId || !email || emailVerified !== true) {
       return res.status(401).json({
         message: 'A verified Google email address is required.',
         code: 'VERIFIED_GOOGLE_EMAIL_REQUIRED'
@@ -132,7 +198,13 @@ router.post('/google', authLimiter, async (req, res) => {
     });
   } catch (error) {
     console.error('[auth/google]', error);
-    return res.status(500).json({ message: 'Google authentication failed.', code: 'GOOGLE_AUTH_FAILED' });
+    const oauthRejected = error?.code === 'GOOGLE_OAUTH_AUDIENCE_REJECTED';
+    return res.status(oauthRejected ? 401 : 500).json({
+      message: oauthRejected
+        ? 'Google authentication was issued to an unapproved application.'
+        : 'Google authentication failed.',
+      code: oauthRejected ? 'GOOGLE_OAUTH_AUDIENCE_REJECTED' : 'GOOGLE_AUTH_FAILED'
+    });
   }
 });
 
