@@ -99,7 +99,7 @@ jobs:
           )
           text = text.replace(
               "      final account = await _google.authenticate();\n      final credential = account.authentication.idToken;",
-              "      final account = await _google.signIn();\n      if (account == null) {\n        throw const PlatformException(code: 'sign_in_cancelled', message: 'Google Sign-In was cancelled.');\n      }\n      final authentication = await account.authentication;\n      final credential = authentication.idToken;",
+              "      final account = await _google.signIn();\n      if (account == null) {\n        throw PlatformException(code: 'sign_in_cancelled', message: 'Google Sign-In was cancelled.');\n      }\n      final authentication = await account.authentication;\n      final credential = authentication.idToken;",
           )
           text = text.replace(
               "    if (exception is GoogleSignInException) {\n      return exception.description ?? 'Google Sign-In failed. Please try again.';\n    }",
