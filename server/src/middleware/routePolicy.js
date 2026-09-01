@@ -100,8 +100,15 @@ function policyGuard(req, res, next) {
   if (!required && !operational) return next();
 
   return authenticateOnce(req, res, () => requireApproved(req, res, () => {
-    // Super Admin has full operational access across every tenant and branch.
-    if (req.access?.isSuperAdmin) return next();
+    // Platform administration is intentionally separated from tenant/branch
+    // operations. Platform accounts use /api/platform and never inherit
+    // TENANT_ADMIN, BRANCH_MANAGER, cashier, waiter or other operational roles.
+    if (req.access?.isSuperAdmin) {
+      return res.status(403).json({
+        message: 'Platform administration does not grant operational tenant or branch access.',
+        code: 'PLATFORM_OPERATION_SCOPE_DENIED'
+      });
+    }
 
     // Tenant-wide routes (branches list, consolidated analytics/reports) perform
     // their own tenant membership checks inside the router.
