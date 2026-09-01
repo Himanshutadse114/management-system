@@ -10,6 +10,7 @@ import {
   Moon,
   PackageSearch,
   ReceiptText,
+  RotateCcw,
   ShieldCheck,
   Store,
   Sun,
@@ -35,7 +36,7 @@ import {
 } from './roleAccess';
 import './focused.css';
 
-const THEME_KEY = 'managementSystemSimpleTheme';
+const THEME_KEY = 'devaSimpleTheme';
 
 function readTheme() {
   try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; }
@@ -65,6 +66,16 @@ function ThemeToggle({ theme, onToggle }) {
   return <button type="button" className="focused-theme" onClick={onToggle}><Icon size={15}/><span>{light ? 'Dark' : 'Light'}</span></button>;
 }
 
+function ImpersonationBanner({ session, busy, error, onReturn }) {
+  const impersonation = session?.impersonation;
+  if (!impersonation?.active) return null;
+  return <div className="deva-impersonation-banner">
+    <div className="deva-impersonation-copy"><ShieldCheck size={15}/><span><strong>Working as {impersonation.role ? (ROLE_LABELS[impersonation.role] || impersonation.role) : 'staff'}</strong><small>{session?.user?.email} · Business Admin session</small></span></div>
+    {error && <span className="deva-impersonation-error">{error}</span>}
+    <button type="button" onClick={onReturn} disabled={busy}><RotateCcw size={13}/>{busy ? 'Returning…' : 'Return to Business Admin'}</button>
+  </div>;
+}
+
 function scopedAccess(access, module) {
   if (module === MODULES.INVENTORY) return accessForBranchRoles(access, ['BRANCH_MANAGER', 'INVENTORY_MANAGER']);
   if (module === MODULES.SALES) return accessForBranchRoles(access, ['BRANCH_MANAGER']);
@@ -88,7 +99,7 @@ function BranchOverview({ access, onOpen }) {
 
   return <div className="focused-overview">
     <section className="focused-overview-hero">
-      <div><div className="focused-kicker">Home</div><h1>Your branches</h1><p>Choose a branch job below. You only see the branches assigned to your account.</p></div>
+      <div><div className="focused-kicker">Home</div><h1>Your branches</h1><p>Choose a branch job below. You only see the branches assigned to this staff account.</p></div>
       <div className="focused-live"><ShieldCheck size={15}/> {managers.length} branch{managers.length === 1 ? '' : 'es'}</div>
     </section>
 
@@ -129,17 +140,31 @@ function ModuleView({ module, token, access, onOpen }) {
 }
 
 export default function FocusedWorkspaceShell() {
-  const { token, session, logout } = useAuth();
+  const { token, session, logout, stopImpersonation } = useAuth();
   const access = session?.access || {};
   const profile = useMemo(() => focusedAccessProfile(access), [access]);
   const [theme, toggleTheme] = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeModule, setActiveModule] = useState(profile?.defaultModule || null);
+  const [returning, setReturning] = useState(false);
+  const [returnError, setReturnError] = useState('');
 
   useEffect(() => {
     if (!profile) return;
     if (!profile.modules.includes(activeModule)) setActiveModule(profile.defaultModule);
   }, [profile, activeModule]);
+
+  async function returnToAdmin() {
+    try {
+      setReturning(true);
+      setReturnError('');
+      await stopImpersonation();
+    } catch (error) {
+      setReturnError(error?.response?.data?.message || error?.message || 'Could not return to the Business Admin account.');
+    } finally {
+      setReturning(false);
+    }
+  }
 
   if (!profile || !activeModule) return <div className="focused-empty"><ShieldCheck size={24}/><strong>No work area assigned</strong><span>Please ask your admin to assign your branch and job role.</span></div>;
 
@@ -147,7 +172,7 @@ export default function FocusedWorkspaceShell() {
   function open(module) { if (profile.modules.includes(module)) setActiveModule(module); setMobileOpen(false); }
 
   function Brand() {
-    return <button className="focused-brand" type="button" onClick={() => open(profile.defaultModule)}><span className="focused-brand-mark"><Layers3 size={18}/></span><span><strong>OUTLET <em>MANAGEMENT</em></strong><small>{profile.primaryRoleLabel}</small></span></button>;
+    return <button className="focused-brand" type="button" onClick={() => open(profile.defaultModule)}><span className="focused-brand-mark"><Layers3 size={18}/></span><span><strong>Deva</strong><small>{profile.primaryRoleLabel}</small></span></button>;
   }
 
   function Nav() {
@@ -157,8 +182,11 @@ export default function FocusedWorkspaceShell() {
     })}</nav>;
   }
 
+  const impersonationBanner = <ImpersonationBanner session={session} busy={returning} error={returnError} onReturn={returnToAdmin}/>;
+
   if (singlePurpose) {
     return <div className={`focused-single scorm-theme-${theme}`}>
+      {impersonationBanner}
       <header className="focused-single-top"><Brand/><div><LanguageSwitcher compact/><ThemeToggle theme={theme} onToggle={toggleTheme}/><div className="focused-user"><span>{session?.user?.name || profile.primaryRoleLabel}</span><small>{session?.user?.email}</small></div><button className="focused-signout" onClick={logout}><LogOut size={14}/><span>Sign out</span></button></div></header>
       <main className="focused-single-main"><ModuleView module={activeModule} token={token} access={access} onOpen={open}/></main>
     </div>;
@@ -166,6 +194,7 @@ export default function FocusedWorkspaceShell() {
 
   const mobileTabs = profile.modules.filter((module) => module !== MODULES.BRANCH_OVERVIEW).slice(0, 4);
   return <div className={`focused-shell scorm-theme-${theme}`}>
+    {impersonationBanner}
     <aside className="focused-sidebar"><Brand/><Nav/><div className="focused-sidebar-foot"><div><ShieldCheck size={13}/><span><strong>{profile.primaryRoleLabel}</strong><small>{session?.user?.email}</small></span></div><button onClick={logout}><LogOut size={14}/>Sign out</button></div></aside>
 
     {mobileOpen && <div className="focused-mobile-overlay"><button className="focused-mobile-backdrop" onClick={() => setMobileOpen(false)} aria-label="Close"/><aside className="focused-mobile-drawer"><div className="focused-drawer-head"><Brand/><button onClick={() => setMobileOpen(false)}><X size={17}/></button></div><Nav/><div className="focused-drawer-tools"><LanguageSwitcher/><ThemeToggle theme={theme} onToggle={toggleTheme}/><button className="focused-signout" onClick={logout}><LogOut size={14}/>Sign out</button></div></aside></div>}
