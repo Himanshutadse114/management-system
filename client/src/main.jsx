@@ -17,6 +17,7 @@ import './desktop-shell-fix.css';
 import './deva-navigation.css';
 import './impersonation.css';
 import './shell-layout-final.css';
+import './publicMenuLightFix.css';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
