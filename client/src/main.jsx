@@ -19,6 +19,7 @@ import './impersonation.css';
 import './shell-layout-final.css';
 import './publicMenuLightFix.css';
 import './publicMenuHeroPolish.css';
+import './deva-typography.css';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
