@@ -1,0 +1,310 @@
+/* Final public QR menu light theme override.
+   Loaded after the shared UI layers so legacy dark !important rules cannot leak into the menu. */
+
+.public-menu-page,
+.public-menu-loading,
+.public-menu-error {
+  --ops-bg: #fbf8f2;
+  --ops-bg-deep: #f4eee4;
+  --ops-surface: #ffffff;
+  --ops-surface-2: #fffaf3;
+  --ops-surface-3: #f7f0e6;
+  --ops-text: #201b16;
+  --ops-body: #655b50;
+  --ops-muted: #8f8375;
+  --ops-line: #e8dfd2;
+  --ops-line-soft: #f2eade;
+  --ops-orange: #f58220;
+  --ops-orange-strong: #c95700;
+  --ops-orange-hover: #e97516;
+  --ops-orange-dark: #3d1d05;
+  --ops-orange-soft: #fff1e4;
+  --ops-orange-soft-strong: #ffe5cf;
+  --ops-orange-line: #f1c79f;
+  --ops-orange-line-soft: #f4d8bd;
+  color-scheme: light !important;
+}
+
+html body #root .public-menu-page {
+  min-height: 100vh;
+  background: #fbf8f2 !important;
+  color: #201b16 !important;
+}
+
+html body #root .public-menu-page .public-menu-hero {
+  color: #201b16 !important;
+  background-color: #fffdf9 !important;
+  background-image:
+    radial-gradient(circle at 88% 8%, rgba(245,130,32,.14), transparent 25%),
+    radial-gradient(circle at 8% 92%, rgba(152,180,132,.13), transparent 28%) !important;
+  border-bottom: 1px solid #eadfce !important;
+}
+
+html body #root .public-menu-page .public-menu-brand strong,
+html body #root .public-menu-page .public-menu-hero-copy h1,
+html body #root .public-menu-page .public-menu-table-card strong,
+html body #root .public-menu-page .public-menu-section-head h2,
+html body #root .public-menu-page .public-menu-card h3,
+html body #root .public-menu-page .public-menu-empty strong,
+html body #root .public-menu-page .public-menu-footer-brand strong {
+  color: #201b16 !important;
+}
+
+html body #root .public-menu-page .public-menu-brand span,
+html body #root .public-menu-page .public-menu-hero-copy p,
+html body #root .public-menu-page .public-menu-card p,
+html body #root .public-menu-page .public-menu-section-head small,
+html body #root .public-menu-page .public-menu-prices span,
+html body #root .public-menu-page .public-menu-footer-brand span {
+  color: #74695d !important;
+}
+
+html body #root .public-menu-page .public-menu-branch-mark {
+  color: #b94b00 !important;
+  background: #fff0e2 !important;
+  border-color: #f3cba7 !important;
+  box-shadow: 0 8px 18px rgba(197,89,0,.08) !important;
+}
+
+html body #root .public-menu-page .public-menu-powered {
+  color: #655b50 !important;
+  background: #ffffff !important;
+  border-color: #e8dfd2 !important;
+  box-shadow: 0 5px 16px rgba(70,52,32,.05) !important;
+}
+
+html body #root .public-menu-page .language-switcher {
+  background: #ffffff !important;
+  border-color: #e8dfd2 !important;
+  box-shadow: 0 4px 14px rgba(70,52,32,.04) !important;
+}
+
+html body #root .public-menu-page .language-switcher button {
+  color: #74695d !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+html body #root .public-menu-page .language-switcher button:hover {
+  color: #201b16 !important;
+  background: #fff7ef !important;
+}
+
+html body #root .public-menu-page .language-switcher button.active {
+  color: #b94b00 !important;
+  background: #fff0e2 !important;
+  border-color: #f1c79f !important;
+}
+
+html body #root .public-menu-page .public-menu-kicker {
+  color: #b94b00 !important;
+  background: #fff0e2 !important;
+  border-color: #f3cfad !important;
+}
+
+html body #root .public-menu-page .public-menu-hero-meta span {
+  color: #74695d !important;
+  background: #ffffff !important;
+  border-color: #e8dfd2 !important;
+  box-shadow: 0 4px 12px rgba(70,52,32,.035) !important;
+}
+
+html body #root .public-menu-page .public-menu-hero-meta strong {
+  color: #201b16 !important;
+}
+
+html body #root .public-menu-page .public-menu-visual {
+  background: rgba(255,255,255,.92) !important;
+  border-color: #e8dfd2 !important;
+  box-shadow: 0 18px 42px rgba(75,54,31,.10) !important;
+}
+
+html body #root .public-menu-page .public-menu-visual-tile,
+html body #root .public-menu-page .public-menu-visual-fallback,
+html body #root .public-menu-page .public-menu-image-placeholder {
+  background-color: #f6eee3 !important;
+  background-image: linear-gradient(145deg, #fff8f0, #efe4d6) !important;
+  color: #c95700 !important;
+}
+
+html body #root .public-menu-page .public-menu-visual-fallback small {
+  color: #74695d !important;
+}
+
+html body #root .public-menu-page .public-menu-table-card {
+  background: #ffffff !important;
+  border-color: #f0cda9 !important;
+  box-shadow: 0 12px 28px rgba(91,62,29,.07) !important;
+}
+
+html body #root .public-menu-page .public-menu-table-card > span {
+  color: #c95700 !important;
+  background: #fff1e4 !important;
+  border-color: #f2d4b7 !important;
+}
+
+html body #root .public-menu-page .public-menu-table-card small {
+  color: #8f8375 !important;
+}
+
+html body #root .public-menu-page .public-menu-contact {
+  color: #74695d !important;
+  border-top-color: #eadfce !important;
+}
+
+html body #root .public-menu-page .public-menu-contact a {
+  color: #74695d !important;
+}
+
+html body #root .public-menu-page .public-menu-toolbar {
+  background: rgba(255,253,249,.97) !important;
+  border-color: #e8dfd2 !important;
+  box-shadow: 0 8px 24px rgba(67,49,30,.035) !important;
+}
+
+html body #root .public-menu-page .public-menu-search input {
+  min-height: 46px !important;
+  background: #ffffff !important;
+  color: #201b16 !important;
+  border-color: #e4dacd !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px rgba(67,49,30,.035) !important;
+}
+
+html body #root .public-menu-page .public-menu-search input::placeholder {
+  color: #9b9084 !important;
+}
+
+html body #root .public-menu-page .public-menu-search input:focus {
+  border-color: #f58220 !important;
+  box-shadow: 0 0 0 3px rgba(245,130,32,.12) !important;
+}
+
+html body #root .public-menu-page .public-menu-search svg {
+  color: #8f8375 !important;
+}
+
+html body #root .public-menu-page .public-menu-sections button {
+  min-height: 38px !important;
+  background: #ffffff !important;
+  color: #655b50 !important;
+  border-color: #e5dbce !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 10px rgba(67,49,30,.025) !important;
+}
+
+html body #root .public-menu-page .public-menu-sections button:hover {
+  color: #201b16 !important;
+  border-color: #d6c8b6 !important;
+  background: #fffaf4 !important;
+}
+
+html body #root .public-menu-page .public-menu-sections button.is-active {
+  color: #3d1d05 !important;
+  background: #f58220 !important;
+  border-color: #f58220 !important;
+  box-shadow: 0 6px 16px rgba(245,130,32,.16) !important;
+}
+
+html body #root .public-menu-page .public-menu-content {
+  background: #fbf8f2 !important;
+}
+
+html body #root .public-menu-page .public-menu-section-head {
+  border-color: #e8dfd2 !important;
+}
+
+html body #root .public-menu-page .public-menu-section-head > div > span,
+html body #root .public-menu-page .public-menu-brandline,
+html body #root .public-menu-page .public-menu-prices strong {
+  color: #c95700 !important;
+}
+
+html body #root .public-menu-page .public-menu-card {
+  background: #ffffff !important;
+  color: #201b16 !important;
+  border-color: #e6ddd1 !important;
+  box-shadow: 0 10px 28px rgba(63,47,29,.065) !important;
+}
+
+html body #root .public-menu-page .public-menu-card:hover {
+  border-color: #d9cbbb !important;
+  box-shadow: 0 15px 34px rgba(63,47,29,.09) !important;
+}
+
+html body #root .public-menu-page .public-menu-card.is-featured {
+  border-color: #efbd91 !important;
+}
+
+html body #root .public-menu-page .public-menu-card-body {
+  background: #ffffff !important;
+}
+
+html body #root .public-menu-page .public-menu-tags span {
+  color: #74695d !important;
+  background: #f7f1e8 !important;
+}
+
+html body #root .public-menu-page .public-menu-prices {
+  border-top-color: #eee6db !important;
+}
+
+html body #root .public-menu-page .public-menu-featured {
+  color: #a84400 !important;
+  background: rgba(255,255,255,.96) !important;
+  border-color: rgba(255,255,255,.82) !important;
+  box-shadow: 0 4px 14px rgba(20,20,20,.12) !important;
+}
+
+html body #root .public-menu-page .public-menu-empty > div {
+  color: #c95700 !important;
+  background: #fff0e2 !important;
+}
+
+html body #root .public-menu-page .public-menu-empty {
+  color: #8f8375 !important;
+}
+
+html body #root .public-menu-page .public-menu-footer {
+  color: #201b16 !important;
+  background: #ffffff !important;
+  border-top: 1px solid #e8dfd2 !important;
+}
+
+html body #root .public-menu-page .public-menu-footer button {
+  color: #655b50 !important;
+  background: #fffaf4 !important;
+  border-color: #e4dacd !important;
+}
+
+html body #root .public-menu-page .public-menu-footer button:hover {
+  color: #201b16 !important;
+  background: #fff1e4 !important;
+  border-color: #efc79f !important;
+}
+
+html body #root .public-menu-loading,
+html body #root .public-menu-error {
+  min-height: 100vh;
+  color: #201b16 !important;
+  background: #fffdf9 !important;
+}
+
+html body #root .public-menu-loading span,
+html body #root .public-menu-error p {
+  color: #74695d !important;
+}
+
+html body #root .public-menu-error > div {
+  color: #c95700 !important;
+  background: #fff0e2 !important;
+}
+
+html body #root .public-menu-error-brand {
+  color: #c95700 !important;
+}
+
+html body #root .public-menu-spinner {
+  border-color: rgba(245,130,32,.18) !important;
+  border-top-color: #f58220 !important;
+}
