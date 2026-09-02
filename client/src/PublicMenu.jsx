@@ -33,7 +33,9 @@ function MenuItemCard({ item, featuredLabel }) {
           <img src={image} alt={item.displayName} loading="lazy" />
         ) : (
           <div className="public-menu-image-placeholder">
-            {alcohol ? <Wine size={34} /> : <UtensilsCrossed size={34} />}
+            <span className="public-menu-placeholder-ring">
+              {alcohol ? <Wine size={34} /> : <UtensilsCrossed size={34} />}
+            </span>
           </div>
         )}
         {item.featured && (
@@ -148,6 +150,10 @@ export default function PublicMenu({ qrToken }) {
   }
 
   const itemCount = data.menu?.length || 0;
+  const heroItems = (data.menu || [])
+    .filter((item) => item.product?.imageUrl)
+    .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
+    .slice(0, 3);
 
   return (
     <main className="public-menu-page">
@@ -187,10 +193,26 @@ export default function PublicMenu({ qrToken }) {
             </div>
           </div>
 
-          <div className="public-menu-table-card">
-            <span>{t('publicMenu.table')}</span>
-            <strong>{data.table?.name}</strong>
-            <small>{data.table?.code} · {data.table?.seats} seats</small>
+          <div className="public-menu-hero-side">
+            <div className={`public-menu-visual ${heroItems.length ? '' : 'is-empty'}`} aria-hidden="true">
+              {heroItems.length ? heroItems.map((item, index) => (
+                <div className={`public-menu-visual-tile tile-${index + 1}`} key={item.id}>
+                  <img src={item.product.imageUrl} alt="" />
+                  <span>{item.displayName}</span>
+                </div>
+              )) : (
+                <div className="public-menu-visual-fallback">
+                  <span><UtensilsCrossed size={42} /></span>
+                  <small>Fresh choices, beautifully served</small>
+                </div>
+              )}
+            </div>
+
+            <div className="public-menu-table-card">
+              <span>{t('publicMenu.table')}</span>
+              <strong>{data.table?.name}</strong>
+              <small>{data.table?.code} · {data.table?.seats} seats</small>
+            </div>
           </div>
         </div>
 
@@ -275,7 +297,7 @@ export default function PublicMenu({ qrToken }) {
         </div>
         <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <ArrowUp size={16} />
-          Back to top
+          <span>Back to top</span>
         </button>
       </footer>
     </main>
