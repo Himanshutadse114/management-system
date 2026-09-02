@@ -150,6 +150,7 @@ export default function PublicMenu({ qrToken }) {
   }
 
   const itemCount = data.menu?.length || 0;
+  const sectionCount = Math.max(0, sections.length - 1);
   const heroItems = (data.menu || [])
     .filter((item) => item.product?.imageUrl)
     .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
@@ -189,7 +190,7 @@ export default function PublicMenu({ qrToken }) {
 
             <div className="public-menu-hero-meta">
               <span><strong>{itemCount}</strong> items</span>
-              <span><strong>{Math.max(0, sections.length - 1)}</strong> sections</span>
+              <span><strong>{sectionCount}</strong> sections</span>
             </div>
           </div>
 
@@ -202,16 +203,28 @@ export default function PublicMenu({ qrToken }) {
                 </div>
               )) : (
                 <div className="public-menu-visual-fallback">
-                  <span><UtensilsCrossed size={42} /></span>
-                  <small>Fresh choices, beautifully served</small>
+                  <div className="public-menu-fallback-illustration">
+                    <span className="public-menu-fallback-main"><UtensilsCrossed size={36} /></span>
+                    <span className="public-menu-fallback-chip chip-one"><Sparkles size={16} /></span>
+                    <span className="public-menu-fallback-chip chip-two"><Wine size={16} /></span>
+                  </div>
+                  <div className="public-menu-fallback-copy">
+                    <strong>Fresh choices for your table</strong>
+                    <small>{itemCount} items across {sectionCount} menu sections</small>
+                  </div>
                 </div>
               )}
             </div>
 
             <div className="public-menu-table-card">
-              <span>{t('publicMenu.table')}</span>
-              <strong>{data.table?.name}</strong>
-              <small>{data.table?.code} · {data.table?.seats} seats</small>
+              <div className="public-menu-table-icon" aria-hidden="true">
+                <MapPin size={19} />
+              </div>
+              <div className="public-menu-table-copy">
+                <span>{t('publicMenu.table')}</span>
+                <strong>{data.table?.name}</strong>
+                <small>{data.table?.code} · {data.table?.seats} seats</small>
+              </div>
             </div>
           </div>
         </div>
