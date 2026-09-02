@@ -10,18 +10,16 @@ import {
 } from 'lucide-react';
 import { api, apiErrorMessage } from './api';
 import { LanguageSwitcher, useLanguage } from './LanguageContext';
+import {
+  localeMoney,
+  localeNumber,
+  localizeMenuItem,
+  localizeMenuValue,
+  publicMenuText
+} from './publicMenuI18n';
 import './publicMenu.css';
 
-function formatMoney(value) {
-  try {
-    const amount = BigInt(value || 0);
-    return `₹${(amount / 100n).toLocaleString('en-IN')}.${String(amount % 100n).padStart(2, '0')}`;
-  } catch (_) {
-    return '₹0.00';
-  }
-}
-
-function MenuItemCard({ item, featuredLabel }) {
+function MenuItemCard({ item, featuredLabel, locale }) {
   const prices = item.product?.priceOptions || [];
   const image = item.product?.imageUrl;
   const alcohol = item.product?.productType === 'ALCOHOL';
@@ -62,7 +60,7 @@ function MenuItemCard({ item, featuredLabel }) {
           {prices.map((price) => (
             <div key={price.id}>
               <span>{price.label}</span>
-              <strong>{formatMoney(price.priceMinor)}</strong>
+              <strong>{localeMoney(locale, price.priceMinor)}</strong>
             </div>
           ))}
         </div>
@@ -72,12 +70,13 @@ function MenuItemCard({ item, featuredLabel }) {
 }
 
 export default function PublicMenu({ qrToken }) {
-  const { t } = useLanguage();
+  const { locale } = useLanguage();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [section, setSection] = useState('All');
+  const mt = (key, vars = {}) => publicMenuText(locale, key, vars);
 
   useEffect(() => {
     let alive = true;
@@ -104,21 +103,34 @@ export default function PublicMenu({ qrToken }) {
     [data]
   );
 
+  const localizedMenu = useMemo(
+    () => (data?.menu || []).map((item) => localizeMenuItem(locale, item)),
+    [data, locale]
+  );
+
   const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return (data?.menu || [])
+    const q = search.trim().toLocaleLowerCase(locale === 'en' ? 'en' : locale);
+    return localizedMenu
       .filter((item) => {
-        const matchesSection = section === 'All' || item.sectionName === section;
-        const matchesSearch = !q || [
+        const source = item._source || item;
+        const matchesSection = section === 'All' || item._sectionKey === section;
+        const searchValues = [
           item.displayName,
           item.description,
           item.product?.brand,
-          item.sectionName
-        ].some((value) => String(value || '').toLowerCase().includes(q));
+          item.sectionName,
+          ...(item.dietaryTags || []),
+          source.displayName,
+          source.description,
+          source.product?.brand,
+          source.sectionName,
+          ...(source.dietaryTags || [])
+        ];
+        const matchesSearch = !q || searchValues.some((value) => String(value || '').toLocaleLowerCase(locale === 'en' ? 'en' : locale).includes(q));
         return matchesSection && matchesSearch;
       })
       .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)));
-  }, [data, search, section]);
+  }, [localizedMenu, locale, search, section]);
 
   const visibleSections = useMemo(
     () => sections.filter((name) => name !== 'All' && (section === 'All' || section === name)),
@@ -133,7 +145,7 @@ export default function PublicMenu({ qrToken }) {
         </div>
         <div className="public-menu-spinner" />
         <strong>Deva</strong>
-        <span>{t('publicMenu.loading')}</span>
+        <span>{mt('loading')}</span>
       </div>
     );
   }
@@ -142,22 +154,22 @@ export default function PublicMenu({ qrToken }) {
     return (
       <div className="public-menu-error">
         <div><UtensilsCrossed size={25} /></div>
-        <h1>{t('publicMenu.unavailable')}</h1>
-        <p>{error || t('publicMenu.unavailable')}</p>
+        <h1>{mt('unavailable')}</h1>
+        <p>{mt('unavailable')}</p>
         <span className="public-menu-error-brand">Deva</span>
       </div>
     );
   }
 
-  const itemCount = data.menu?.length || 0;
+  const itemCount = localizedMenu.length;
   const sectionCount = Math.max(0, sections.length - 1);
-  const heroItems = (data.menu || [])
+  const heroItems = localizedMenu
     .filter((item) => item.product?.imageUrl)
     .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
     .slice(0, 3);
 
   return (
-    <main className="public-menu-page">
+    <main className="public-menu-page" lang={locale}>
       <header className="public-menu-hero">
         <div className="public-menu-topline">
           <div className="public-menu-brand">
@@ -165,8 +177,8 @@ export default function PublicMenu({ qrToken }) {
               <UtensilsCrossed size={20} />
             </div>
             <div>
-              <strong>{data.branch?.name}</strong>
-              <span>{t('publicMenu.menu')}</span>
+              <strong>{localizeMenuValue(locale, data.branch?.name)}</strong>
+              <span>{mt('menu')}</span>
             </div>
           </div>
 
@@ -183,14 +195,14 @@ export default function PublicMenu({ qrToken }) {
           <div className="public-menu-hero-copy">
             <div className="public-menu-kicker">
               <Sparkles size={14} />
-              Fresh from the menu
+              {mt('kicker')}
             </div>
-            <h1>Find something<br />you’ll enjoy.</h1>
-            <p>{t('publicMenu.subtitle')}</p>
+            <h1>{mt('heroA')}<br />{mt('heroB')}</h1>
+            <p>{mt('subtitle')}</p>
 
             <div className="public-menu-hero-meta">
-              <span><strong>{itemCount}</strong> items</span>
-              <span><strong>{sectionCount}</strong> sections</span>
+              <span><strong>{localeNumber(locale, itemCount)}</strong> {itemCount === 1 ? mt('item') : mt('items')}</span>
+              <span><strong>{localeNumber(locale, sectionCount)}</strong> {sectionCount === 1 ? mt('section') : mt('sections')}</span>
             </div>
           </div>
 
@@ -209,8 +221,8 @@ export default function PublicMenu({ qrToken }) {
                     <span className="public-menu-fallback-chip chip-two"><Wine size={16} /></span>
                   </div>
                   <div className="public-menu-fallback-copy">
-                    <strong>Fresh choices for your table</strong>
-                    <small>{itemCount} items across {sectionCount} menu sections</small>
+                    <strong>{mt('freshChoices')}</strong>
+                    <small>{mt('across', { items: localeNumber(locale, itemCount), sections: localeNumber(locale, sectionCount) })}</small>
                   </div>
                 </div>
               )}
@@ -221,9 +233,9 @@ export default function PublicMenu({ qrToken }) {
                 <MapPin size={19} />
               </div>
               <div className="public-menu-table-copy">
-                <span>{t('publicMenu.table')}</span>
-                <strong>{data.table?.name}</strong>
-                <small>{data.table?.code} · {data.table?.seats} seats</small>
+                <span>{mt('table')}</span>
+                <strong>{localizeMenuValue(locale, data.table?.name)}</strong>
+                <small>{data.table?.code} · {mt('seats', { count: localeNumber(locale, data.table?.seats || 0) })}</small>
               </div>
             </div>
           </div>
@@ -231,25 +243,25 @@ export default function PublicMenu({ qrToken }) {
 
         {(data.branch?.address || data.branch?.phone) && (
           <div className="public-menu-contact">
-            {data.branch?.address && <span><MapPin size={14} />{data.branch.address}</span>}
+            {data.branch?.address && <span><MapPin size={14} />{localizeMenuValue(locale, data.branch.address)}</span>}
             {data.branch?.phone && <a href={`tel:${data.branch.phone}`}><Phone size={14} />{data.branch.phone}</a>}
           </div>
         )}
       </header>
 
-      <section className="public-menu-toolbar" aria-label="Menu filters">
+      <section className="public-menu-toolbar" aria-label={mt('filters')}>
         <div className="public-menu-toolbar-inner">
           <label className="public-menu-search">
             <Search size={17} />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('publicMenu.search')}
-              aria-label={t('publicMenu.search')}
+              placeholder={mt('search')}
+              aria-label={mt('search')}
             />
           </label>
 
-          <div className="public-menu-sections" role="tablist" aria-label="Menu sections">
+          <div className="public-menu-sections" role="tablist" aria-label={mt('menuSections')}>
             {sections.map((name) => (
               <button
                 key={name}
@@ -259,7 +271,7 @@ export default function PublicMenu({ qrToken }) {
                 className={section === name ? 'is-active' : ''}
                 onClick={() => setSection(name)}
               >
-                {name === 'All' ? t('publicMenu.all') : name}
+                {name === 'All' ? mt('all') : localizeMenuValue(locale, name)}
               </button>
             ))}
           </div>
@@ -270,23 +282,23 @@ export default function PublicMenu({ qrToken }) {
         {!visible.length && (
           <div className="public-menu-empty">
             <div><Search size={24} /></div>
-            <strong>{t('publicMenu.noItems')}</strong>
-            <span>{t('publicMenu.noItemsCopy')}</span>
+            <strong>{mt('noItems')}</strong>
+            <span>{mt('noItemsCopy')}</span>
           </div>
         )}
 
         {visibleSections.map((name) => {
-          const items = visible.filter((item) => (item.sectionName || 'Menu') === name);
+          const items = visible.filter((item) => item._sectionKey === name);
           if (!items.length) return null;
 
           return (
             <section className="public-menu-section" key={name}>
               <div className="public-menu-section-head">
                 <div>
-                  <span>{t('publicMenu.menu')}</span>
-                  <h2>{name}</h2>
+                  <span>{mt('menu')}</span>
+                  <h2>{localizeMenuValue(locale, name)}</h2>
                 </div>
-                <small>{items.length} {items.length === 1 ? 'item' : 'items'}</small>
+                <small>{localeNumber(locale, items.length)} {items.length === 1 ? mt('item') : mt('items')}</small>
               </div>
 
               <div className="public-menu-grid">
@@ -294,7 +306,8 @@ export default function PublicMenu({ qrToken }) {
                   <MenuItemCard
                     key={item.id}
                     item={item}
-                    featuredLabel={t('publicMenu.featured')}
+                    locale={locale}
+                    featuredLabel={mt('featured')}
                   />
                 ))}
               </div>
@@ -306,11 +319,11 @@ export default function PublicMenu({ qrToken }) {
       <footer className="public-menu-footer">
         <div className="public-menu-footer-brand">
           <img src="/deva-mark.svg" alt="Deva" />
-          <div><strong>Deva</strong><span>Simple service. Better operations.</span></div>
+          <div><strong>Deva</strong><span>{mt('footer')}</span></div>
         </div>
         <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <ArrowUp size={16} />
-          <span>Back to top</span>
+          <span>{mt('backTop')}</span>
         </button>
       </footer>
     </main>
