@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Montserrat:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
+
+/*
+  Deva typography system
+  ----------------------
+  Montserrat: product UI, navigation, controls, data and compact titles.
+  Lora:       large editorial/display headings only.
+  Noto Sans Devanagari is a technical glyph fallback for Hindi/Marathi.
+*/
+
+:root {
+  --deva-font-ui: 'Montserrat', 'Noto Sans Devanagari', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --deva-font-display: 'Lora', 'Noto Sans Devanagari', Georgia, 'Times New Roman', serif;
+}
+
+html,
+body,
+#root {
+  font-family: var(--deva-font-ui) !important;
+}
+
+body,
+button,
+input,
+select,
+textarea,
+label,
+table,
+th,
+td,
+a,
+small,
+span,
+p,
+li,
+code {
+  font-family: var(--deva-font-ui) !important;
+}
+
+/* UI typography stays crisp and compact. */
+button,
+input,
+select,
+textarea,
+.scorm-nav-item,
+.focused-nav button,
+.language-switcher,
+.public-menu-sections,
+.public-menu-search,
+.public-menu-card,
+.public-menu-table-card,
+.waiter-head-actions,
+.cashier-head-actions,
+.inventory-tabs,
+.restaurant-tabs {
+  font-family: var(--deva-font-ui) !important;
+}
+
+/* Large editorial moments use Lora. */
+h1,
+h2,
+.sa-title,
+.public-menu-hero-copy h1,
+.public-menu-section-head h2,
+.focused-overview-hero h1,
+.focused-single-main h1,
+.inventory-page h1,
+.sales-page h1,
+.restaurant-page h1,
+.analytics-page h1,
+.reports-page h1,
+.staff-page h1,
+.waiter-head h1,
+.cashier-head h1,
+.scorm-page-title,
+.page-title {
+  font-family: var(--deva-font-display) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.025em !important;
+}
+
+/* Dense component headings remain Montserrat for better scanning. */
+h3,
+h4,
+h5,
+h6,
+.public-menu-card h3,
+.scorm-brand-name,
+.focused-brand,
+.sa-form-title,
+.status-title,
+.report-card strong,
+.waiter-section h2,
+.cashier-panel h2,
+.inventory-panel h2,
+.restaurant-panel h2,
+.analytics-panel h2,
+.staff-panel h2 {
+  font-family: var(--deva-font-ui) !important;
+  letter-spacing: -0.012em !important;
+}
+
+/* Brand and navigation benefit from a slightly stronger Montserrat weight. */
+.scorm-brand-name,
+.focused-brand strong,
+.public-menu-brand strong,
+.public-menu-footer-brand strong,
+.public-menu-powered,
+.scorm-nav-item,
+.focused-nav button,
+.language-switcher button {
+  font-weight: 600 !important;
+}
+
+/* Lora needs a touch more breathing room than the previous geometric display face. */
+.public-menu-hero-copy h1,
+.sa-title,
+.focused-overview-hero h1 {
+  line-height: 1.02 !important;
+}
+
+/* Devanagari: preserve the hierarchy while using a font with native glyph support. */
+html[lang='hi'] h1,
+html[lang='hi'] h2,
+html[lang='hi'] .sa-title,
+html[lang='hi'] .public-menu-hero-copy h1,
+html[lang='hi'] .public-menu-section-head h2,
+html[lang='hi'] .focused-overview-hero h1,
+html[lang='mr'] h1,
+html[lang='mr'] h2,
+html[lang='mr'] .sa-title,
+html[lang='mr'] .public-menu-hero-copy h1,
+html[lang='mr'] .public-menu-section-head h2,
+html[lang='mr'] .focused-overview-hero h1 {
+  font-family: 'Noto Sans Devanagari', var(--deva-font-ui) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.18 !important;
+}
+
+html[lang='hi'] body,
+html[lang='hi'] button,
+html[lang='hi'] input,
+html[lang='hi'] select,
+html[lang='hi'] textarea,
+html[lang='mr'] body,
+html[lang='mr'] button,
+html[lang='mr'] input,
+html[lang='mr'] select,
+html[lang='mr'] textarea {
+  font-family: 'Noto Sans Devanagari', 'Montserrat', ui-sans-serif, system-ui, sans-serif !important;
+}
