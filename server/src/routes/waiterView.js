@@ -5,6 +5,7 @@ const { RestaurantTable } = require('../models/restaurant');
 const { Order, OrderLine } = require('../models/sales');
 const { authenticate, requireApproved, requireBranchRoles } = require('../middleware/auth');
 const { createRestaurantOrder, addRestaurantLines, setRestaurantStatus } = require('../services/restaurantService');
+const { getCurrentShift } = require('../services/shiftService');
 
 const router = express.Router();
 router.use(authenticate, requireApproved);
@@ -20,6 +21,14 @@ function waiterScope(req, res, next) {
     }
     next();
   });
+}
+
+async function requireWaiterShift(req, res, next) {
+  try {
+    const shift = await getCurrentShift({ tenantId: req.params.tenantId, branchId: req.params.branchId, userId: req.userId, role: 'WAITER' });
+    if (!shift || shift.status !== 'OPEN') return res.status(409).json({ message: 'Open a waiter shift before taking or updating orders.', code: 'OPEN_SHIFT_REQUIRED' });
+    next();
+  } catch (error) { next(error); }
 }
 
 function mediaUrl(objectKey) {
@@ -45,6 +54,9 @@ function safeLine(line) {
     totalBaseQuantity: value.totalBaseQuantity,
     unitPriceMinor: value.unitPriceMinor,
     lineSubtotalMinor: value.lineSubtotalMinor,
+    modifierTotalMinor: value.modifierTotalMinor,
+    modifiersSnapshot: Array.isArray(value.modifiersSnapshot) ? value.modifiersSnapshot : [],
+    notes: value.notes,
     status: value.status,
     createdAt: value.createdAt
   };
@@ -217,7 +229,7 @@ router.get('/waiter/tenants/:tenantId/branches/:branchId/unresolved', waiterScop
   } catch (error) { next(error); }
 });
 
-router.post('/waiter/tenants/:tenantId/branches/:branchId/orders', waiterScope, async (req, res, next) => {
+router.post('/waiter/tenants/:tenantId/branches/:branchId/orders', waiterScope, requireWaiterShift, async (req, res, next) => {
   try {
     const result = await createRestaurantOrder({
       tenantId: req.params.tenantId,
@@ -235,7 +247,7 @@ router.post('/waiter/tenants/:tenantId/branches/:branchId/orders', waiterScope, 
   } catch (error) { next(error); }
 });
 
-router.post('/waiter/tenants/:tenantId/branches/:branchId/orders/:orderId/lines', waiterScope, async (req, res, next) => {
+router.post('/waiter/tenants/:tenantId/branches/:branchId/orders/:orderId/lines', waiterScope, requireWaiterShift, async (req, res, next) => {
   try {
     const order = await loadOwnOrder(req);
     if (!order) return res.status(404).json({ message: 'Your table order was not found.' });
@@ -247,7 +259,7 @@ router.post('/waiter/tenants/:tenantId/branches/:branchId/orders/:orderId/lines'
   } catch (error) { next(error); }
 });
 
-router.post('/waiter/tenants/:tenantId/branches/:branchId/orders/:orderId/status', waiterScope, async (req, res, next) => {
+router.post('/waiter/tenants/:tenantId/branches/:branchId/orders/:orderId/status', waiterScope, requireWaiterShift, async (req, res, next) => {
   try {
     const order = await loadOwnOrder(req);
     if (!order) return res.status(404).json({ message: 'Your table order was not found.' });

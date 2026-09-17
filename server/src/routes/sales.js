@@ -5,11 +5,12 @@ const {
   AuditLog,
   Product,
   ProductPriceOption,
-  InventoryBalance
+  InventoryBalance,
+  BranchSettings
 } = require('../models');
-const { Order, OrderLine, Payment, PAYMENT_METHODS } = require('../models/sales');
+const { Order, OrderLine, Payment, SalesRefund, PAYMENT_METHODS } = require('../models/sales');
 const { authenticate, requireApproved, requireBranchRoles } = require('../middleware/auth');
-const { postCounterSale } = require('../services/salesService');
+const { postCounterSale, refundPaidOrder } = require('../services/salesService');
 const { minorInteger } = require('../services/inventoryService');
 
 const router = express.Router();
@@ -108,14 +109,20 @@ router.get('/tenants/:tenantId/branches/:branchId/catalogue', readAccess, async 
 router.post('/tenants/:tenantId/branches/:branchId/checkout', writeAccess, async (req, res, next) => {
   try {
     const paymentMethod = String(req.body?.paymentMethod || '').toUpperCase();
-    if (!PAYMENT_METHODS.includes(paymentMethod)) {
+    const splitPayments = Array.isArray(req.body?.payments) && req.body.payments.length ? req.body.payments : null;
+    const requestedMethods = splitPayments ? splitPayments.map((row) => String(row.method || '').toUpperCase()) : [paymentMethod];
+    if (requestedMethods.some((method) => !PAYMENT_METHODS.includes(method))) {
       return res.status(400).json({ message: `paymentMethod must be one of: ${PAYMENT_METHODS.join(', ')}` });
     }
+    const settings = await BranchSettings.findOne({ where: { tenantId: req.params.tenantId, branchId: req.params.branchId } });
+    if (settings && requestedMethods.some((method) => !(settings.allowedPaymentMethods || []).includes(method))) return res.status(409).json({ message: 'One or more payment methods are disabled in branch settings.', code: 'PAYMENT_METHOD_DISABLED' });
 
     const discountMinor = req.body?.discountMinor == null ? '0' : minorInteger(req.body.discountMinor, 'discountMinor').toString();
     const taxMinor = req.body?.taxMinor == null ? '0' : minorInteger(req.body.taxMinor, 'taxMinor').toString();
     const idempotencyKey = cleanText(req.header('Idempotency-Key') || req.body?.idempotencyKey, 180);
     const orderType = req.branch.type === 'WINE_SHOP' ? 'WINE_SHOP' : 'COUNTER';
+    const discountReason = cleanText(req.body?.discountReason, 500);
+    if (BigInt(discountMinor) > 0n && !discountReason) return res.status(400).json({ message: 'Discount reason is required for manager approval.' });
 
     const result = await postCounterSale({
       tenantId: req.params.tenantId,
@@ -126,9 +133,11 @@ router.post('/tenants/:tenantId/branches/:branchId/checkout', writeAccess, async
       taxMinor,
       paymentMethod,
       paymentReference: req.body?.paymentReference,
-      notes: req.body?.notes,
+      payments: splitPayments,
+      notes: [req.body?.notes, discountReason ? `Discount approved: ${discountReason}` : null].filter(Boolean).join('\n') || null,
       idempotencyKey,
-      actorUserId: req.userId
+      actorUserId: req.userId,
+      allowPriceOverride: true
     });
 
     if (!result.replayed) {
@@ -137,7 +146,9 @@ router.post('/tenants/:tenantId/branches/:branchId/checkout', writeAccess, async
         totalMinor: result.order.totalMinor,
         cogsMinor: result.order.cogsMinor,
         grossProfitMinor: result.order.grossProfitMinor,
-        paymentMethod
+        paymentMethods: requestedMethods,
+        discountReason,
+        priceOverrides: (req.body?.lines || []).filter((line) => line.unitPriceMinorOverride != null).map((line) => ({ priceOptionId: line.priceOptionId, unitPriceMinorOverride: line.unitPriceMinorOverride, reason: cleanText(line.priceOverrideReason, 500) }))
       });
     }
     res.status(result.replayed ? 200 : 201).json(result);
@@ -154,7 +165,7 @@ router.get('/tenants/:tenantId/branches/:branchId/orders', readAccess, async (re
     if (req.query.status) where.status = String(req.query.status).toUpperCase();
     const orders = await Order.findAll({
       where,
-      include: [{ model: OrderLine, as: 'lines' }, { model: Payment, as: 'payments' }],
+      include: [{ model: OrderLine, as: 'lines' }, { model: Payment, as: 'payments' }, { model: SalesRefund, as: 'refunds' }],
       order: [['createdAt', 'DESC']],
       limit
     });
@@ -166,10 +177,35 @@ router.get('/tenants/:tenantId/branches/:branchId/orders/:orderId', readAccess, 
   try {
     const order = await Order.findOne({
       where: { id: req.params.orderId, tenantId: req.params.tenantId, branchId: req.params.branchId },
-      include: [{ model: OrderLine, as: 'lines' }, { model: Payment, as: 'payments' }]
+      include: [{ model: OrderLine, as: 'lines' }, { model: Payment, as: 'payments' }, { model: SalesRefund, as: 'refunds' }]
     });
     if (!order) return res.status(404).json({ message: 'Order not found.' });
     res.json({ order });
+  } catch (error) { next(error); }
+});
+
+router.post('/tenants/:tenantId/branches/:branchId/orders/:orderId/refund', writeAccess, async (req, res, next) => {
+  try {
+    const result = await refundPaidOrder({
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      orderId: req.params.orderId,
+      reason: req.body?.reason,
+      stockDisposition: req.body?.stockDisposition,
+      refundMethod: req.body?.refundMethod,
+      idempotencyKey: cleanText(req.header('Idempotency-Key') || req.body?.idempotencyKey, 180),
+      actorUserId: req.userId
+    });
+    if (!result.replayed) {
+      await audit(req, 'SALE_REFUNDED', 'SalesRefund', result.refund.id, {
+        orderId: req.params.orderId,
+        amountMinor: result.refund.amountMinor,
+        method: result.refund.method,
+        stockDisposition: result.refund.stockDisposition,
+        reason: result.refund.reason
+      });
+    }
+    res.json(result);
   } catch (error) { next(error); }
 });
 

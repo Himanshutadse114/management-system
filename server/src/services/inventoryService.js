@@ -1,4 +1,6 @@
+const crypto = require('crypto');
 const Decimal = require('decimal.js');
+const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const {
   Product,
@@ -7,6 +9,7 @@ const {
   InventoryBalance,
   InventoryMovement
 } = require('../models');
+const { InventoryBatch } = require('../models/inventoryOperations');
 
 Decimal.set({ precision: 40, rounding: Decimal.ROUND_HALF_UP });
 
@@ -162,6 +165,36 @@ async function applyInventoryMovement({
   balance.version = Number(balance.version || 0) + 1;
   await balance.save({ transaction });
 
+  if (delta.lt(0) && ['SALE', 'WASTAGE', 'ADJUSTMENT_OUT', 'TRANSFER_OUT'].includes(movementType)) {
+    let remaining = delta.abs();
+    const batches = await InventoryBatch.findAll({
+      where: { tenantId, branchId, productId, status: 'ACTIVE', quantityCurrentBase: { [Op.gt]: 0 } },
+      order: [sequelize.literal('"expiresAt" ASC NULLS LAST'), ['createdAt', 'ASC']],
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    for (const batch of batches) {
+      if (remaining.lte(0)) break;
+      const available = decimal(batch.quantityCurrentBase);
+      const used = Decimal.min(available, remaining);
+      batch.quantityCurrentBase = quantityString(available.minus(used));
+      if (decimal(batch.quantityCurrentBase).lte(0)) batch.status = 'DEPLETED';
+      await batch.save({ transaction });
+      remaining = remaining.minus(used);
+    }
+  } else if (delta.gt(0) && ['RETURN_IN', 'ADJUSTMENT_IN'].includes(movementType)) {
+    const batchNumber = movementType === 'RETURN_IN' ? 'CUSTOMER-RETURNS' : 'UNBATCHED-ADJUSTMENTS';
+    const [batch] = await InventoryBatch.findOrCreate({
+      where: { branchId, productId, batchNumber },
+      defaults: { tenantId, branchId, productId, batchNumber, packageSizeBaseUnits: '1.000', quantityReceivedBase: '0.000', quantityCurrentBase: '0.000', status: 'ACTIVE' },
+      transaction
+    });
+    batch.quantityReceivedBase = quantityString(decimal(batch.quantityReceivedBase).plus(delta));
+    batch.quantityCurrentBase = quantityString(decimal(batch.quantityCurrentBase).plus(delta));
+    batch.status = 'ACTIVE';
+    await batch.save({ transaction });
+  }
+
   const movement = await InventoryMovement.create({
     tenantId,
     branchId,
@@ -253,7 +286,12 @@ async function postPurchase({
         packageCount,
         packageSize,
         totalBaseUnits,
-        lineTotalMinor
+        lineTotalMinor,
+        batchNumber: line.batchNumber ? String(line.batchNumber).trim().slice(0, 120) : null,
+        manufacturedAt: line.manufacturedAt || null,
+        expiresAt: line.expiresAt || null,
+        mrpMinor: line.mrpMinor == null || line.mrpMinor === '' ? null : minorInteger(line.mrpMinor, `line ${index + 1} mrpMinor`).toString(),
+        packageLabel: line.packageLabel ? String(line.packageLabel).trim().slice(0, 80) : null
       });
     }
 
@@ -271,7 +309,7 @@ async function postPurchase({
     }, { transaction });
 
     for (const [index, row] of prepared.entries()) {
-      await PurchaseLine.create({
+      const purchaseLine = await PurchaseLine.create({
         tenantId,
         branchId,
         purchaseId: purchase.id,
@@ -282,6 +320,24 @@ async function postPurchase({
         packageSizeBaseUnits: quantityString(row.packageSize),
         totalBaseUnits: quantityString(row.totalBaseUnits),
         lineTotalMinor: row.lineTotalMinor.toString()
+      }, { transaction });
+
+      await InventoryBatch.create({
+        tenantId,
+        branchId,
+        productId: row.product.id,
+        supplierId: supplierId || null,
+        purchaseId: purchase.id,
+        purchaseLineId: purchaseLine.id,
+        batchNumber: row.batchNumber || `${purchase.id.slice(0, 8).toUpperCase()}-${index + 1}`,
+        manufacturedAt: row.manufacturedAt,
+        expiresAt: row.expiresAt,
+        mrpMinor: row.mrpMinor,
+        packageLabel: row.packageLabel,
+        packageSizeBaseUnits: quantityString(row.packageSize),
+        quantityReceivedBase: quantityString(row.totalBaseUnits),
+        quantityCurrentBase: quantityString(row.totalBaseUnits),
+        status: 'ACTIVE'
       }, { transaction });
 
       await applyInventoryMovement({
@@ -355,6 +411,104 @@ async function postAdjustment({
   }));
 }
 
+async function postTransfer({
+  tenantId,
+  sourceBranchId,
+  destinationBranchId,
+  productId,
+  quantityBase,
+  reason = null,
+  idempotencyKey = null,
+  actorUserId
+}) {
+  const quantity = positiveDecimal(quantityBase, 'quantityBase');
+  if (String(sourceBranchId) === String(destinationBranchId)) {
+    const error = new Error('Source and destination branches must be different.');
+    error.status = 400;
+    throw error;
+  }
+
+  const product = await Product.findOne({ where: { id: productId, tenantId, status: 'ACTIVE' } });
+  if (!product) {
+    const error = new Error('Product not found.');
+    error.status = 404;
+    throw error;
+  }
+  if (!product.trackInventory) {
+    const error = new Error('This product does not track inventory.');
+    error.status = 400;
+    throw error;
+  }
+
+  const safeKey = idempotencyKey ? String(idempotencyKey).trim().slice(0, 145) : null;
+  const outgoingKey = safeKey ? `transfer:${safeKey}:out` : null;
+  const incomingKey = safeKey ? `transfer:${safeKey}:in` : null;
+
+  return sequelize.transaction(async (transaction) => {
+    if (outgoingKey) {
+      const existingOutgoing = await InventoryMovement.findOne({
+        where: { tenantId, idempotencyKey: outgoingKey },
+        transaction
+      });
+      if (existingOutgoing) {
+        const existingIncoming = await InventoryMovement.findOne({
+          where: {
+            tenantId,
+            branchId: destinationBranchId,
+            referenceType: 'STOCK_TRANSFER',
+            referenceId: existingOutgoing.referenceId,
+            movementType: 'TRANSFER_IN'
+          },
+          transaction
+        });
+        return {
+          transferId: existingOutgoing.referenceId,
+          outgoingMovement: existingOutgoing,
+          incomingMovement: existingIncoming,
+          replayed: true
+        };
+      }
+    }
+
+    const transferId = crypto.randomUUID();
+    const transferReason = reason ? String(reason).trim().slice(0, 2000) : 'Inter-branch stock transfer';
+    const outgoing = await applyInventoryMovement({
+      tenantId,
+      branchId: sourceBranchId,
+      productId,
+      movementType: 'TRANSFER_OUT',
+      quantityDeltaBase: quantity.negated(),
+      referenceType: 'STOCK_TRANSFER',
+      referenceId: transferId,
+      reason: transferReason,
+      idempotencyKey: outgoingKey,
+      actorUserId,
+      transaction
+    });
+    const incoming = await applyInventoryMovement({
+      tenantId,
+      branchId: destinationBranchId,
+      productId,
+      movementType: 'TRANSFER_IN',
+      quantityDeltaBase: quantity,
+      costAmountMinor: outgoing.movement.costAmountMinor,
+      referenceType: 'STOCK_TRANSFER',
+      referenceId: transferId,
+      reason: transferReason,
+      idempotencyKey: incomingKey,
+      actorUserId,
+      transaction
+    });
+
+    return {
+      transferId,
+      outgoingMovement: outgoing.movement,
+      incomingMovement: incoming.movement,
+      replayed: false
+    };
+  });
+}
+
 module.exports = {
   decimal,
   positiveDecimal,
@@ -363,5 +517,6 @@ module.exports = {
   moneyString,
   applyInventoryMovement,
   postPurchase,
-  postAdjustment
+  postAdjustment,
+  postTransfer
 };

@@ -13,6 +13,7 @@ const {
   PurchaseLine,
   InventoryBalance,
   InventoryMovement,
+  Branch,
   PRODUCT_TYPES,
   INVENTORY_UNITS
 } = require('../models');
@@ -21,9 +22,21 @@ const {
   positiveDecimal,
   minorInteger,
   postPurchase,
-  postAdjustment
+  postAdjustment,
+  postTransfer
 } = require('../services/inventoryService');
+const { hasBranchRole } = require('../services/accessService');
+const {
+  listStocktakes,
+  loadStocktake,
+  createStocktake,
+  updateStocktakeCounts,
+  submitStocktake,
+  postStocktake
+} = require('../services/stocktakeService');
 const { getObjectStorage, tenantObjectKey } = require('../storage/objectStorage');
+const { InventoryBatch, SupplierReturn } = require('../models/inventoryOperations');
+const { dispatchTransfer, receiveTransfer, postSupplierReturn, listTransfers } = require('../services/inventoryOperationsService');
 
 const router = express.Router();
 const ALL_BRANCH_ROLES = ['BRANCH_MANAGER', 'INVENTORY_MANAGER', 'CASHIER', 'WAITER', 'AUDITOR'];
@@ -515,6 +528,189 @@ router.post('/tenants/:tenantId/branches/:branchId/wastage', branchInventoryWrit
       });
     }
     res.status(result.replayed ? 200 : 201).json(result);
+  } catch (error) { next(error); }
+});
+
+router.post('/tenants/:tenantId/branches/:branchId/transfers', branchInventoryWriteAccess, async (req, res, next) => {
+  try {
+    const tenantId = req.params.tenantId;
+    const sourceBranchId = req.params.branchId;
+    const destinationBranchId = cleanText(req.body?.destinationBranchId, 100);
+    const productId = cleanText(req.body?.productId, 100);
+    const reason = cleanText(req.body?.reason, 2000);
+
+    if (!destinationBranchId || !productId) {
+      return res.status(400).json({ message: 'Destination branch and product are required.' });
+    }
+    if (!reason) return res.status(400).json({ message: 'Transfer reason is required.' });
+
+    const destination = await Branch.findOne({
+      where: { id: destinationBranchId, tenantId, status: 'ACTIVE' }
+    });
+    if (!destination) return res.status(404).json({ message: 'Destination branch not found in this business.' });
+    if (!(await hasBranchRole(req.user, destination, INVENTORY_WRITE_ROLES))) {
+      return res.status(403).json({
+        message: 'Stock access is required for both the source and destination branches.',
+        code: 'TRANSFER_DESTINATION_ACCESS_DENIED'
+      });
+    }
+
+    const result = await postTransfer({
+      tenantId,
+      sourceBranchId,
+      destinationBranchId,
+      productId,
+      quantityBase: req.body?.quantityBase,
+      reason,
+      idempotencyKey: cleanText(req.body?.idempotencyKey, 145),
+      actorUserId: req.auditActorUserId || req.userId
+    });
+    await audit(req, 'INVENTORY_TRANSFERRED', 'InventoryMovement', result.transferId, {
+      sourceBranchId,
+      destinationBranchId,
+      productId,
+      quantityBase: String(req.body?.quantityBase),
+      replayed: result.replayed
+    });
+    res.status(result.replayed ? 200 : 201).json(result);
+  } catch (error) { next(error); }
+});
+
+router.get('/tenants/:tenantId/branches/:branchId/batches', branchReadAccess, async (req, res, next) => {
+  try {
+    const batches = await InventoryBatch.findAll({ where: { tenantId: req.params.tenantId, branchId: req.params.branchId }, order: [sequelize.literal('"expiresAt" ASC NULLS LAST'), ['createdAt', 'DESC']], limit: 300 });
+    res.json({ batches });
+  } catch (error) { next(error); }
+});
+
+router.get('/tenants/:tenantId/branches/:branchId/transfer-orders', branchReadAccess, async (req, res, next) => {
+  try { res.json({ transfers: await listTransfers({ tenantId: req.params.tenantId, branchId: req.params.branchId }) }); }
+  catch (error) { next(error); }
+});
+
+router.post('/tenants/:tenantId/branches/:branchId/transfer-orders', branchInventoryWriteAccess, async (req, res, next) => {
+  try {
+    const destinationBranchId = cleanText(req.body?.destinationBranchId, 100);
+    const reason = cleanText(req.body?.reason, 2000);
+    if (!destinationBranchId || !reason) return res.status(400).json({ message: 'Destination and transfer reason are required.' });
+    const destination = await Branch.findOne({ where: { id: destinationBranchId, tenantId: req.params.tenantId, status: 'ACTIVE' } });
+    if (!destination) return res.status(404).json({ message: 'Destination branch not found.' });
+    if (!(await hasBranchRole(req.user, destination, INVENTORY_WRITE_ROLES))) return res.status(403).json({ message: 'Stock access is required for both branches.', code: 'TRANSFER_DESTINATION_ACCESS_DENIED' });
+    const result = await dispatchTransfer({ tenantId: req.params.tenantId, sourceBranchId: req.params.branchId, destinationBranchId, lines: req.body?.lines, reason, idempotencyKey: cleanText(req.body?.idempotencyKey, 180), actorUserId: req.userId });
+    if (!result.replayed) await audit(req, 'STOCK_TRANSFER_DISPATCHED', 'StockTransfer', result.transfer.id, { transferNumber: result.transfer.transferNumber, destinationBranchId, lineCount: result.transfer.lines?.length || 0 });
+    res.status(result.replayed ? 200 : 201).json(result);
+  } catch (error) { next(error); }
+});
+
+router.post('/tenants/:tenantId/branches/:branchId/transfer-orders/:transferId/receive', branchInventoryWriteAccess, async (req, res, next) => {
+  try {
+    const result = await receiveTransfer({ tenantId: req.params.tenantId, destinationBranchId: req.params.branchId, transferId: req.params.transferId, actorUserId: req.userId });
+    if (!result.replayed) await audit(req, 'STOCK_TRANSFER_RECEIVED', 'StockTransfer', result.transfer.id, { transferNumber: result.transfer.transferNumber });
+    res.json(result);
+  } catch (error) { next(error); }
+});
+
+router.get('/tenants/:tenantId/branches/:branchId/supplier-returns', branchReadAccess, async (req, res, next) => {
+  try { res.json({ returns: await SupplierReturn.findAll({ where: { tenantId: req.params.tenantId, branchId: req.params.branchId }, order: [['createdAt', 'DESC']], limit: 100 }) }); }
+  catch (error) { next(error); }
+});
+
+router.post('/tenants/:tenantId/branches/:branchId/supplier-returns', branchInventoryWriteAccess, async (req, res, next) => {
+  try {
+    const reason = cleanText(req.body?.reason, 2000);
+    if (!reason) return res.status(400).json({ message: 'Supplier return reason is required.' });
+    const result = await postSupplierReturn({ tenantId: req.params.tenantId, branchId: req.params.branchId, supplierId: req.body?.supplierId, productId: req.body?.productId, batchId: req.body?.batchId || null, quantityBase: req.body?.quantityBase, creditMinor: req.body?.creditMinor, reason, idempotencyKey: cleanText(req.body?.idempotencyKey, 180), actorUserId: req.userId });
+    if (!result.replayed) await audit(req, 'SUPPLIER_RETURN_POSTED', 'SupplierReturn', result.supplierReturn.id, { returnNumber: result.supplierReturn.returnNumber, supplierId: result.supplierReturn.supplierId, quantityBase: result.supplierReturn.quantityBase, creditMinor: result.supplierReturn.creditMinor });
+    res.status(result.replayed ? 200 : 201).json(result);
+  } catch (error) { next(error); }
+});
+
+router.get('/tenants/:tenantId/branches/:branchId/stocktakes', branchReadAccess, async (req, res, next) => {
+  try {
+    const stocktakes = await listStocktakes({
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      limit: req.query.limit
+    });
+    res.json({ stocktakes });
+  } catch (error) { next(error); }
+});
+
+router.get('/tenants/:tenantId/branches/:branchId/stocktakes/:stocktakeId', branchReadAccess, async (req, res, next) => {
+  try {
+    const stocktake = await loadStocktake({
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      stocktakeId: req.params.stocktakeId
+    });
+    if (!stocktake) return res.status(404).json({ message: 'Stocktake not found.' });
+    res.json({ stocktake });
+  } catch (error) { next(error); }
+});
+
+router.post('/tenants/:tenantId/branches/:branchId/stocktakes', branchInventoryWriteAccess, async (req, res, next) => {
+  try {
+    const stocktake = await createStocktake({
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      name: req.body?.name,
+      notes: req.body?.notes,
+      actorUserId: req.userId
+    });
+    await audit(req, 'STOCKTAKE_STARTED', 'Stocktake', stocktake.id, { name: stocktake.name, lineCount: stocktake.lines?.length || 0 });
+    res.status(201).json({ stocktake });
+  } catch (error) {
+    if (error?.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ message: 'Finish or post the current stocktake before starting another.', code: 'STOCKTAKE_ALREADY_OPEN' });
+    }
+    next(error);
+  }
+});
+
+router.patch('/tenants/:tenantId/branches/:branchId/stocktakes/:stocktakeId/lines', branchInventoryWriteAccess, async (req, res, next) => {
+  try {
+    const stocktake = await updateStocktakeCounts({
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      stocktakeId: req.params.stocktakeId,
+      counts: req.body?.counts
+    });
+    await audit(req, 'STOCKTAKE_COUNTS_UPDATED', 'Stocktake', stocktake.id, { updatedLineCount: req.body?.counts?.length || 0 });
+    res.json({ stocktake });
+  } catch (error) { next(error); }
+});
+
+router.post('/tenants/:tenantId/branches/:branchId/stocktakes/:stocktakeId/submit', branchInventoryWriteAccess, async (req, res, next) => {
+  try {
+    const stocktake = await submitStocktake({
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      stocktakeId: req.params.stocktakeId,
+      actorUserId: req.userId
+    });
+    await audit(req, 'STOCKTAKE_SUBMITTED', 'Stocktake', stocktake.id, { lineCount: stocktake.lines?.length || 0 });
+    res.json({ stocktake });
+  } catch (error) { next(error); }
+});
+
+router.post('/tenants/:tenantId/branches/:branchId/stocktakes/:stocktakeId/post', branchInventoryWriteAccess, async (req, res, next) => {
+  try {
+    if (!(await hasBranchRole(req.user, req.branch, ['BRANCH_MANAGER']))) {
+      return res.status(403).json({ message: 'A Branch Manager or Tenant Admin must approve and post a stocktake.', code: 'STOCKTAKE_APPROVAL_REQUIRED' });
+    }
+    const result = await postStocktake({
+      tenantId: req.params.tenantId,
+      branchId: req.params.branchId,
+      stocktakeId: req.params.stocktakeId,
+      actorUserId: req.userId
+    });
+    if (!result.replayed) {
+      await audit(req, 'STOCKTAKE_POSTED', 'Stocktake', result.stocktake.id, {
+        lineCount: result.stocktake.lines?.length || 0,
+        varianceLineCount: (result.stocktake.lines || []).filter((line) => Number(line.varianceQuantityBase) !== 0).length
+      });
+    }
+    res.json(result);
   } catch (error) { next(error); }
 });
 

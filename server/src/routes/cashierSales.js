@@ -1,10 +1,11 @@
 const express = require('express');
 const { Op, QueryTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const { AuditLog, Product, ProductPriceOption, InventoryBalance } = require('../models');
+const { AuditLog, Product, ProductPriceOption, InventoryBalance, BranchSettings } = require('../models');
 const { Order, OrderLine, Payment, PAYMENT_METHODS } = require('../models/sales');
 const { authenticate, requireApproved, requireBranchRoles } = require('../middleware/auth');
 const { postCounterSale } = require('../services/salesService');
+const { getCurrentShift } = require('../services/shiftService');
 
 const router = express.Router();
 router.use(authenticate, requireApproved);
@@ -17,6 +18,15 @@ function cashierScope(req, res, next) {
     }
     next();
   });
+}
+
+async function requireCashierShift(req, res, next) {
+  try {
+    const shift = await getCurrentShift({ tenantId: req.params.tenantId, branchId: req.params.branchId, userId: req.userId, role: 'CASHIER' });
+    if (!shift || shift.status !== 'OPEN') return res.status(409).json({ message: 'Open a cashier shift before collecting payments.', code: 'OPEN_SHIFT_REQUIRED' });
+    req.operationalShift = shift;
+    next();
+  } catch (error) { next(error); }
 }
 
 function mediaUrl(objectKey) {
@@ -97,12 +107,16 @@ router.get('/cashier/tenants/:tenantId/branches/:branchId/catalogue', cashierSco
   } catch (error) { next(error); }
 });
 
-router.post('/cashier/tenants/:tenantId/branches/:branchId/checkout', cashierScope, async (req, res, next) => {
+router.post('/cashier/tenants/:tenantId/branches/:branchId/checkout', cashierScope, requireCashierShift, async (req, res, next) => {
   try {
     const paymentMethod = String(req.body?.paymentMethod || '').toUpperCase();
-    if (!PAYMENT_METHODS.includes(paymentMethod)) {
+    const splitPayments = Array.isArray(req.body?.payments) && req.body.payments.length ? req.body.payments : null;
+    const requestedMethods = splitPayments ? splitPayments.map((row) => String(row.method || '').toUpperCase()) : [paymentMethod];
+    if (requestedMethods.some((method) => !PAYMENT_METHODS.includes(method))) {
       return res.status(400).json({ message: `paymentMethod must be one of: ${PAYMENT_METHODS.join(', ')}` });
     }
+    const settings = await BranchSettings.findOne({ where: { tenantId: req.params.tenantId, branchId: req.params.branchId } });
+    if (settings && requestedMethods.some((method) => !(settings.allowedPaymentMethods || []).includes(method))) return res.status(409).json({ message: 'One or more payment methods are disabled in branch settings.', code: 'PAYMENT_METHOD_DISABLED' });
 
     // A cashier chooses an existing selling option and payment method. Pricing,
     // discount and tax overrides require a manager/admin workflow, not cashier input.
@@ -120,11 +134,12 @@ router.post('/cashier/tenants/:tenantId/branches/:branchId/checkout', cashierSco
       taxMinor: '0',
       paymentMethod,
       paymentReference: req.body?.paymentReference,
+      payments: splitPayments,
       notes: req.body?.notes,
       idempotencyKey,
       actorUserId: req.userId
     });
-    if (!result.replayed) await audit(req, 'CASHIER_COUNTER_SALE_PAID', result.order.id, { orderNumber: result.order.orderNumber, totalMinor: result.order.totalMinor, paymentMethod });
+    if (!result.replayed) await audit(req, 'CASHIER_COUNTER_SALE_PAID', result.order.id, { orderNumber: result.order.orderNumber, totalMinor: result.order.totalMinor, paymentMethods: requestedMethods });
     res.status(result.replayed ? 200 : 201).json({ ...result, order: safeOrder(result.order) });
   } catch (error) { next(error); }
 });

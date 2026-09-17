@@ -1,10 +1,11 @@
 const express = require('express');
 const { Op } = require('sequelize');
-const { AuditLog } = require('../models');
+const { AuditLog, BranchSettings } = require('../models');
 const { RestaurantTable } = require('../models/restaurant');
 const { Order, OrderLine, PAYMENT_METHODS } = require('../models/sales');
 const { authenticate, requireApproved, requireBranchRoles } = require('../middleware/auth');
 const { payRestaurantOrder } = require('../services/restaurantService');
+const { getCurrentShift } = require('../services/shiftService');
 
 const router = express.Router();
 router.use(authenticate, requireApproved);
@@ -22,6 +23,14 @@ function cashierRestaurantScope(req, res, next) {
   });
 }
 
+async function requireCashierShift(req, res, next) {
+  try {
+    const shift = await getCurrentShift({ tenantId: req.params.tenantId, branchId: req.params.branchId, userId: req.userId, role: 'CASHIER' });
+    if (!shift || shift.status !== 'OPEN') return res.status(409).json({ message: 'Open a cashier shift before collecting payments.', code: 'OPEN_SHIFT_REQUIRED' });
+    next();
+  } catch (error) { next(error); }
+}
+
 function safeLine(line) {
   const value = line.toJSON ? line.toJSON() : line;
   return {
@@ -31,6 +40,8 @@ function safeLine(line) {
     quantityUnits: value.quantityUnits,
     unitPriceMinor: value.unitPriceMinor,
     lineSubtotalMinor: value.lineSubtotalMinor,
+    modifiersSnapshot: Array.isArray(value.modifiersSnapshot) ? value.modifiersSnapshot : [],
+    notes: value.notes,
     status: value.status
   };
 }
@@ -86,7 +97,7 @@ router.get('/cashier/tenants/:tenantId/branches/:branchId/settlements', cashierR
   } catch (error) { next(error); }
 });
 
-router.post('/cashier/tenants/:tenantId/branches/:branchId/orders/:orderId/pay', cashierRestaurantScope, async (req, res, next) => {
+router.post('/cashier/tenants/:tenantId/branches/:branchId/orders/:orderId/pay', cashierRestaurantScope, requireCashierShift, async (req, res, next) => {
   try {
     const order = await Order.findOne({
       where: {
@@ -100,20 +111,26 @@ router.post('/cashier/tenants/:tenantId/branches/:branchId/orders/:orderId/pay',
     });
     if (!order) return res.status(404).json({ message: 'Awaiting-payment restaurant order not found.' });
 
-    const paymentMethod = String(req.body?.paymentMethod || '').toUpperCase();
-    if (!PAYMENT_METHODS.includes(paymentMethod)) {
+    const splitPayments = Array.isArray(req.body?.payments) ? req.body.payments : null;
+    const paymentMethod = String(req.body?.paymentMethod || splitPayments?.[0]?.method || '').toUpperCase();
+    const requestedMethods = splitPayments?.map((row) => String(row?.method || '').toUpperCase()) || [paymentMethod];
+    if (!requestedMethods.length || requestedMethods.some((method) => !PAYMENT_METHODS.includes(method))) {
       return res.status(400).json({ message: `Payment method must be one of: ${PAYMENT_METHODS.join(', ')}` });
     }
+    const settings = await BranchSettings.findOne({ where: { tenantId: req.params.tenantId, branchId: req.params.branchId } });
+    const disabledMethod = settings && requestedMethods.find((method) => !(settings.allowedPaymentMethods || []).includes(method));
+    if (disabledMethod) return res.status(409).json({ message: `${disabledMethod} is disabled in branch settings.`, code: 'PAYMENT_METHOD_DISABLED' });
 
     const updated = await payRestaurantOrder({
       orderId: order.id,
       tenantId: req.params.tenantId,
       branchId: req.params.branchId,
       paymentMethod,
+      payments: splitPayments,
       paymentReference: req.body?.paymentReference,
       actorUserId: req.userId
     });
-    await audit(req, 'CASHIER_RESTAURANT_ORDER_PAID', order, { orderNumber: order.orderNumber, totalMinor: order.totalMinor, paymentMethod });
+    await audit(req, 'CASHIER_RESTAURANT_ORDER_PAID', order, { orderNumber: order.orderNumber, totalMinor: order.totalMinor, paymentMethods: requestedMethods });
     res.json({ order: safeSettlement(updated) });
   } catch (error) { next(error); }
 });

@@ -3,11 +3,13 @@ import {
   Banknote,
   BarChart3,
   CreditCard,
+  Clock3,
   Minus,
   PackageSearch,
   Plus,
   ReceiptText,
   RefreshCw,
+  RotateCcw,
   Search,
   ShoppingCart,
   Store,
@@ -96,6 +98,7 @@ export default function SalesWorkspace({ token, access }) {
   const [cart, setCart] = useState([]);
   const [search, setSearch] = useState('');
   const [discount, setDiscount] = useState('');
+  const [discountReason, setDiscountReason] = useState('');
   const [tax, setTax] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [paymentReference, setPaymentReference] = useState('');
@@ -103,8 +106,13 @@ export default function SalesWorkspace({ token, access }) {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [shifts, setShifts] = useState([]);
+  const [approvalNotes, setApprovalNotes] = useState({});
+  const [refundTarget, setRefundTarget] = useState(null);
+  const [refundForm, setRefundForm] = useState({ reason:'', stockDisposition:'RESTOCK', refundMethod:'CASH' });
 
   const base = scope.tenantId && scope.branchId ? `/sales/tenants/${scope.tenantId}/branches/${scope.branchId}` : '';
+  const shiftBase = scope.tenantId && scope.branchId ? `/shifts/tenants/${scope.tenantId}/branches/${scope.branchId}` : '';
 
   async function load() {
     if (!base) return;
@@ -112,15 +120,17 @@ export default function SalesWorkspace({ token, access }) {
       setLoading(true);
       setError('');
       const headers = authHeaders(token);
-      const [catalogue, orderResult, summaryResult] = await Promise.all([
+      const [catalogue, orderResult, summaryResult, shiftResult] = await Promise.all([
         api.get(`${base}/catalogue`, { headers }),
         api.get(`${base}/orders?limit=50`, { headers }),
-        api.get(`${base}/summary`, { headers })
+        api.get(`${base}/summary`, { headers }),
+        api.get(`${shiftBase}?limit=100`, { headers })
       ]);
       setProducts(catalogue.data.products || []);
       setBranch(catalogue.data.branch || branch);
       setOrders(orderResult.data.orders || []);
       setSummary(summaryResult.data.summary || {});
+      setShifts(shiftResult.data.shifts || []);
     } catch (err) { setError(apiErrorMessage(err)); }
     finally { setLoading(false); }
   }
@@ -138,7 +148,7 @@ export default function SalesWorkspace({ token, access }) {
     setCart((current) => {
       const existing = current.find((row) => row.key === key);
       if (existing) return current.map((row) => row.key === key ? { ...row, quantityUnits: row.quantityUnits + 1 } : row);
-      return [...current, { key, productId: product.id, productName: product.name, productType: product.productType, inventoryUnit: product.inventoryUnit, availableQuantityBase: product.availableQuantityBase, priceOptionId: price.id, priceLabel: price.label, baseQuantityPerUnit: price.quantityBaseUnits, unitPriceMinor: price.priceMinor, quantityUnits: 1 }];
+      return [...current, { key, productId: product.id, productName: product.name, productType: product.productType, inventoryUnit: product.inventoryUnit, availableQuantityBase: product.availableQuantityBase, priceOptionId: price.id, priceLabel: price.label, baseQuantityPerUnit: price.quantityBaseUnits, unitPriceMinor: price.priceMinor, overrideRupees:'', priceOverrideReason:'', quantityUnits: 1 }];
     });
   }
 
@@ -147,7 +157,9 @@ export default function SalesWorkspace({ token, access }) {
     setCart((current) => current.map((row) => row.key === key ? { ...row, quantityUnits: quantity } : row));
   }
 
-  const subtotalMinor = useMemo(() => cart.reduce((total, row) => total + BigInt(row.unitPriceMinor || 0) * BigInt(row.quantityUnits), 0n), [cart]);
+  function updateCartLine(key, patch) { setCart((current)=>current.map((row)=>row.key===key?{...row,...patch}:row)); }
+
+  const subtotalMinor = useMemo(() => cart.reduce((total, row) => { let price=BigInt(row.unitPriceMinor||0); try{if(String(row.overrideRupees||'').trim())price=BigInt(minorFromRupees(row.overrideRupees,false));}catch(_){} return total+price*BigInt(row.quantityUnits); }, 0n), [cart]);
   let discountMinor = 0n;
   let taxMinor = 0n;
   try { discountMinor = BigInt(minorFromRupees(discount)); } catch (_) {}
@@ -160,8 +172,9 @@ export default function SalesWorkspace({ token, access }) {
       setPaying(true);
       setError('');
       const response = await api.post(`${base}/checkout`, {
-        lines: cart.map((row) => ({ priceOptionId: row.priceOptionId, quantityUnits: row.quantityUnits })),
+        lines: cart.map((row) => ({ priceOptionId: row.priceOptionId, quantityUnits: row.quantityUnits, unitPriceMinorOverride:String(row.overrideRupees||'').trim()?minorFromRupees(row.overrideRupees,false):null, priceOverrideReason:row.priceOverrideReason||null })),
         discountMinor: minorFromRupees(discount),
+        discountReason: discountReason || null,
         taxMinor: minorFromRupees(tax),
         paymentMethod,
         paymentReference: paymentReference || null,
@@ -170,11 +183,30 @@ export default function SalesWorkspace({ token, access }) {
       setLastReceipt(response.data.order);
       setCart([]);
       setDiscount('');
+      setDiscountReason('');
       setTax('');
       setPaymentReference('');
       await load();
     } catch (err) { setError(err.message || apiErrorMessage(err)); }
     finally { setPaying(false); }
+  }
+
+  async function approveShift(shift) {
+    try {
+      setError('');
+      await api.post(`${shiftBase}/${shift.id}/approve`, { approvalNote:approvalNotes[shift.id]||null }, { headers:authHeaders(token) });
+      setApprovalNotes((current)=>({...current,[shift.id]:''}));
+      await load();
+    } catch (err) { setError(apiErrorMessage(err)); }
+  }
+
+  async function refundOrder(event) {
+    event.preventDefault();
+    try {
+      setError('');
+      await api.post(`${base}/orders/${refundTarget.id}/refund`, { ...refundForm, idempotencyKey:crypto.randomUUID() }, { headers:authHeaders(token) });
+      setRefundTarget(null); setRefundForm({reason:'',stockDisposition:'RESTOCK',refundMethod:'CASH'}); await load();
+    } catch (err) { setError(apiErrorMessage(err)); }
   }
 
   if (!scope.branchId) {
@@ -190,7 +222,7 @@ export default function SalesWorkspace({ token, access }) {
 
       <div className="sales-stats"><Stat label="Paid orders today" value={summary.orderCount || 0} icon={ReceiptText} /><Stat label="Sales today" value={formatMoney(summary.salesMinor)} icon={Banknote} /><Stat label="Cost of sold items" value={formatMoney(summary.cogsMinor)} icon={PackageSearch} /><Stat label="Gross profit" value={formatMoney(summary.grossProfitMinor)} icon={BarChart3} /></div>
 
-      <div className="workspace-tabs">{[{label:'Sell',icon:CreditCard},{label:'History',icon:ReceiptText}].map(({label,icon:Icon}) => <button key={label} className={tab===label?'is-active':''} onClick={() => setTab(label)}><Icon size={15}/>{label}</button>)}</div>
+      <div className="workspace-tabs">{[{label:'Sell',icon:CreditCard},{label:'History',icon:ReceiptText},{label:'Shifts',icon:Clock3}].map(({label,icon:Icon}) => <button key={label} className={tab===label?'is-active':''} onClick={() => setTab(label)}><Icon size={15}/>{label}</button>)}</div>
 
       {tab === 'Sell' && <div className="pos-layout">
         <section className="pos-catalogue">
@@ -200,14 +232,16 @@ export default function SalesWorkspace({ token, access }) {
 
         <aside className="pos-cart">
           <div className="cart-head"><div><div className="sales-mini">Step 2</div><h3>Bill</h3></div><div className="cart-icon"><ShoppingCart size={17} /><span>{cart.reduce((sum, row) => sum + row.quantityUnits, 0)}</span></div></div>
-          <div className="cart-lines">{!cart.length && <div className="cart-empty"><ShoppingCart size={22} /><strong>No items added</strong><span>Tap an item price to add it to the bill.</span></div>}{cart.map((row) => <div className="cart-line" key={row.key}><div className="cart-line-copy"><strong>{row.productName}</strong><span>{row.priceLabel} · {formatMoney(row.unitPriceMinor)} each</span></div><div className="qty-control"><button aria-label="Reduce" onClick={() => setQuantity(row.key, row.quantityUnits - 1)}><Minus size={12} /></button><span>{row.quantityUnits}</span><button aria-label="Add" onClick={() => setQuantity(row.key, row.quantityUnits + 1)}><Plus size={12} /></button></div><strong className="line-total">{formatMoney(BigInt(row.unitPriceMinor) * BigInt(row.quantityUnits))}</strong><button aria-label="Remove" className="cart-remove" onClick={() => setQuantity(row.key, 0)}><Trash2 size={13} /></button></div>)}</div>
-          <div className="checkout-fields"><div className="field-pair"><label><span>Discount ₹</span><input value={discount} onChange={(e) => setDiscount(e.target.value)} inputMode="decimal" placeholder="0.00" /></label><label><span>Tax ₹</span><input value={tax} onChange={(e) => setTax(e.target.value)} inputMode="decimal" placeholder="0.00" /></label></div><label><span>How did they pay?</span><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}><option value="UPI">UPI</option><option value="CASH">Cash</option><option value="CARD">Card</option><option value="OTHER">Other</option></select></label><label><span>Payment reference (optional)</span><input value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="UPI or card reference" /></label></div>
+          <div className="cart-lines">{!cart.length && <div className="cart-empty"><ShoppingCart size={22} /><strong>No items added</strong><span>Tap an item price to add it to the bill.</span></div>}{cart.map((row) => {let effective=BigInt(row.unitPriceMinor||0);try{if(String(row.overrideRupees||'').trim())effective=BigInt(minorFromRupees(row.overrideRupees,false));}catch(_){}return <div className="cart-line" key={row.key}><div className="cart-line-copy"><strong>{row.productName}</strong><span>{row.priceLabel} · {formatMoney(effective)} each</span><div className="price-override-fields"><input aria-label={`Override price for ${row.productName}`} value={row.overrideRupees} onChange={(event)=>updateCartLine(row.key,{overrideRupees:event.target.value})} inputMode="decimal" placeholder="Override ₹"/><input aria-label={`Override reason for ${row.productName}`} value={row.priceOverrideReason} onChange={(event)=>updateCartLine(row.key,{priceOverrideReason:event.target.value})} placeholder="Approval reason"/></div></div><div className="qty-control"><button aria-label="Reduce" onClick={() => setQuantity(row.key, row.quantityUnits - 1)}><Minus size={12} /></button><span>{row.quantityUnits}</span><button aria-label="Add" onClick={() => setQuantity(row.key, row.quantityUnits + 1)}><Plus size={12} /></button></div><strong className="line-total">{formatMoney(effective*BigInt(row.quantityUnits))}</strong><button aria-label="Remove" className="cart-remove" onClick={() => setQuantity(row.key, 0)}><Trash2 size={13} /></button></div>})}</div>
+          <div className="checkout-fields"><div className="field-pair"><label><span>Discount ₹</span><input value={discount} onChange={(e) => setDiscount(e.target.value)} inputMode="decimal" placeholder="0.00" /></label><label><span>Tax ₹</span><input value={tax} onChange={(e) => setTax(e.target.value)} inputMode="decimal" placeholder="0.00" /></label></div>{Number(discount)>0&&<label><span>Discount approval reason</span><input value={discountReason} onChange={(e)=>setDiscountReason(e.target.value)} required placeholder="Happy hour, manager recovery, promotion..."/></label>}<label><span>How did they pay?</span><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}><option value="UPI">UPI</option><option value="CASH">Cash</option><option value="CARD">Card</option><option value="OTHER">Other</option></select></label><label><span>Payment reference (optional)</span><input value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="UPI or card reference" /></label></div>
           <div className="cart-totals"><div><span>Items</span><strong>{formatMoney(subtotalMinor)}</strong></div><div><span>Discount</span><strong>-{formatMoney(discountMinor)}</strong></div><div><span>Tax</span><strong>{formatMoney(taxMinor)}</strong></div><div className="grand-total"><span>Total</span><strong>{formatMoney(totalMinor)}</strong></div></div>
           <button className="scorm-button-primary checkout-button" disabled={paying || !cart.length || totalMinor < 0n} onClick={checkout}><CreditCard size={15} /> {paying ? 'Saving payment…' : `Collect ${formatMoney(totalMinor)}`}</button>
         </aside>
       </div>}
 
-      {tab === 'History' && <section className="sales-history"><div className="sales-history-head"><div><div className="sales-mini">Today</div><h3>Recent sales</h3></div><span>{orders.length} latest</span></div>{!orders.length ? <div className="sales-empty"><ReceiptText size={21} /><strong>No sales yet</strong><span>Paid sales will appear here.</span></div> : <div className="sales-table"><table><thead><tr><th>Bill</th><th>Time</th><th>Items</th><th>Payment</th><th>Sales</th><th>Item cost</th><th>Profit</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><strong>{order.orderNumber}</strong></td><td>{new Date(order.paidAt || order.createdAt).toLocaleString('en-IN')}</td><td>{order.lines?.reduce((sum, line) => sum + Number(line.quantityUnits || 0), 0) || 0}</td><td>{order.payments?.[0]?.method || '—'}</td><td><strong>{formatMoney(order.totalMinor)}</strong></td><td>{formatMoney(order.cogsMinor)}</td><td className="profit-cell">{formatMoney(order.grossProfitMinor)}</td></tr>)}</tbody></table></div>}</section>}
+      {tab === 'History' && <section className="sales-history"><div className="sales-history-head"><div><div className="sales-mini">Sales ledger</div><h3>Recent sales & returns</h3></div><span>{orders.length} latest</span></div>{refundTarget&&<form className="refund-panel" onSubmit={refundOrder}><div><span>Full bill return</span><strong>{refundTarget.orderNumber} · {formatMoney(refundTarget.totalMinor)}</strong><small>The full paid bill will be reversed. Choose whether returned goods are safe to put back into stock.</small></div><label><span>Refund method</span><select value={refundForm.refundMethod} onChange={(event)=>setRefundForm({...refundForm,refundMethod:event.target.value})}><option>CASH</option><option>UPI</option><option>CARD</option><option>OTHER</option></select></label><label><span>Returned stock</span><select value={refundForm.stockDisposition} onChange={(event)=>setRefundForm({...refundForm,stockDisposition:event.target.value})}><option value="RESTOCK">Return to stock</option><option value="NO_RESTOCK">Do not restock</option></select></label><label><span>Reason</span><input value={refundForm.reason} onChange={(event)=>setRefundForm({...refundForm,reason:event.target.value})} required placeholder="Wrong item, customer return, billing mistake..."/></label><div><button type="button" className="scorm-button-secondary" onClick={()=>setRefundTarget(null)}>Cancel</button><button className="scorm-button-primary"><RotateCcw size={14}/>Approve refund</button></div></form>}{!orders.length ? <div className="sales-empty"><ReceiptText size={21} /><strong>No sales yet</strong><span>Paid sales will appear here.</span></div> : <div className="sales-table"><table><thead><tr><th>Bill</th><th>Time</th><th>Status</th><th>Items</th><th>Payment</th><th>Sales</th><th>Item cost</th><th>Profit</th><th>Action</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td><strong>{order.orderNumber}</strong></td><td>{new Date(order.paidAt || order.createdAt).toLocaleString('en-IN')}</td><td><span className={`sale-status status-${String(order.status).toLowerCase()}`}>{order.status}</span></td><td>{order.lines?.reduce((sum, line) => sum + Number(line.quantityUnits || 0), 0) || 0}</td><td>{order.payments?.[0]?.method || '—'}</td><td><strong>{formatMoney(order.totalMinor)}</strong></td><td>{formatMoney(order.cogsMinor)}</td><td className="profit-cell">{formatMoney(order.grossProfitMinor)}</td><td>{order.status==='PAID'?<button className="refund-link" onClick={()=>{setRefundTarget(order);setRefundForm((current)=>({...current,refundMethod:order.payments?.[0]?.method||'OTHER'}));}}><RotateCcw size={13}/>Refund</button>:<span>—</span>}</td></tr>)}</tbody></table></div>}</section>}
+
+      {tab === 'Shifts' && <section className="sales-history shift-review"><div className="sales-history-head"><div><div className="sales-mini">Staff control</div><h3>Shift close & cash approval</h3></div><span>{shifts.filter((row)=>row.status==='SUBMITTED').length} awaiting approval</span></div>{!shifts.length?<div className="sales-empty"><Clock3 size={21}/><strong>No shifts yet</strong><span>Cashier and waiter shifts will appear here.</span></div>:<div className="shift-review-list">{shifts.map((shift)=><article key={shift.id} className={`shift-review-row status-${String(shift.status).toLowerCase()}`}><div><span>{shift.role} · {shift.status}</span><strong>{shift.user?.name||shift.user?.email||'Staff member'}</strong><small>{new Date(shift.openedAt).toLocaleString('en-IN')}{shift.closedAt?` → ${new Date(shift.closedAt).toLocaleString('en-IN')}`:''}</small></div><div className="shift-money"><span>Expected <strong>{formatMoney(shift.expectedCashMinor||shift.openingFloatMinor)}</strong></span><span>Declared <strong>{formatMoney(shift.declaredCashMinor)}</strong></span><span>Variance <strong className={Number(shift.varianceMinor)===0?'':'has-variance'}>{formatMoney(shift.varianceMinor)}</strong></span></div>{shift.status==='SUBMITTED'?<div className="shift-approve"><input aria-label={`Approval note for ${shift.user?.name||'staff'}`} value={approvalNotes[shift.id]||''} onChange={(event)=>setApprovalNotes((current)=>({...current,[shift.id]:event.target.value}))} placeholder={Number(shift.varianceMinor)!==0?'Variance explanation required':'Approval note (optional)'}/><button className="scorm-button-primary" onClick={()=>approveShift(shift)}>Approve close</button></div>:<div className="shift-note">{shift.approvalNote||shift.closeNote||'No note'}</div>}</article>)}</div>}</section>}
 
       {lastReceipt && <div className="receipt-toast"><ReceiptText size={17} /><div><strong>Payment saved</strong><span>{lastReceipt.orderNumber} · {formatMoney(lastReceipt.totalMinor)}</span></div><button onClick={() => setLastReceipt(null)}>×</button></div>}
     </div>

@@ -2,7 +2,7 @@ const { QueryTypes } = require('sequelize');
 
 const INVENTORY_CORE_ID = '20260825_001_inventory_core';
 
-async function inventoryCoreUp(sequelize) {
+async function inventoryCoreUp(sequelize, transaction) {
   const statements = [
     `CREATE TABLE IF NOT EXISTS product_categories (
       id UUID PRIMARY KEY,
@@ -145,7 +145,7 @@ async function inventoryCoreUp(sequelize) {
   ];
 
   for (const statement of statements) {
-    await sequelize.query(statement);
+    await sequelize.query(statement, { transaction });
   }
 }
 

@@ -3,9 +3,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { connectDatabase } = require('./config/database');
+const { connectDatabase, sequelize } = require('./config/database');
 const { policyGuard } = require('./middleware/routePolicy');
 const { responsePolicy } = require('./middleware/responsePolicy');
+const { requestContext } = require('./middleware/requestContext');
 
 const app = express();
 const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
@@ -35,6 +36,7 @@ const allowedOrigins = new Set(configuredOrigins);
 if (ownOrigin) allowedOrigins.add(ownOrigin);
 
 app.disable('x-powered-by');
+app.use(requestContext);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
   credentials: true,
@@ -48,11 +50,21 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-app.get(['/health', '/api', '/api/'], (_req, res) => {
-  res.json({ service: 'management-system-backend', status: 'healthy', timestamp: new Date().toISOString() });
+app.get(['/health', '/api', '/api/'], (req, res) => {
+  res.json({ service: 'management-system-backend', status: 'healthy', requestId: req.requestId, timestamp: new Date().toISOString() });
+});
+
+app.get('/ready', async (req, res) => {
+  try {
+    await sequelize.query('SELECT 1');
+    res.json({ service: 'management-system-backend', status: 'ready', database: 'available', requestId: req.requestId, timestamp: new Date().toISOString() });
+  } catch (_) {
+    res.status(503).json({ service: 'management-system-backend', status: 'not_ready', database: 'unavailable', requestId: req.requestId, timestamp: new Date().toISOString() });
+  }
 });
 
 app.use('/api/public', require('./routes/public'));
+app.use('/api/partner', require('./routes/partner'));
 app.use('/api/auth', require('./routes/auth'));
 
 // Role policy is evaluated before all tenant operational routers. The token
@@ -66,6 +78,12 @@ app.use('/api', responsePolicy);
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api/tenants', require('./routes/tenants'));
 app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/shifts', require('./routes/shifts'));
+app.use('/api/settings', require('./routes/settings'));
+app.use('/api/devices', require('./routes/devices'));
+app.use('/api/growth', require('./routes/growth'));
+app.use('/api/operations', require('./routes/operations'));
+app.use('/api/ecosystem', require('./routes/ecosystem'));
 
 // Cashier and waiter traffic has explicit namespaces. This avoids ambiguous
 // role inference when an identity happens to hold more than one membership.
@@ -86,12 +104,25 @@ app.use((req, res) => {
 app.use((error, _req, res, _next) => {
   console.error('[api]', error);
   const status = Number(error.status || 500);
-  res.status(status).json({ message: status >= 500 ? 'Unexpected server error.' : error.message, code: error.code || 'SERVER_ERROR' });
+  res.status(status).json({ message: status >= 500 ? 'Unexpected server error.' : error.message, code: error.code || 'SERVER_ERROR', requestId: _req.requestId || null });
 });
 
 const port = Number(process.env.PORT || 5001);
 connectDatabase()
-  .then(() => app.listen(port, '0.0.0.0', () => console.log(`[server] listening on ${port}`)))
+  .then(() => {
+    app.listen(port, '0.0.0.0', () => console.log(`[server] listening on ${port}`));
+    if (String(process.env.NODE_ENV || '').toLowerCase() !== 'test') {
+      const { ensureReservationReminders } = require('./services/restaurantNotificationService');
+      const checkReminders = () => ensureReservationReminders().catch((error) => console.error('[reservation-reminders]', error.message));
+      checkReminders();
+      const reminderTimer = setInterval(checkReminders, 5 * 60 * 1000);
+      reminderTimer.unref();
+      const { deliverPendingWebhooks } = require('./services/webhookDeliveryService');
+      const deliverWebhooks = () => deliverPendingWebhooks().catch((error) => console.error('[webhook-delivery]', error.message));
+      const webhookTimer = setInterval(deliverWebhooks, 30 * 1000);
+      webhookTimer.unref();
+    }
+  })
   .catch((error) => { console.error('[server] startup failed:', error); process.exit(1); });
 
 module.exports = app;

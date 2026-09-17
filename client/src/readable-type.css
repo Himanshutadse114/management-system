@@ -4,16 +4,6 @@
   No behaviour, permissions or feature logic changes here.
 */
 
-:root {
-  --type-xs: 12px;
-  --type-sm: 13px;
-  --type-md: 15px;
-  --type-lg: 17px;
-  --type-xl: 20px;
-  --type-2xl: 26px;
-  --type-3xl: 34px;
-}
-
 html { font-size: 16px; }
 body { font-size: var(--type-md) !important; line-height: 1.5 !important; }
 button, input, select, textarea { font-size: 14px !important; }

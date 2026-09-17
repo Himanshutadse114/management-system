@@ -1,7 +1,7 @@
 const { authenticate, requireApproved } = require('./auth');
 const { CAPABILITIES, roleHasCapability } = require('../security/rolePolicy');
 
-const OPERATION_PREFIXES = ['/tenants', '/inventory', '/sales', '/restaurant', '/analytics', '/reports'];
+const OPERATION_PREFIXES = ['/tenants', '/inventory', '/sales', '/restaurant', '/analytics', '/reports', '/shifts', '/settings', '/devices', '/growth', '/operations', '/ecosystem'];
 
 function requirement(tenantId, branchId, capability, roles = null, tenantAdminAllowed = true) {
   return { tenantId, branchId, capability, roles, tenantAdminAllowed };
@@ -42,6 +42,15 @@ function branchRequirement(req) {
   // Inventory management API: branch managers and inventory managers only.
   match = path.match(/^\/inventory\/tenants\/([^/]+)\/branches\/([^/]+)(?:\/|$)/);
   if (match) return requirement(match[1], match[2], req.method === 'GET' ? CAPABILITIES.INVENTORY_READ : CAPABILITIES.INVENTORY_WRITE, ['BRANCH_MANAGER', 'INVENTORY_MANAGER']);
+
+  match = path.match(/^\/settings\/tenants\/([^/]+)\/branches\/([^/]+)(?:\/|$)/);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_MANAGE, ['BRANCH_MANAGER']);
+
+  match = path.match(/^\/devices\/tenants\/([^/]+)\/branches\/([^/]+)(?:\/|$)/);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_MANAGE, ['BRANCH_MANAGER']);
+
+  match = path.match(/^\/(?:growth|operations|ecosystem)\/tenants\/([^/]+)\/branches\/([^/]+)(?:\/|$)/);
+  if (match) return requirement(match[1], match[2], CAPABILITIES.RESTAURANT_MANAGE, ['BRANCH_MANAGER']);
 
   // Management sales API: cashiers use the dedicated /sales/cashier namespace.
   match = path.match(/^\/sales\/tenants\/([^/]+)\/branches\/([^/]+)(?:\/|$)/);

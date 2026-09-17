@@ -9,17 +9,38 @@ const { runSalesMigration } = require('../src/migrations/sales');
 const { runRestaurantMigration } = require('../src/migrations/restaurant');
 const { runAnalyticsMigration } = require('../src/migrations/analytics');
 const { runReportsMigration } = require('../src/migrations/reports');
-const { RestaurantTable, MenuItem } = require('../src/models/restaurant');
-const { Order } = require('../src/models/sales');
-const { postPurchase } = require('../src/services/inventoryService');
-const { postCounterSale } = require('../src/services/salesService');
-const { createRestaurantOrder, cancelRestaurantOrder } = require('../src/services/restaurantService');
+const { runStocktakeMigration } = require('../src/migrations/stocktake');
+const { runOperationalShiftsMigration } = require('../src/migrations/operationalShifts');
+const { runSalesRefundsMigration } = require('../src/migrations/salesRefunds');
+const { runBranchSettingsMigration } = require('../src/migrations/branchSettings');
+const { runDevicesMigration } = require('../src/migrations/devices');
+const { runKitchenTicketsMigration } = require('../src/migrations/kitchenTickets');
+const { runReservationsMigration } = require('../src/migrations/reservations');
+const { runRestaurantEnhancementsMigration } = require('../src/migrations/restaurantEnhancements');
+const { runRestaurantNotificationsMigration } = require('../src/migrations/restaurantNotifications');
+const { runInventoryOperationsMigration } = require('../src/migrations/inventoryOperations');
+const { runGrowthMigration } = require('../src/migrations/growth');
+const { runIntegrationsMigration } = require('../src/migrations/integrations');
+const { runOperationsMigration } = require('../src/migrations/operations');
+const { runEcosystemMigration } = require('../src/migrations/ecosystem');
+const { runGuestPaymentsMigration } = require('../src/migrations/guestPayments');
+const { RestaurantTable, MenuItem, RecipeComponent, KitchenTicket, KitchenTicketLine, Reservation, RestaurantNotification } = require('../src/models/restaurant');
+const { Order, Payment } = require('../src/models/sales');
+const { postPurchase, postTransfer } = require('../src/services/inventoryService');
+const { createStocktake, updateStocktakeCounts, submitStocktake, postStocktake } = require('../src/services/stocktakeService');
+const { openShift, submitShift, approveShift } = require('../src/services/shiftService');
+const { postCounterSale, refundPaidOrder } = require('../src/services/salesService');
+const { createRestaurantOrder, cancelRestaurantOrder, moveRestaurantOrder, mergeRestaurantOrders, splitRestaurantOrder } = require('../src/services/restaurantService');
+const { ensureReservationReminders } = require('../src/services/restaurantNotificationService');
+const { dispatchTransfer, receiveTransfer, postSupplierReturn } = require('../src/services/inventoryOperationsService');
+const { InventoryBatch } = require('../src/models/inventoryOperations');
 const { seedDemoData, DEMO } = require('../src/services/demoSeedService');
 const { canManageTenant, hasBranchRole } = require('../src/services/accessService');
 const { policyGuard } = require('../src/middleware/routePolicy');
 const { responsePolicy } = require('../src/middleware/responsePolicy');
 const waiterCatalogue = require('../src/routes/waiterCatalogue');
 const cashierSales = require('../src/routes/cashierSales');
+const publicRoutes = require('../src/routes/public');
 
 const {
   User,
@@ -29,6 +50,7 @@ const {
   BranchMembership,
   Product,
   ProductPriceOption,
+  Supplier,
   InventoryBalance
 } = models;
 
@@ -40,6 +62,21 @@ async function prepareSchema() {
   await runRestaurantMigration(sequelize);
   await runAnalyticsMigration(sequelize);
   await runReportsMigration(sequelize);
+  await runStocktakeMigration(sequelize);
+  await runOperationalShiftsMigration(sequelize);
+  await runSalesRefundsMigration(sequelize);
+  await runBranchSettingsMigration(sequelize);
+  await runDevicesMigration(sequelize);
+  await runKitchenTicketsMigration(sequelize);
+  await runReservationsMigration(sequelize);
+  await runRestaurantEnhancementsMigration(sequelize);
+  await runRestaurantNotificationsMigration(sequelize);
+  await runInventoryOperationsMigration(sequelize);
+  await runGrowthMigration(sequelize);
+  await runIntegrationsMigration(sequelize);
+  await runOperationsMigration(sequelize);
+  await runEcosystemMigration(sequelize);
+  await runGuestPaymentsMigration(sequelize);
 }
 
 async function seedBase() {
@@ -67,6 +104,7 @@ function testToken(user) {
 function focusedApiApp() {
   const app = express();
   app.use(express.json());
+  app.use('/api/public', publicRoutes);
   app.use('/api', policyGuard);
   app.use('/api', responsePolicy);
   app.use('/api/restaurant', waiterCatalogue);
@@ -116,7 +154,8 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
 
   it('prevents a second unresolved order on the same table', async () => {
     const table = await RestaurantTable.create({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, name: 'Test Table 1', code: 'TT1', seats: 4, status: 'ACTIVE', qrToken: crypto.randomBytes(24).toString('base64url') });
-    await createRestaurantOrder({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, tableId: table.id, lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 1 }], waiterUserId: fixture.actor.id, actorUserId: fixture.actor.id, idempotencyKey: 'table-first' });
+    const firstOrder = await createRestaurantOrder({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, tableId: table.id, lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 1 }], waiterUserId: fixture.actor.id, actorUserId: fixture.actor.id, idempotencyKey: 'table-first' });
+    assert.equal(await KitchenTicket.count({ where: { orderId: firstOrder.order.id, station: 'BAR', status: 'NEW' } }), 1);
     await assert.rejects(
       () => createRestaurantOrder({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, tableId: table.id, lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 1 }], waiterUserId: fixture.actor.id, actorUserId: fixture.actor.id, idempotencyKey: 'table-second' }),
       (error) => error?.code === 'TABLE_OCCUPIED'
@@ -132,6 +171,341 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
     await cancelRestaurantOrder({ orderId: opened.order.id, tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, reason: 'Automated cancellation test', approvedByUserId: fixture.actor.id });
     const afterCancel = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
     assert.equal(afterCancel, before);
+  });
+
+  it('serves the public menu and accepts one idempotent QR guest-order request', async () => {
+    const table = await RestaurantTable.create({ tenantId:fixture.tenantA.id,branchId:fixture.branchA.id,name:'QR Table',code:'QR-1',seats:2,status:'ACTIVE',qrToken:`qr-${crypto.randomUUID()}` });
+    await MenuItem.create({tenantId:fixture.tenantA.id,branchId:fixture.branchA.id,productId:fixture.productA.id,displayName:'Guest Whisky',sectionName:'Drinks',active:true,sortOrder:0,modifierGroups:[],comboItems:[]});
+    const app=focusedApiApp(),menu=await request(app).get(`/api/public/menu/${table.qrToken}`).expect(200);assert.equal(menu.body.table.code,'QR-1');assert.ok(menu.body.menu.length>=1);
+    const body={guestName:'Guest',phone:'9000000000',lines:[{priceOptionId:fixture.price30.id,quantityUnits:1}],idempotencyKey:'qr-smoke-1'};
+    const first=await request(app).post(`/api/public/menu/${table.qrToken}/orders`).send(body).expect(202);const replay=await request(app).post(`/api/public/menu/${table.qrToken}/orders`).send(body).expect(200);assert.equal(first.body.request.id,replay.body.request.id);assert.equal(replay.body.replayed,true);
+  });
+
+  it('prices modifiers, records KOT choices, consumes recipe ingredients and reverses them on cancellation', async () => {
+    const ingredient = await Product.create({ tenantId: fixture.tenantA.id, name: 'Recipe Ingredient', sku: 'RECIPE-GRAM', productType: 'FOOD', inventoryUnit: 'GRAM', trackInventory: true, status: 'ACTIVE' });
+    const dish = await Product.create({ tenantId: fixture.tenantA.id, name: 'Recipe Dish', sku: 'RECIPE-DISH', productType: 'FOOD', inventoryUnit: 'PIECE', trackInventory: false, status: 'ACTIVE' });
+    const dishPrice = await ProductPriceOption.create({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, productId: dish.id, label: 'Regular', quantityBaseUnits: '1.000', priceMinor: '30000', active: true, sortOrder: 0 });
+    await postPurchase({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, purchaseDate: new Date().toISOString().slice(0,10), idempotencyKey: 'recipe-opening-stock', lines: [{ productId: ingredient.id, packageCount: '1', packageSizeBaseUnits: '1000', lineTotalMinor: '10000' }], actorUserId: fixture.actor.id });
+    const modifierId = crypto.randomUUID();
+    await MenuItem.create({
+      tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, productId: dish.id,
+      displayName: 'Recipe Dish', sectionName: 'Test Kitchen', active: true,
+      modifierGroups: [{ id: crypto.randomUUID(), name: 'Add-on', min: 1, max: 1, required: true, options: [{ id: modifierId, label: 'Premium topping', priceMinor: '5000' }] }],
+      comboItems: [{ id: crypto.randomUUID(), label: 'Side salad', quantity: 1 }]
+    });
+    await RecipeComponent.create({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, outputProductId: dish.id, priceOptionId: dishPrice.id, ingredientProductId: ingredient.id, quantityBasePerUnit: '50.000', wastePercent: '0.000', active: true });
+    const table = await RestaurantTable.create({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, name: 'Recipe Table', code: 'RECIPE-T', seats: 2, status: 'ACTIVE', qrToken: crypto.randomBytes(24).toString('base64url') });
+    const before = await stockOf(fixture.tenantA.id, fixture.branchA.id, ingredient.id);
+    const opened = await createRestaurantOrder({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, tableId: table.id, lines: [{ priceOptionId: dishPrice.id, quantityUnits: 1, modifiers: [modifierId], notes: 'Allergy checked' }], waiterUserId: fixture.actor.id, actorUserId: fixture.actor.id, idempotencyKey: 'recipe-order' });
+    assert.equal(opened.order.totalMinor, '35000');
+    assert.equal(await stockOf(fixture.tenantA.id, fixture.branchA.id, ingredient.id), before - 50);
+    const ticketLine = await KitchenTicketLine.findOne({ where: { orderLineId: opened.order.lines[0].id } });
+    assert.equal(ticketLine.modifiersSnapshot[0].label, 'Premium topping');
+    assert.equal(ticketLine.notes, 'Allergy checked');
+    await cancelRestaurantOrder({ orderId: opened.order.id, tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, reason: 'Recipe reversal test', approvedByUserId: fixture.actor.id });
+    assert.equal(await stockOf(fixture.tenantA.id, fixture.branchA.id, ingredient.id), before);
+  });
+
+  it('creates one deduplicated in-app reminder for an upcoming reservation', async () => {
+    const startsAt = new Date(Date.now() + 60 * 60 * 1000);
+    const reservation = await Reservation.create({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      guestName: 'Reminder Guest',
+      phone: '+919999999999',
+      partySize: 4,
+      startsAt,
+      durationMinutes: 90,
+      status: 'CONFIRMED',
+      depositMinor: '50000',
+      consentToContact: true,
+      createdByUserId: fixture.actor.id
+    });
+    const first = await ensureReservationReminders(new Date());
+    const second = await ensureReservationReminders(new Date());
+    assert.ok(first.created >= 1);
+    assert.equal(second.created, 0);
+    assert.equal(await RestaurantNotification.count({ where: { dedupeKey: `reservation-reminder:${reservation.id}` } }), 1);
+  });
+
+  it('splits, merges and moves restaurant bills without changing stock twice', async () => {
+    const tables = [];
+    for (const [name, code] of [['Split Source', 'SPLIT-A'], ['Split Destination', 'SPLIT-B'], ['Move Destination', 'MOVE-C']]) {
+      tables.push(await RestaurantTable.create({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, name, code, seats: 4, status: 'ACTIVE', qrToken: crypto.randomBytes(24).toString('base64url') }));
+    }
+    const opened = await createRestaurantOrder({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      tableId: tables[0].id,
+      lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 2 }],
+      waiterUserId: fixture.actor.id,
+      actorUserId: fixture.actor.id,
+      idempotencyKey: 'split-merge-move-source'
+    });
+    const stockAfterOpen = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
+    const split = await splitRestaurantOrder({
+      orderId: opened.order.id,
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      destinationTableId: tables[1].id,
+      lines: [{ lineId: opened.order.lines[0].id, quantityUnits: 1 }],
+      actorUserId: fixture.actor.id,
+      idempotencyKey: 'split-once'
+    });
+    assert.equal(split.order.totalMinor, '22000');
+    assert.equal(await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id), stockAfterOpen);
+    const merged = await mergeRestaurantOrders({
+      sourceOrderId: split.order.id,
+      targetOrderId: opened.order.id,
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      actorUserId: fixture.actor.id
+    });
+    assert.equal(merged.totalMinor, '44000');
+    assert.equal((await Order.findByPk(split.order.id)).status, 'VOIDED');
+    const moved = await moveRestaurantOrder({ orderId: merged.id, tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, destinationTableId: tables[2].id });
+    assert.equal(String(moved.tableId), String(tables[2].id));
+    assert.equal(await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id), stockAfterOpen);
+  });
+
+  it('moves stock between branches atomically and replays safely', async () => {
+    const destination = await Branch.create({
+      tenantId: fixture.tenantA.id,
+      name: 'A Wine Shop',
+      code: 'A-02',
+      type: 'WINE_SHOP',
+      status: 'ACTIVE'
+    });
+    const sourceBefore = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
+    const destinationBefore = await stockOf(fixture.tenantA.id, destination.id, fixture.productA.id);
+    const first = await postTransfer({
+      tenantId: fixture.tenantA.id,
+      sourceBranchId: fixture.branchA.id,
+      destinationBranchId: destination.id,
+      productId: fixture.productA.id,
+      quantityBase: '750',
+      reason: 'Opening stock for second outlet',
+      idempotencyKey: 'branch-transfer-once',
+      actorUserId: fixture.actor.id
+    });
+    const replay = await postTransfer({
+      tenantId: fixture.tenantA.id,
+      sourceBranchId: fixture.branchA.id,
+      destinationBranchId: destination.id,
+      productId: fixture.productA.id,
+      quantityBase: '750',
+      reason: 'Opening stock for second outlet',
+      idempotencyKey: 'branch-transfer-once',
+      actorUserId: fixture.actor.id
+    });
+    const sourceAfter = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
+    const destinationAfter = await stockOf(fixture.tenantA.id, destination.id, fixture.productA.id);
+
+    assert.equal(sourceBefore - sourceAfter, 750);
+    assert.equal(destinationAfter - destinationBefore, 750);
+    assert.equal(first.outgoingMovement.referenceId, first.incomingMovement.referenceId);
+    assert.equal(replay.transferId, first.transferId);
+    assert.equal(replay.replayed, true);
+  });
+
+  it('keeps dispatched stock in transit until the destination receives it', async () => {
+    const destination = await Branch.create({ tenantId: fixture.tenantA.id, name: 'Transit Destination', code: 'TRANSIT-01', type: 'WINE_SHOP', status: 'ACTIVE' });
+    const sourceBefore = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
+    const destinationBefore = await stockOf(fixture.tenantA.id, destination.id, fixture.productA.id);
+    const dispatched = await dispatchTransfer({ tenantId: fixture.tenantA.id, sourceBranchId: fixture.branchA.id, destinationBranchId: destination.id, lines: [{ productId: fixture.productA.id, quantityBase: '375' }], reason: 'Lifecycle transfer test', idempotencyKey: 'transit-transfer', actorUserId: fixture.actor.id });
+    assert.equal(dispatched.transfer.status, 'IN_TRANSIT');
+    assert.equal(sourceBefore - await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id), 375);
+    assert.equal(await stockOf(fixture.tenantA.id, destination.id, fixture.productA.id), destinationBefore);
+    const received = await receiveTransfer({ tenantId: fixture.tenantA.id, destinationBranchId: destination.id, transferId: dispatched.transfer.id, actorUserId: fixture.actor.id });
+    assert.equal(received.transfer.status, 'RECEIVED');
+    assert.equal(await stockOf(fixture.tenantA.id, destination.id, fixture.productA.id) - destinationBefore, 375);
+  });
+
+  it('records purchase batch, pack conversion, expiry/MRP and a supplier return', async () => {
+    const supplier = await Supplier.create({ tenantId: fixture.tenantA.id, name: 'Batch Supplier', status: 'ACTIVE' });
+    const purchase = await postPurchase({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, supplierId: supplier.id, purchaseDate: new Date().toISOString().slice(0,10), idempotencyKey: 'batch-purchase', lines: [{ productId: fixture.productA.id, packageCount: '2', packageSizeBaseUnits: '750', lineTotalMinor: '240000', batchNumber: 'BATCH-EXP-01', expiresAt: '2027-12-31', mrpMinor: '180000', packageLabel: 'Case conversion: 2 bottles' }], actorUserId: fixture.actor.id });
+    const batch = await InventoryBatch.findOne({ where: { purchaseId: purchase.purchase.id, batchNumber: 'BATCH-EXP-01' } });
+    assert.equal(Number(batch.quantityCurrentBase), 1500);
+    assert.equal(batch.mrpMinor, '180000');
+    const before = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
+    await postSupplierReturn({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, supplierId: supplier.id, productId: fixture.productA.id, batchId: batch.id, quantityBase: '750', creditMinor: '120000', reason: 'Short-dated batch return', idempotencyKey: 'batch-return', actorUserId: fixture.actor.id });
+    await batch.reload();
+    assert.equal(Number(batch.quantityCurrentBase), 750);
+    assert.equal(before - await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id), 750);
+  });
+
+  it('records mixed tender only when the component payments equal the bill total', async () => {
+    const result = await postCounterSale({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      orderType: 'COUNTER',
+      lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 1 }],
+      payments: [
+        { method: 'CASH', amountMinor: '10000' },
+        { method: 'UPI', amountMinor: '12000', reference: 'mixed-payment-test' }
+      ],
+      idempotencyKey: 'mixed-tender-sale',
+      actorUserId: fixture.actor.id
+    });
+    const payments = await Payment.findAll({ where: { orderId: result.order.id }, order: [['method', 'ASC']] });
+    assert.equal(payments.length, 2);
+    assert.equal(payments.reduce((sum, payment) => sum + Number(payment.amountMinor), 0), 22000);
+    await assert.rejects(
+      () => postCounterSale({
+        tenantId: fixture.tenantA.id,
+        branchId: fixture.branchA.id,
+        orderType: 'COUNTER',
+        lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 1 }],
+        payments: [{ method: 'CARD', amountMinor: '10000' }, { method: 'UPI', amountMinor: '10000' }],
+        idempotencyKey: 'bad-mixed-tender-sale',
+        actorUserId: fixture.actor.id
+      }),
+      (error) => error?.code === 'PAYMENT_TOTAL_MISMATCH'
+    );
+  });
+
+  it('posts an approved physical stocktake once and records the variance', async () => {
+    const before = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
+    const opened = await createStocktake({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      name: 'Automated closing count',
+      actorUserId: fixture.actor.id
+    });
+    const targetLine = opened.lines.find((line) => String(line.productId) === String(fixture.productA.id));
+    assert.ok(targetLine);
+
+    await updateStocktakeCounts({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      stocktakeId: opened.id,
+      counts: opened.lines.map((line) => ({
+        lineId: line.id,
+        countedQuantityBase: String(line.id) === String(targetLine.id)
+          ? String(Number(line.expectedQuantityBase) - 30)
+          : line.expectedQuantityBase,
+        note: String(line.id) === String(targetLine.id) ? 'Measured one peg short' : null
+      }))
+    });
+    await submitStocktake({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      stocktakeId: opened.id,
+      actorUserId: fixture.actor.id
+    });
+    const first = await postStocktake({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      stocktakeId: opened.id,
+      actorUserId: fixture.actor.id
+    });
+    const replay = await postStocktake({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      stocktakeId: opened.id,
+      actorUserId: fixture.actor.id
+    });
+
+    assert.equal(first.stocktake.status, 'POSTED');
+    assert.equal(Number(first.stocktake.lines.find((line) => String(line.id) === String(targetLine.id)).varianceQuantityBase), -30);
+    assert.equal(await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id), before - 30);
+    assert.equal(replay.replayed, true);
+  });
+
+  it('reconciles a cashier shift and requires manager approval before closing', async () => {
+    const opened = await openShift({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      userId: fixture.actor.id,
+      role: 'CASHIER',
+      openingFloatMinor: '10000',
+      idempotencyKey: 'test-cashier-shift'
+    });
+    await postCounterSale({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      orderType: 'COUNTER',
+      lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 1 }],
+      paymentMethod: 'CASH',
+      idempotencyKey: 'shift-cash-sale',
+      actorUserId: fixture.actor.id
+    });
+    const submitted = await submitShift({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      shiftId: opened.shift.id,
+      userId: fixture.actor.id,
+      declaredCashMinor: '32000',
+      closeNote: 'Drawer counted'
+    });
+    assert.equal(submitted.expectedCashMinor, '32000');
+    assert.equal(submitted.varianceMinor, '0');
+    const closed = await approveShift({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      shiftId: submitted.id,
+      approvedByUserId: fixture.actor.id
+    });
+    const replay = await approveShift({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      shiftId: submitted.id,
+      approvedByUserId: fixture.actor.id
+    });
+    assert.equal(closed.shift.status, 'CLOSED');
+    assert.equal(replay.replayed, true);
+  });
+
+  it('refunds a paid bill once and restores returned stock atomically', async () => {
+    const beforeSale = await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id);
+    const sale = await postCounterSale({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      orderType: 'COUNTER',
+      lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 2 }],
+      paymentMethod: 'UPI',
+      idempotencyKey: 'refund-test-sale',
+      actorUserId: fixture.actor.id
+    });
+    assert.equal(await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id), beforeSale - 60);
+    const first = await refundPaidOrder({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      orderId: sale.order.id,
+      reason: 'Customer returned sealed items',
+      stockDisposition: 'RESTOCK',
+      refundMethod: 'UPI',
+      idempotencyKey: 'refund-test-once',
+      actorUserId: fixture.actor.id
+    });
+    const replay = await refundPaidOrder({
+      tenantId: fixture.tenantA.id,
+      branchId: fixture.branchA.id,
+      orderId: sale.order.id,
+      reason: 'Customer returned sealed items',
+      stockDisposition: 'RESTOCK',
+      refundMethod: 'UPI',
+      idempotencyKey: 'refund-test-once',
+      actorUserId: fixture.actor.id
+    });
+    assert.equal(first.order.status, 'REFUNDED');
+    assert.equal(await stockOf(fixture.tenantA.id, fixture.branchA.id, fixture.productA.id), beforeSale);
+    assert.equal(replay.replayed, true);
+  });
+
+  it('rejects cashier-style price overrides unless manager approval is explicit', async () => {
+    await assert.rejects(
+      () => postCounterSale({
+        tenantId: fixture.tenantA.id,
+        branchId: fixture.branchA.id,
+        orderType: 'COUNTER',
+        lines: [{ priceOptionId: fixture.price30.id, quantityUnits: 1, unitPriceMinorOverride: '100', priceOverrideReason: 'Unauthorized change' }],
+        paymentMethod: 'UPI',
+        idempotencyKey: 'unauthorized-price-override',
+        actorUserId: fixture.actor.id
+      }),
+      (error) => error?.code === 'PRICE_OVERRIDE_DENIED'
+    );
   });
 
   it('does not let Platform Admin inherit Tenant Admin or Branch Manager access', async () => {

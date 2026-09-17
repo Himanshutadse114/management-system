@@ -33,7 +33,7 @@ router.get('/waiter/tenants/:tenantId/branches/:branchId/catalogue', waiterScope
         branchId: req.params.branchId,
         active: true
       },
-      attributes: ['id', 'productId', 'displayName', 'description', 'sectionName', 'featured', 'dietaryTags', 'sortOrder'],
+      attributes: ['id', 'productId', 'displayName', 'description', 'sectionName', 'featured', 'dietaryTags', 'modifierGroups', 'comboItems', 'sortOrder'],
       order: [['sectionName', 'ASC'], ['sortOrder', 'ASC'], ['displayName', 'ASC']]
     });
 
@@ -83,6 +83,8 @@ router.get('/waiter/tenants/:tenantId/branches/:branchId/catalogue', waiterScope
         sectionName: item.sectionName,
         featured: Boolean(item.featured),
         dietaryTags: Array.isArray(item.dietaryTags) ? item.dietaryTags : [],
+        modifierGroups: Array.isArray(item.modifierGroups) ? item.modifierGroups : [],
+        comboItems: Array.isArray(item.comboItems) ? item.comboItems : [],
         brand: product.brand,
         productType: product.productType,
         imageUrl: mediaUrl(product.imageObjectKey),

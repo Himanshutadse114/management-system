@@ -1,6 +1,10 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const defineInventoryModels = require('./inventory');
+const { Stocktake, StocktakeLine } = require('./stocktake');
+const { OperationalShift } = require('./operationalShift');
+const { BranchSettings } = require('./branchSettings');
+const { Device, PrintJob } = require('./device');
 
 const USER_STATUS = ['PENDING', 'ACTIVE', 'SUSPENDED'];
 const TENANT_STATUS = ['ACTIVE', 'SUSPENDED'];
@@ -208,6 +212,34 @@ InventoryMovement.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
 User.hasMany(InventoryMovement, { foreignKey: 'actorUserId', as: 'inventoryMovements' });
 InventoryMovement.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
+Tenant.hasMany(Stocktake, { foreignKey: 'tenantId', as: 'stocktakes', onDelete: 'CASCADE' });
+Stocktake.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+Branch.hasMany(Stocktake, { foreignKey: 'branchId', as: 'stocktakes', onDelete: 'RESTRICT' });
+Stocktake.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+User.hasMany(Stocktake, { foreignKey: 'createdByUserId', as: 'createdStocktakes' });
+Stocktake.belongsTo(User, { foreignKey: 'createdByUserId', as: 'createdBy' });
+Stocktake.hasMany(StocktakeLine, { foreignKey: 'stocktakeId', as: 'lines', onDelete: 'CASCADE' });
+StocktakeLine.belongsTo(Stocktake, { foreignKey: 'stocktakeId', as: 'stocktake' });
+Product.hasMany(StocktakeLine, { foreignKey: 'productId', as: 'stocktakeLines' });
+StocktakeLine.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+InventoryMovement.hasOne(StocktakeLine, { foreignKey: 'movementId', as: 'stocktakeLine' });
+StocktakeLine.belongsTo(InventoryMovement, { foreignKey: 'movementId', as: 'movement' });
+
+Tenant.hasMany(OperationalShift, { foreignKey: 'tenantId', as: 'operationalShifts', onDelete: 'CASCADE' });
+OperationalShift.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+Branch.hasMany(OperationalShift, { foreignKey: 'branchId', as: 'operationalShifts' });
+OperationalShift.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+User.hasMany(OperationalShift, { foreignKey: 'userId', as: 'operationalShifts' });
+OperationalShift.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Branch.hasOne(BranchSettings, { foreignKey: 'branchId', as: 'settings', onDelete: 'CASCADE' });
+BranchSettings.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+Tenant.hasMany(BranchSettings, { foreignKey: 'tenantId', as: 'branchSettings', onDelete: 'CASCADE' });
+BranchSettings.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+Branch.hasMany(Device, { foreignKey: 'branchId', as: 'devices', onDelete: 'CASCADE' });
+Device.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+Device.hasMany(PrintJob, { foreignKey: 'deviceId', as: 'printJobs' });
+PrintJob.belongsTo(Device, { foreignKey: 'deviceId', as: 'device' });
+
 function assertAllowed(value, allowed, label) {
   if (!allowed.includes(value)) throw new Error(`${label} must be one of: ${allowed.join(', ')}`);
 }
@@ -277,6 +309,12 @@ module.exports = {
   PurchaseLine,
   InventoryBalance,
   InventoryMovement,
+  Stocktake,
+  StocktakeLine,
+  OperationalShift,
+  BranchSettings,
+  Device,
+  PrintJob,
   USER_STATUS,
   TENANT_STATUS,
   MEMBERSHIP_STATUS,

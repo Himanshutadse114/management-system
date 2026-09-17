@@ -18,7 +18,10 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
+      - run: npm test
       - run: npm run build
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --package-lock=false --audit-level=high
 
   backend:
     runs-on: ubuntu-latest
@@ -58,9 +61,28 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --package-lock=false --audit-level=high
       - name: Check backend JavaScript syntax
         run: find src tests -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Run critical flow tests
         run: npm test
+      - name: Start service and run health load smoke
+        run: |
+          node src/index.js >/tmp/deva-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in {1..30}; do curl --fail --silent http://127.0.0.1:5001/ready && break || sleep 1; done
+          curl --fail http://127.0.0.1:5001/ready
+          node tests/load-smoke.js
       - name: Generate and download a report
         run: node tests/report-smoke.js
+      - name: Verify PostgreSQL backup and restore
+        env:
+          PGPASSWORD: postgres
+        run: |
+          pg_dump --host=127.0.0.1 --username=postgres --dbname=management_system_test --format=custom --file=/tmp/management-system.backup
+          dropdb --host=127.0.0.1 --username=postgres --if-exists management_system_restore_test
+          createdb --host=127.0.0.1 --username=postgres management_system_restore_test
+          pg_restore --host=127.0.0.1 --username=postgres --dbname=management_system_restore_test --no-owner --no-privileges --exit-on-error /tmp/management-system.backup
+          psql --host=127.0.0.1 --username=postgres --dbname=management_system_restore_test --set=ON_ERROR_STOP=1 --command='SELECT COUNT(*) AS applied_migrations FROM schema_migrations;'

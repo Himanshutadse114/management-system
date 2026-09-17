@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './AuthContext';
 import { LanguageProvider } from './LanguageContext';
 import App from './App';
-import PublicMenu from './PublicMenu';
-import MenuImageManager from './MenuImageManager';
+const PublicMenu = lazy(() => import('./PublicMenu'));
+const MenuImageManager = lazy(() => import('./MenuImageManager'));
+import './design-tokens.css';
 import './styles.css';
 import './language.css';
 import './responsive.css';
@@ -32,14 +33,26 @@ function publicMenuToken() {
   try { return decodeURIComponent(match[1]); } catch (_) { return match[1]; }
 }
 
+function directStoreSlug() {
+  if (typeof window === 'undefined') return null;
+  const match = window.location.pathname.match(/^\/store\/([^/]+)\/?$/);
+  if (!match) return null;
+  try { return decodeURIComponent(match[1]); } catch (_) { return match[1]; }
+}
+
 const menuToken = publicMenuToken();
+const storeSlug = directStoreSlug();
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 
 root.render(
   <React.StrictMode>
     <LanguageProvider>
-      {menuToken ? (
-        <PublicMenu qrToken={menuToken} />
+      <Suspense fallback={<div className="app-loading">Loading Deva...</div>}>{menuToken || storeSlug ? (
+        <PublicMenu qrToken={menuToken} storeSlug={storeSlug} />
       ) : (
         <GoogleOAuthProvider clientId={googleClientId}>
           <AuthProvider>
@@ -47,7 +60,7 @@ root.render(
             <MenuImageManager />
           </AuthProvider>
         </GoogleOAuthProvider>
-      )}
+      )}</Suspense>
     </LanguageProvider>
   </React.StrictMode>
 );

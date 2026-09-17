@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Montserrat:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
-
 /*
   Deva typography system
   ----------------------
@@ -8,15 +6,134 @@
   Noto Sans Devanagari is a technical glyph fallback for Hindi/Marathi.
 */
 
-:root {
-  --deva-font-ui: 'Montserrat', 'Noto Sans Devanagari', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --deva-font-display: 'Lora', 'Noto Sans Devanagari', Georgia, 'Times New Roman', serif;
-}
-
 html,
 body,
 #root {
   font-family: var(--deva-font-ui) !important;
+}
+
+body {
+  font-size: var(--deva-type-body) !important;
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font-size: var(--deva-type-support) !important;
+}
+
+input,
+select,
+textarea {
+  min-height: var(--deva-control-height);
+}
+
+textarea {
+  padding-block: 11px !important;
+  line-height: 1.5 !important;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--ops-orange-strong) !important;
+  outline-offset: 2px !important;
+}
+
+/* Operational labels and tables must remain readable during long shifts. */
+.inventory-form label > span,
+.purchase-line label > span,
+.sales-scope label,
+.checkout-fields label,
+.restaurant-form label > span,
+.service-controls label > span,
+.analytics-controls label > span,
+.staff-form label > span,
+.report-controls label > span,
+.waiter-search,
+.cashier-search,
+.inventory-table-wrap th,
+.sales-table th,
+.restaurant-table th,
+.analytics-table th,
+.staff-table th {
+  font-size: var(--deva-type-caption) !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0.045em !important;
+}
+
+.inventory-table-wrap td,
+.sales-table td,
+.restaurant-table td,
+.analytics-table td,
+.staff-table td,
+.history-row,
+.product-list-row,
+.menu-admin-row,
+.order-card,
+.report-card {
+  font-size: var(--deva-type-support) !important;
+  line-height: 1.45 !important;
+}
+
+.inventory-mini,
+.sales-mini,
+.restaurant-mini,
+.analytics-mini,
+.reports-mini,
+.staff-mini,
+.scorm-eyebrow,
+.focused-kicker,
+.scorm-nav-section,
+.focused-nav-label {
+  font-size: var(--deva-type-caption) !important;
+  line-height: 1.35 !important;
+}
+
+.scorm-nav-item,
+.focused-nav button,
+.workspace-tabs button,
+.inventory-tabs button,
+.restaurant-tabs button,
+.scorm-button-primary,
+.scorm-button-secondary,
+.waiter-primary,
+.cashier-primary {
+  min-height: var(--deva-control-height) !important;
+  font-size: var(--deva-type-support) !important;
+}
+
+.scorm-nav-item,
+.focused-nav button {
+  font-size: var(--deva-type-body) !important;
+}
+
+.inventory-inline-error,
+.inventory-error,
+.inventory-notice,
+.sales-error,
+.sales-info,
+.restaurant-error,
+.analytics-error,
+.staff-error,
+.sa-error {
+  font-size: var(--deva-type-caption) !important;
+  line-height: 1.5 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body,

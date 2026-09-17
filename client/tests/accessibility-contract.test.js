@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from'node:assert/strict';import{readFile}from'node:fs/promises';
+const source=(path)=>readFile(new URL(path,import.meta.url),'utf8');
+test('global interaction tokens preserve keyboard focus, reduced motion and touch targets',async()=>{const css=await source('../src/deva-typography.css');assert.match(css,/focus-visible/);assert.match(css,/outline:\s*3px/);assert.match(css,/prefers-reduced-motion/);assert.match(css,/--deva-control-height/);});
+test('public ordering drawers expose labelled dismiss controls and status updates',async()=>{const jsx=await source('../src/PublicMenu.jsx');assert.match(jsx,/aria-label="Close cart"/);assert.match(jsx,/role="status"/);assert.match(jsx,/inputMode="tel"/);});
+test('role workspaces retain an accessible branch selector and explicit button controls',async()=>{for(const file of['../src/CashierWorkspace.jsx','../src/WaiterWorkspace.jsx','../src/SettingsWorkspace.jsx']){const jsx=await source(file);assert.match(jsx,/(aria-label="Branch"|<label)/);assert.match(jsx,/<button/);}});

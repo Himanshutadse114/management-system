@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const ORDER_TYPES = ['COUNTER', 'WINE_SHOP', 'RESTAURANT'];
-const ORDER_STATUSES = ['DRAFT', 'OPEN', 'SERVED', 'AWAITING_PAYMENT', 'PAID', 'CANCELLED', 'VOIDED'];
+const ORDER_STATUSES = ['DRAFT', 'OPEN', 'SERVED', 'AWAITING_PAYMENT', 'PAID', 'CANCELLED', 'VOIDED', 'REFUNDED'];
 const PAYMENT_METHODS = ['CASH', 'CARD', 'UPI', 'OTHER'];
 
 const Order = sequelize.models.Order || sequelize.define('Order', {
@@ -52,6 +52,9 @@ const OrderLine = sequelize.models.OrderLine || sequelize.define('OrderLine', {
   totalBaseQuantity: { type: DataTypes.DECIMAL(18, 3), allowNull: false },
   unitPriceMinor: { type: DataTypes.BIGINT, allowNull: false },
   lineSubtotalMinor: { type: DataTypes.BIGINT, allowNull: false },
+  modifierTotalMinor: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
+  modifiersSnapshot: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+  notes: { type: DataTypes.TEXT, allowNull: true },
   costAmountMinor: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
   status: { type: DataTypes.STRING(24), allowNull: false, defaultValue: 'ACTIVE' }
 }, { tableName: 'order_lines' });
@@ -67,10 +70,27 @@ const Payment = sequelize.models.Payment || sequelize.define('Payment', {
   receivedByUserId: { type: DataTypes.UUID, allowNull: false }
 }, { tableName: 'payments' });
 
+const SalesRefund = sequelize.models.SalesRefund || sequelize.define('SalesRefund', {
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  tenantId: { type: DataTypes.UUID, allowNull: false },
+  branchId: { type: DataTypes.UUID, allowNull: false },
+  orderId: { type: DataTypes.UUID, allowNull: false },
+  amountMinor: { type: DataTypes.BIGINT, allowNull: false },
+  method: { type: DataTypes.STRING(24), allowNull: false },
+  stockDisposition: { type: DataTypes.STRING(24), allowNull: false },
+  reason: { type: DataTypes.TEXT, allowNull: false },
+  processedByUserId: { type: DataTypes.UUID, allowNull: false },
+  cashierUserId: { type: DataTypes.UUID, allowNull: true },
+  idempotencyKey: { type: DataTypes.STRING(180), allowNull: true },
+  processedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
+}, { tableName: 'sales_refunds' });
+
 Order.hasMany(OrderLine, { foreignKey: 'orderId', as: 'lines' });
 OrderLine.belongsTo(Order, { foreignKey: 'orderId', as: 'order' });
 Order.hasMany(Payment, { foreignKey: 'orderId', as: 'payments' });
 Payment.belongsTo(Order, { foreignKey: 'orderId', as: 'order' });
+Order.hasMany(SalesRefund, { foreignKey: 'orderId', as: 'refunds' });
+SalesRefund.belongsTo(Order, { foreignKey: 'orderId', as: 'order' });
 
 function assertAllowed(value, allowed, label) {
   if (!allowed.includes(value)) throw new Error(`${label} must be one of: ${allowed.join(', ')}`);
@@ -81,4 +101,4 @@ Order.beforeValidate((order) => {
 });
 Payment.beforeValidate((payment) => assertAllowed(payment.method, PAYMENT_METHODS, 'Payment method'));
 
-module.exports = { Order, OrderLine, Payment, ORDER_TYPES, ORDER_STATUSES, PAYMENT_METHODS };
+module.exports = { Order, OrderLine, Payment, SalesRefund, ORDER_TYPES, ORDER_STATUSES, PAYMENT_METHODS };
