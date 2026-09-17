@@ -29,11 +29,17 @@ async function dispatchTransfer({ tenantId, sourceBranchId, destinationBranchId,
 
 async function receiveTransfer({ tenantId, destinationBranchId, transferId, actorUserId }) {
   return sequelize.transaction(async (transaction) => {
-    const transfer = await StockTransfer.findOne({ where: { id: transferId, tenantId, destinationBranchId }, include: [{ model: StockTransferLine, as: 'lines' }], transaction, lock: transaction.LOCK.UPDATE });
+    const transfer = await StockTransfer.findOne({
+      where: { id: transferId, tenantId, destinationBranchId },
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
     if (!transfer) { const error = new Error('Incoming transfer not found.'); error.status = 404; throw error; }
+    const lines = await StockTransferLine.findAll({ where: { transferId: transfer.id, tenantId }, transaction, lock: transaction.LOCK.UPDATE });
+    transfer.setDataValue('lines', lines);
     if (transfer.status === 'RECEIVED') return { transfer, replayed: true };
     if (transfer.status !== 'IN_TRANSIT') { const error = new Error(`Transfer cannot be received from ${transfer.status}.`); error.status = 409; throw error; }
-    for (const [index, line] of transfer.lines.entries()) {
+    for (const [index, line] of lines.entries()) {
       await applyInventoryMovement({ tenantId, branchId: destinationBranchId, productId: line.productId, movementType: 'TRANSFER_IN', quantityDeltaBase: line.quantityBase, costAmountMinor: line.costAmountMinor, referenceType: 'STOCK_TRANSFER', referenceId: transfer.id, reason: `Received ${transfer.transferNumber}: ${transfer.reason}`, idempotencyKey: `transfer-receive:${transfer.id}:${index}`, actorUserId, transaction });
       await InventoryBatch.create({ tenantId, branchId: destinationBranchId, productId: line.productId, batchNumber: `${transfer.transferNumber}-${index + 1}`.slice(0, 120), packageLabel: 'Inter-branch transfer', packageSizeBaseUnits: '1.000', quantityReceivedBase: line.quantityBase, quantityCurrentBase: line.quantityBase, status: 'ACTIVE' }, { transaction });
     }

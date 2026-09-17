@@ -242,7 +242,6 @@ async function refundPaidOrder({
   return sequelize.transaction(async (transaction) => {
     const order = await Order.findOne({
       where: { id: orderId, tenantId, branchId },
-      include: [{ model: OrderLine, as: 'lines' }, { model: Payment, as: 'payments' }],
       transaction,
       lock: transaction.LOCK.UPDATE
     });
@@ -254,7 +253,12 @@ async function refundPaidOrder({
     if (order.status !== 'PAID') {
       const error = new Error('Only a paid, non-refunded order can be refunded.'); error.status = 409; error.code = 'ORDER_NOT_REFUNDABLE'; throw error;
     }
-    const originalPayment = order.payments?.[0] || null;
+    const [lines, originalPayment] = await Promise.all([
+      OrderLine.findAll({ where: { orderId: order.id, tenantId }, transaction, lock: transaction.LOCK.UPDATE }),
+      Payment.findOne({ where: { orderId: order.id, tenantId }, order: [['createdAt', 'ASC']], transaction })
+    ]);
+    order.setDataValue('lines', lines);
+    order.setDataValue('payments', originalPayment ? [originalPayment] : []);
     const method = String(refundMethod || originalPayment?.method || 'OTHER').toUpperCase();
     if (!PAYMENT_METHODS.includes(method)) {
       const error = new Error(`refundMethod must be one of: ${PAYMENT_METHODS.join(', ')}`); error.status = 400; throw error;
@@ -275,7 +279,7 @@ async function refundPaidOrder({
     }, { transaction });
 
     if (disposition === 'RESTOCK') {
-      for (const line of order.lines || []) {
+      for (const line of lines) {
         if (line.status !== 'ACTIVE') continue;
         const product = await Product.findOne({ where: { id: line.productId, tenantId }, transaction });
         if (!product?.trackInventory) continue;

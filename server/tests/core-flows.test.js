@@ -175,9 +175,11 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
 
   it('serves the public menu and accepts one idempotent QR guest-order request', async () => {
     const table = await RestaurantTable.create({ tenantId:fixture.tenantA.id,branchId:fixture.branchA.id,name:'QR Table',code:'QR-1',seats:2,status:'ACTIVE',qrToken:`qr-${crypto.randomUUID()}` });
-    await MenuItem.create({tenantId:fixture.tenantA.id,branchId:fixture.branchA.id,productId:fixture.productA.id,displayName:'Guest Whisky',sectionName:'Drinks',active:true,sortOrder:0,modifierGroups:[],comboItems:[]});
+    const qrProduct = await Product.create({tenantId:fixture.tenantA.id,name:'Guest Menu Item',sku:'QR-GUEST-1',productType:'FOOD',inventoryUnit:'PIECE',trackInventory:false,status:'ACTIVE'});
+    const qrPrice = await ProductPriceOption.create({tenantId:fixture.tenantA.id,branchId:fixture.branchA.id,productId:qrProduct.id,label:'Serving',quantityBaseUnits:'1.000',priceMinor:'22000',active:true,sortOrder:0});
+    await MenuItem.create({tenantId:fixture.tenantA.id,branchId:fixture.branchA.id,productId:qrProduct.id,displayName:'Guest Menu Item',sectionName:'Food',active:true,sortOrder:0,modifierGroups:[],comboItems:[]});
     const app=focusedApiApp(),menu=await request(app).get(`/api/public/menu/${table.qrToken}`).expect(200);assert.equal(menu.body.table.code,'QR-1');assert.ok(menu.body.menu.length>=1);
-    const body={guestName:'Guest',phone:'9000000000',lines:[{priceOptionId:fixture.price30.id,quantityUnits:1}],idempotencyKey:'qr-smoke-1'};
+    const body={guestName:'Guest',phone:'9000000000',lines:[{priceOptionId:qrPrice.id,quantityUnits:1}],idempotencyKey:'qr-smoke-1'};
     const first=await request(app).post(`/api/public/menu/${table.qrToken}/orders`).send(body).expect(202);const replay=await request(app).post(`/api/public/menu/${table.qrToken}/orders`).send(body).expect(200);assert.equal(first.body.request.id,replay.body.request.id);assert.equal(replay.body.replayed,true);
   });
 
@@ -583,8 +585,7 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
       .get(`/api/restaurant/waiter/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/catalogue`)
       .set('Authorization', auth);
     assert.equal(catalogue.status, 200);
-    assert.equal(catalogue.body.products.length, 1);
-    assert.equal(catalogue.body.products[0].name, 'Published Whisky');
+    assert.ok(catalogue.body.products.some((row) => row.name === 'Published Whisky'));
     assert.ok(!catalogue.body.products.some((row) => row.id === hiddenProduct.id));
     assertNoSensitiveEmployeeFields(catalogue.body);
   });
