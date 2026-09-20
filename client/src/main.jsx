@@ -20,6 +20,7 @@ import './shell-layout-final.css';
 import './publicMenuLightFix.css';
 import './publicMenuHeroPolish.css';
 import './deva-typography.css';
+import './mobile-app.css';
 
 function publicMenuToken() {
   if (typeof window === 'undefined') return null;
