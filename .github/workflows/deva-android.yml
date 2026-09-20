@@ -130,7 +130,7 @@ jobs:
       - name: Build release APK
         working-directory: mobile
         run: >-
-          flutter build apk --release --build-number=5
+          flutter build apk --release --build-number=6
           --dart-define=DEVA_WEB_URL="$DEVA_WEB_URL"
 
       - name: Verify finished APK signing SHA-1

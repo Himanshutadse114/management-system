@@ -10,6 +10,21 @@ import 'package:webview_flutter/webview_flutter.dart';
 const _orange = Color(0xFFF58220);
 const _ink = Color(0xFF171B18);
 const _surface = Color(0xFFF7F5F0);
+const _downloadsChannel = MethodChannel('com.deva.deva/downloads');
+
+String safeDownloadName(String? value) {
+  final cleaned =
+      (value ?? 'deva-download')
+          .replaceAll(RegExp(r'[^A-Za-z0-9._ -]'), '_')
+          .trim();
+  return cleaned.isEmpty ? 'deva-download' : cleaned;
+}
+
+Uint8List decodeDownloadDataUrl(String value) {
+  final separator = value.indexOf(',');
+  if (separator < 0) throw const FormatException('Missing file content');
+  return base64Decode(value.substring(separator + 1));
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -114,6 +129,10 @@ class _WebPlatformScreenState extends State<WebPlatformScreen> {
       (() => {
         if (window.__devaAndroidPrepared) return;
         window.__devaAndroidPrepared = true;
+        window.DevaDownloadCapabilities = Object.freeze({
+          acknowledgements: true,
+          savesToDownloads: true
+        });
         document.addEventListener('click', (event) => {
           const link = event.target && event.target.closest
             ? event.target.closest('a[target="_blank"]')
@@ -128,18 +147,89 @@ class _WebPlatformScreenState extends State<WebPlatformScreen> {
   }
 
   Future<void> _handleDownload(JavaScriptMessage message) async {
+    String? requestId;
     try {
       final payload = jsonDecode(message.message) as Map<String, dynamic>;
-      final rawName = (payload['fileName'] as String? ?? 'deva-download')
-          .replaceAll(RegExp(r'[^A-Za-z0-9._ -]'), '_');
-      final fileName = rawName.isEmpty ? 'deva-download' : rawName;
-      final dataUrl = payload['dataUrl'] as String? ?? '';
-      final separator = dataUrl.indexOf(',');
-      if (separator < 0) throw const FormatException('Missing file content');
-      final bytes = base64Decode(dataUrl.substring(separator + 1));
+      requestId = payload['requestId'] as String?;
+      final fileName = safeDownloadName(payload['fileName'] as String?);
+      final mimeType =
+          payload['mimeType'] as String? ?? 'application/octet-stream';
+      final bytes = decodeDownloadDataUrl(payload['dataUrl'] as String? ?? '');
       if (bytes.length > 50 * 1024 * 1024) {
         throw const FormatException('File is too large');
       }
+      final savedLocation = await _downloadsChannel.invokeMethod<String>(
+        'saveDownload',
+        <String, Object>{
+          'fileName': fileName,
+          'mimeType': mimeType,
+          'bytes': bytes,
+        },
+      );
+      await _sendDownloadResult(
+        requestId: requestId,
+        ok: true,
+        message: 'Saved to Downloads',
+        location: savedLocation,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$fileName saved in Downloads/Deva'),
+          action: SnackBarAction(
+            label: 'Share',
+            onPressed: () {
+              _shareDownloadedFile(bytes, fileName, mimeType);
+            },
+          ),
+        ),
+      );
+    } catch (error) {
+      await _sendDownloadResult(
+        requestId: requestId,
+        ok: false,
+        message: 'The file could not be saved. Please try again.',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('The file could not be downloaded. Please try again.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _sendDownloadResult({
+    required String? requestId,
+    required bool ok,
+    required String message,
+    String? location,
+  }) async {
+    if (requestId == null || requestId.isEmpty) return;
+    final detail = jsonEncode(<String, Object?>{
+      'requestId': requestId,
+      'ok': ok,
+      'message': message,
+      'location': location,
+    });
+    try {
+      await _controller.runJavaScript('''
+        window.dispatchEvent(new CustomEvent('deva-download-result', {
+          detail: $detail
+        }));
+      ''');
+    } catch (_) {
+      // The page may have navigated after requesting the download. The native
+      // snackbar still reports the result to the user.
+    }
+  }
+
+  Future<void> _shareDownloadedFile(
+    Uint8List bytes,
+    String fileName,
+    String mimeType,
+  ) async {
+    try {
       final directory = await getTemporaryDirectory();
       final file = File('${directory.path}${Platform.pathSeparator}$fileName');
       await file.writeAsBytes(bytes, flush: true);
@@ -147,7 +237,7 @@ class _WebPlatformScreenState extends State<WebPlatformScreen> {
       final box = context.findRenderObject() as RenderBox?;
       await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(file.path, mimeType: payload['mimeType'] as String?)],
+          files: [XFile(file.path, mimeType: mimeType)],
           title: fileName,
           sharePositionOrigin:
               box == null ? null : box.localToGlobal(Offset.zero) & box.size,
@@ -156,9 +246,7 @@ class _WebPlatformScreenState extends State<WebPlatformScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('The file could not be downloaded. Please try again.'),
-        ),
+        const SnackBar(content: Text('The saved file could not be shared.')),
       );
     }
   }

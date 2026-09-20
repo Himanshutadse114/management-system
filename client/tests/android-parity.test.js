@@ -11,8 +11,13 @@ test('generated files use the Android download bridge with browser fallback', as
     source('../src/OperationsWorkspace.jsx'),
   ]);
   assert.match(helper, /window\.DevaDownload\?\.postMessage/);
+  assert.match(helper, /DevaDownloadCapabilities\?\.acknowledgements/);
+  assert.match(helper, /deva-download-result/);
+  assert.match(helper, /requestId/);
   assert.match(helper, /URL\.createObjectURL/);
   assert.match(reports, /downloadBlob\(response\.data/);
+  assert.match(reports, /setTab\('Previous reports'\)/);
+  assert.match(reports, /await download\(data\.report,\{created:true\}\)/);
   assert.match(operations, /downloadBlob\(response\.data/);
 });
 
