@@ -27,10 +27,19 @@ test("restaurant destinations use a complete mobile navigation grid", async () =
 
 test("role navigation opens as a native left drawer", async () => {
   const css = await readFile(cssUrl, "utf8");
+  const shell = await readFile(
+    new URL("../src/FocusedWorkspaceShell.jsx", import.meta.url),
+    "utf8",
+  );
   assert.match(css, /\.focused-mobile-drawer\s*\{/);
   assert.match(css, /inset:\s*0 auto 0 0 !important/);
   assert.match(css, /right:\s*auto !important/);
   assert.match(css, /mobileDrawerFromLeft/);
+  assert.match(css, /\.focused-mobile-drawer \.focused-brand small\s*\{/);
+  assert.match(css, /max-width:\s*none !important/);
+  assert.match(css, /white-space:\s*normal !important/);
+  assert.match(shell, /focused-drawer-identity/);
+  assert.match(shell, /<small>\{profile\.primaryRoleLabel\}<\/small>/);
 });
 
 test("restaurant exposes the customer menu journey and resets app scrolling", async () => {

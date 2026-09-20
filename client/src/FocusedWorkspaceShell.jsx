@@ -475,9 +475,16 @@ export default function FocusedWorkspaceShell() {
           <aside className="focused-mobile-drawer">
             <div className="focused-drawer-head">
               <Brand />
-              <button onClick={() => setMobileOpen(false)}>
+              <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
                 <X size={17} />
               </button>
+            </div>
+            <div className="focused-drawer-identity">
+              <ShieldCheck size={16} />
+              <span>
+                <strong>{session?.user?.name || "Signed-in user"}</strong>
+                <small>{profile.primaryRoleLabel}</small>
+              </span>
             </div>
             <Nav />
             <div className="focused-drawer-tools">

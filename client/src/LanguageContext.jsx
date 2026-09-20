@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { installInterfaceLocaliser } from './uiLocale';
 
 const LanguageContext = createContext(null);
 const STORAGE_KEY = 'managementSystemLocale';
@@ -70,6 +71,8 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = locale;
   }, [locale]);
 
+  useEffect(() => installInterfaceLocaliser(locale), [locale]);
+
   const value = useMemo(() => ({
     locale,
     setLocale: (next) => dictionaries[next] && setLocale(next),
@@ -93,9 +96,9 @@ export function useLanguage() {
 export function LanguageSwitcher({ compact = false }) {
   const { locale, setLocale, languages } = useLanguage();
   return (
-    <div className={compact ? 'language-switcher compact' : 'language-switcher'} aria-label="Language">
+    <div className={compact ? 'language-switcher compact' : 'language-switcher'} role="group" aria-label="Language">
       {languages.map((language) => (
-        <button key={language.id} type="button" className={locale === language.id ? 'active' : ''} onClick={() => setLocale(language.id)} title={language.name}>
+        <button key={language.id} type="button" className={locale === language.id ? 'active' : ''} aria-pressed={locale === language.id} onClick={() => setLocale(language.id)} title={language.name}>
           {compact ? language.short : language.name}
         </button>
       ))}

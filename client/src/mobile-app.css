@@ -113,6 +113,64 @@
     border-bottom: 1px solid var(--ops-line);
   }
 
+  .focused-mobile-drawer .focused-drawer-head .focused-brand {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  .focused-mobile-drawer .focused-brand > span:last-child {
+    min-width: 0;
+  }
+
+  .focused-mobile-drawer .focused-brand small {
+    display: block;
+    max-width: none !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere;
+    font-size: 11px !important;
+    line-height: 1.35;
+  }
+
+  .focused-drawer-identity {
+    margin-top: 12px;
+    padding: 11px 12px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--ops-line);
+    border-radius: 12px;
+    background: var(--ops-surface-2);
+    color: var(--ops-orange-strong);
+  }
+
+  .focused-drawer-identity > span {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+  }
+
+  .focused-drawer-identity strong {
+    overflow: hidden;
+    color: var(--ops-text);
+    font-size: 12px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .focused-drawer-identity small {
+    color: var(--ops-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .focused-mobile-drawer .focused-nav {
     margin-top: 14px !important;
     overflow-y: auto;
