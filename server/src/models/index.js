@@ -7,7 +7,7 @@ const { BranchSettings } = require('./branchSettings');
 const { Device, PrintJob } = require('./device');
 
 const USER_STATUS = ['PENDING', 'ACTIVE', 'SUSPENDED'];
-const TENANT_STATUS = ['ACTIVE', 'SUSPENDED', 'DELETED'];
+const TENANT_STATUS = ['ACTIVE', 'SUSPENDED'];
 const MEMBERSHIP_STATUS = ['INVITED', 'ACTIVE', 'SUSPENDED'];
 const TENANT_ROLES = ['TENANT_ADMIN', 'AUDITOR'];
 const BRANCH_ROLES = ['BRANCH_MANAGER', 'INVENTORY_MANAGER', 'CASHIER', 'WAITER', 'AUDITOR'];
@@ -86,6 +86,7 @@ const Tenant = sequelize.define('Tenant', {
   slug: { type: DataTypes.STRING(100), allowNull: false, unique: true },
   status: { type: DataTypes.STRING(24), allowNull: false, defaultValue: 'ACTIVE' },
   logoObjectKey: { type: DataTypes.TEXT, allowNull: true },
+  deletedAt: { type: DataTypes.DATE, allowNull: true },
   createdByUserId: { type: DataTypes.UUID, allowNull: false }
 }, {
   tableName: 'tenants',

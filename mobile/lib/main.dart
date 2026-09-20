@@ -1670,6 +1670,14 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
           (dialogContext) => StatefulBuilder(
             builder:
                 (context, setDialogState) => AlertDialog(
+                  scrollable: true,
+                  insetPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 24,
+                  ),
+                  actionsAlignment: MainAxisAlignment.end,
+                  actionsOverflowAlignment: OverflowBarAlignment.end,
+                  actionsOverflowButtonSpacing: 8,
                   icon: const Icon(
                     Icons.delete_forever_rounded,
                     color: Colors.red,
@@ -1684,6 +1692,9 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                       const SizedBox(height: 14),
                       TextField(
                         controller: confirmation,
+                        maxLines: 1,
+                        textInputAction: TextInputAction.done,
+                        scrollPadding: const EdgeInsets.only(bottom: 160),
                         onChanged: (_) => setDialogState(() {}),
                         decoration: InputDecoration(
                           labelText: 'Type ${tenant['name']} to confirm',

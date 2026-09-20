@@ -3,6 +3,12 @@ const { QueryTypes } = require('sequelize');
 const INVENTORY_CORE_ID = '20260825_001_inventory_core';
 const PASSWORD_CREDENTIALS_ID = '20260921_001_password_credentials';
 const RECOVERY_CODES_ID = '20260921_002_recovery_codes';
+const TENANT_ARCHIVAL_ID = '20260921_003_tenant_archival';
+
+async function tenantArchivalUp(sequelize, transaction) {
+  await sequelize.query('ALTER TABLE tenants ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMPTZ NULL', { transaction });
+  await sequelize.query('CREATE INDEX IF NOT EXISTS tenants_deleted_at_idx ON tenants ("deletedAt")', { transaction });
+}
 
 async function recoveryCodesUp(sequelize, transaction) {
   await sequelize.query('ALTER TABLE user_credentials ADD COLUMN IF NOT EXISTS "recoveryCodeHash" TEXT NULL', { transaction });
@@ -180,8 +186,9 @@ async function inventoryCoreUp(sequelize, transaction) {
 
 const migrations = [
   { id: INVENTORY_CORE_ID, up: inventoryCoreUp },
-  { id: PASSWORD_CREDENTIALS_ID, up: passwordCredentialsUp }
-  ,{ id: RECOVERY_CODES_ID, up: recoveryCodesUp }
+  { id: PASSWORD_CREDENTIALS_ID, up: passwordCredentialsUp },
+  { id: RECOVERY_CODES_ID, up: recoveryCodesUp },
+  { id: TENANT_ARCHIVAL_ID, up: tenantArchivalUp }
 ];
 
 async function runMigrations(sequelize) {

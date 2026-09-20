@@ -6,8 +6,6 @@ const {
   AccessRequest,
   Tenant,
   TenantMembership,
-  Branch,
-  BranchMembership,
   AuditLog,
   TENANT_ROLES
 } = require('../models');
@@ -50,7 +48,10 @@ async function audit(req, action, entityType, entityId, metadata = null, tenantI
 
 router.get('/tenants', async (_req, res) => {
   const tenants = await Tenant.findAll({
-    where: { status: { [Op.ne]: 'DELETED' } },
+    where: {
+      deletedAt: null,
+      status: { [Op.ne]: 'DELETED' }
+    },
     order: [['createdAt', 'DESC']]
   });
   res.json({ tenants });
@@ -141,7 +142,7 @@ router.post('/tenants', async (req, res, next) => {
 router.delete('/tenants/:tenantId', async (req, res, next) => {
   try {
     const tenant = await Tenant.findByPk(req.params.tenantId);
-    if (!tenant || tenant.status === 'DELETED') {
+    if (!tenant || tenant.deletedAt || tenant.status === 'DELETED') {
       return res.status(404).json({ message: 'Business not found.' });
     }
 
@@ -154,35 +155,55 @@ router.delete('/tenants/:tenantId', async (req, res, next) => {
     }
 
     const previousStatus = tenant.status;
+    const deletedAt = new Date();
     await sequelize.transaction(async (transaction) => {
-      await TenantMembership.update(
-        { status: 'SUSPENDED' },
-        { where: { tenantId: tenant.id }, transaction }
+      const replacements = { tenantId: tenant.id, deletedAt };
+      await sequelize.query(
+        'UPDATE tenant_memberships SET status = \'SUSPENDED\', "updatedAt" = NOW() WHERE "tenantId" = :tenantId',
+        { replacements, transaction }
       );
-      await BranchMembership.update(
-        { status: 'SUSPENDED' },
-        { where: { tenantId: tenant.id }, transaction }
+      await sequelize.query(
+        'UPDATE branch_memberships SET status = \'SUSPENDED\', "updatedAt" = NOW() WHERE "tenantId" = :tenantId',
+        { replacements, transaction }
       );
-      await Branch.update(
-        { status: 'SUSPENDED' },
-        { where: { tenantId: tenant.id }, transaction }
+      await sequelize.query(
+        'UPDATE branches SET status = \'SUSPENDED\', "updatedAt" = NOW() WHERE "tenantId" = :tenantId',
+        { replacements, transaction }
       );
-      tenant.status = 'DELETED';
-      await tenant.save({ transaction });
+      await sequelize.query(
+        'UPDATE tenants SET status = \'SUSPENDED\', "deletedAt" = :deletedAt, "updatedAt" = NOW() WHERE id = :tenantId',
+        { replacements, transaction }
+      );
     });
 
-    await audit(req, 'TENANT_DELETED', 'Tenant', tenant.id, {
-      name: tenant.name,
-      slug: tenant.slug,
-      previousStatus,
-      retention: 'Business records retained for audit and accounting integrity.'
-    }, tenant.id);
+    try {
+      await audit(req, 'TENANT_DELETED', 'Tenant', tenant.id, {
+        name: tenant.name,
+        slug: tenant.slug,
+        previousStatus,
+        deletedAt: deletedAt.toISOString(),
+        retention: 'Business records retained for audit and accounting integrity.'
+      }, tenant.id);
+    } catch (auditError) {
+      console.error('[platform/delete-business] business archived but audit logging failed', {
+        tenantId: tenant.id,
+        requestId: req.requestId,
+        error: auditError.message
+      });
+    }
 
     res.json({
       message: 'Business deleted. Branch and user access has been revoked; audit and accounting records were retained.',
-      tenant: { id: tenant.id, name: tenant.name, status: tenant.status }
+      tenant: { id: tenant.id, name: tenant.name, status: 'DELETED', deletedAt }
     });
   } catch (error) {
+    console.error('[platform/delete-business]', {
+      tenantId: req.params.tenantId,
+      requestId: req.requestId,
+      name: error.name,
+      message: error.message,
+      database: error.parent?.message || null
+    });
     next(error);
   }
 });
