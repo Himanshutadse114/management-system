@@ -41,6 +41,7 @@ const { responsePolicy } = require('../src/middleware/responsePolicy');
 const waiterCatalogue = require('../src/routes/waiterCatalogue');
 const cashierSales = require('../src/routes/cashierSales');
 const publicRoutes = require('../src/routes/public');
+const platformRoutes = require('../src/routes/platform');
 
 const {
   User,
@@ -109,6 +110,15 @@ function focusedApiApp() {
   app.use('/api', responsePolicy);
   app.use('/api/restaurant', waiterCatalogue);
   app.use('/api/sales', cashierSales);
+  app.use((req, res) => res.status(404).json({ message: 'Route not mounted in test app.' }));
+  app.use((error, _req, res, _next) => res.status(Number(error.status || 500)).json({ message: error.message, code: error.code || 'TEST_ERROR' }));
+  return app;
+}
+
+function platformApiApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/platform', platformRoutes);
   app.use((req, res) => res.status(404).json({ message: 'Route not mounted in test app.' }));
   app.use((error, _req, res, _next) => res.status(Number(error.status || 500)).json({ message: error.message, code: error.code || 'TEST_ERROR' }));
   return app;
@@ -521,6 +531,52 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
       .set('Authorization', `Bearer ${testToken(platformAdmin)}`);
     assert.equal(response.status, 403);
     assert.equal(response.body.code, 'PLATFORM_OPERATION_SCOPE_DENIED');
+  });
+
+  it('lets Platform Admin rename and archive a business while revoking its access', async () => {
+    const [platformAdmin] = await User.findOrCreate({
+      where: { email: process.env.SUPER_ADMIN_EMAIL },
+      defaults: { name: 'Platform Admin', status: 'ACTIVE' }
+    });
+    const owner = await User.create({ email: `archive-owner-${crypto.randomUUID()}@example.com`, name: 'Archive Owner', status: 'ACTIVE' });
+    const tenant = await Tenant.create({
+      name: 'Archive Test Business',
+      slug: `archive-test-${crypto.randomBytes(4).toString('hex')}`,
+      status: 'ACTIVE',
+      createdByUserId: platformAdmin.id
+    });
+    const branch = await Branch.create({ tenantId: tenant.id, name: 'Archive Branch', code: 'ARCH-01', type: 'BAR_RESTAURANT', status: 'ACTIVE' });
+    const tenantMembership = await TenantMembership.create({
+      tenantId: tenant.id, userId: owner.id, email: owner.email, role: 'TENANT_ADMIN', status: 'ACTIVE', invitedByUserId: platformAdmin.id, activatedAt: new Date()
+    });
+    const branchMembership = await BranchMembership.create({
+      tenantId: tenant.id, branchId: branch.id, userId: owner.id, email: owner.email, role: 'BRANCH_MANAGER', status: 'ACTIVE', invitedByUserId: platformAdmin.id, activatedAt: new Date()
+    });
+    const app = platformApiApp();
+    const auth = `Bearer ${testToken(platformAdmin)}`;
+
+    await request(app)
+      .patch(`/api/platform/tenants/${tenant.id}`)
+      .set('Authorization', auth)
+      .send({ name: 'Renamed Archive Business' })
+      .expect(200);
+    await tenant.reload();
+    assert.equal(tenant.name, 'Renamed Archive Business');
+
+    await request(app)
+      .delete(`/api/platform/tenants/${tenant.id}`)
+      .set('Authorization', auth)
+      .send({ confirmationName: 'Renamed Archive Business' })
+      .expect(200);
+
+    await Promise.all([tenant.reload(), branch.reload(), tenantMembership.reload(), branchMembership.reload()]);
+    assert.ok(tenant.deletedAt);
+    assert.equal(tenant.status, 'SUSPENDED');
+    assert.equal(branch.status, 'SUSPENDED');
+    assert.equal(tenantMembership.status, 'SUSPENDED');
+    assert.equal(branchMembership.status, 'SUSPENDED');
+    const listing = await request(app).get('/api/platform/tenants').set('Authorization', auth).expect(200);
+    assert.equal(listing.body.tenants.some((row) => row.id === tenant.id), false);
   });
 
   it('keeps waiter inside dedicated table-service APIs and published menu only', async () => {

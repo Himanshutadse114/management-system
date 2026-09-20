@@ -3,7 +3,8 @@
     <application
         android:label="Deva"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_deva_launcher"
+        android:roundIcon="@drawable/ic_deva_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false">
         <activity

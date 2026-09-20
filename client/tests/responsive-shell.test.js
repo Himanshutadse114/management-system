@@ -31,3 +31,14 @@ test('primary navigation uses solid current-color glyphs in both shells', async 
   assert.match(admin, /<FilledNavIcon name=\{NAV_GLYPHS\[label\]\}/);
   assert.match(focused, /<FilledNavIcon name=\{MODULE_ICONS\[module\]\}/);
 });
+
+test('the application root does not force horizontal overflow on narrow phones', async () => {
+  const [base, simple] = await Promise.all([
+    source('../src/styles.css'),
+    source('../src/simple-ui.css'),
+  ]);
+  for (const css of [base, simple]) {
+    assert.match(css, /html, body, #root\s*\{[^}]*min-width:\s*0/);
+    assert.doesNotMatch(css, /html, body, #root\s*\{[^}]*min-width:\s*320px/);
+  }
+});

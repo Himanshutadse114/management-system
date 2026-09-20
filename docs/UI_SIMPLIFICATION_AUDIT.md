@@ -97,7 +97,7 @@ Existing breakpoints prevent major overflow, but some screens still feel like co
 
 The redesign must not change:
 
-- Google authentication
+- Manual credential authentication
 - Role permissions
 - Tenant and branch access
 - Inventory ledger

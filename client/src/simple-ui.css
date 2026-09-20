@@ -5,7 +5,7 @@
   API, permission, calculation or workflow is changed here.
 */
 
-html, body, #root { min-width: 320px; min-height: 100%; }
+html, body, #root { width: 100%; min-width: 0; min-height: 100%; }
 body { margin: 0; overflow-x: hidden; background: var(--ops-bg); color: var(--ops-text); }
 body, button, input, select, textarea { font-family: var(--deva-font-ui) !important; }
 button, input, select, textarea { font-size: 14px; }

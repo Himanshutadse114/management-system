@@ -1,5 +1,5 @@
 * { box-sizing: border-box; }
-html, body, #root { min-width: 320px; min-height: 100%; }
+html, body, #root { width: 100%; min-width: 0; min-height: 100%; }
 body { margin: 0; background: var(--ops-bg); color: var(--ops-text); overflow-x: hidden; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
@@ -530,20 +530,24 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .ops-entity span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--scorm-subtle); font-size: 9px; }
 .ops-status { min-height: 23px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid var(--scorm-line); border-radius: 999px; color: var(--scorm-subtle); font-size: 8px; font-weight: 700; letter-spacing: .05em; }
 .ops-status.is-active { color: #8BE5C1; background: rgba(111,190,147,.08); border-color: rgba(111,190,147,.20); }
-.ops-row-actions { display: flex; align-items: center; gap: 7px; }
-.ops-delete-button { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 1px solid rgba(231,76,60,.28); border-radius: 8px; background: rgba(231,76,60,.07); color: #ff8e84; cursor: pointer; }
+.ops-row-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
+.ops-action-button, .ops-delete-button { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border-radius: 8px; cursor: pointer; }
+.ops-action-button { border: 1px solid var(--scorm-line); background: var(--scorm-surface-soft); color: var(--ops-orange-strong); }
+.ops-action-button:hover { border-color: var(--ops-orange-line-soft); background: var(--ops-orange-soft); }
+.ops-action-button:disabled { opacity: .45; cursor: not-allowed; }
+.ops-delete-button { border: 1px solid rgba(231,76,60,.28); background: rgba(231,76,60,.07); color: #ff8e84; }
 .ops-delete-button:hover { background: rgba(231,76,60,.15); border-color: rgba(231,76,60,.45); }
 .ops-delete-button:disabled { opacity: .45; cursor: not-allowed; }
-.tenant-delete-modal { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 18px; }
+.tenant-delete-modal { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); overflow-y: auto; overscroll-behavior: contain; }
 .tenant-delete-backdrop { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(2,5,11,.78); backdrop-filter: blur(5px); }
-.tenant-delete-card { position: relative; width: min(470px,100%); padding: 24px; border: 1px solid var(--scorm-line); border-radius: 16px; background: var(--scorm-surface); box-shadow: 0 24px 80px rgba(0,0,0,.38); color: var(--scorm-ink); }
+.tenant-delete-card { position: relative; width: min(470px,100%); max-height: calc(100dvh - max(24px,env(safe-area-inset-top) + env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; padding: 24px; border: 1px solid var(--scorm-line); border-radius: 16px; background: var(--scorm-surface); box-shadow: 0 24px 80px rgba(0,0,0,.38); color: var(--scorm-ink); }
 .tenant-delete-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: rgba(231,76,60,.12); color: #ff8e84; }
 .tenant-delete-card h3 { margin: 15px 0 7px; font-size: 20px; }
 .tenant-delete-card p { margin: 0 0 17px; color: var(--scorm-muted); font-size: 10px; line-height: 1.6; }
 .tenant-delete-card label { display: grid; gap: 7px; color: var(--scorm-muted); font-size: 9px; }
 .tenant-delete-card label strong { color: var(--scorm-ink); }
 .tenant-delete-card input { min-height: 42px; padding: 0 11px; border: 1px solid var(--scorm-line); border-radius: 9px; background: var(--scorm-surface-soft); color: var(--scorm-ink); font: inherit; }
-.tenant-delete-actions { margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; }
+.tenant-delete-actions { margin-top: 18px; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 .tenant-delete-confirm { min-height: 38px; padding: 0 13px; border: 1px solid rgba(231,76,60,.35); border-radius: 9px; background: #c0392b; color: #fff; font: inherit; font-size: 9px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .tenant-delete-confirm:disabled { opacity: .45; cursor: not-allowed; }
 .ops-empty { min-height: 250px; padding: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--scorm-muted); }

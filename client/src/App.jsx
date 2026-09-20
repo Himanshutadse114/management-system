@@ -13,6 +13,7 @@ import {
   Menu,
   Moon,
   PackageSearch,
+  Pencil,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -452,6 +453,8 @@ function PlatformTenants({ token }) {
   const [owners, setOwners] = useState([]);
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPassword, setResetPassword] = useState("");
+  const [editTarget, setEditTarget] = useState(null);
+  const [editName, setEditName] = useState("");
 
   async function load() {
     try {
@@ -496,6 +499,15 @@ function PlatformTenants({ token }) {
   async function resetOwnerPassword() {
     try { setBusy(true); setError(""); await api.post(`/platform/tenants/${ownerTarget.id}/admins/${resetTarget.id}/reset-password`, { temporaryPassword: resetPassword }, { headers: authHeaders(token) }); setResetTarget(null); setResetPassword(""); await openOwners(ownerTarget); }
     catch (err) { setError(apiErrorMessage(err)); } finally { setBusy(false); }
+  }
+
+  async function updateBusinessName() {
+    try {
+      setBusy(true); setError("");
+      await api.patch(`/platform/tenants/${editTarget.id}`, { name: editName.trim() }, { headers: authHeaders(token) });
+      setEditTarget(null); setEditName(""); await load();
+    } catch (err) { setError(apiErrorMessage(err)); }
+    finally { setBusy(false); }
   }
 
   async function deleteTenant() {
@@ -612,7 +624,9 @@ function PlatformTenants({ token }) {
                   {tenant.status}
                 </span>
                 <button
-                  type="button" className="ops-delete-button" title={`Manage ${tenant.name} owners`} aria-label={`Manage ${tenant.name} owners`} onClick={() => openOwners(tenant)} disabled={busy}><KeyRound size={14} /></button>
+                  type="button" className="ops-action-button" title={`Edit ${tenant.name}`} aria-label={`Edit ${tenant.name}`} onClick={() => { setEditTarget(tenant); setEditName(tenant.name); setError(""); }} disabled={busy}><Pencil size={14} /></button>
+                <button
+                  type="button" className="ops-action-button" title={`Manage ${tenant.name} owners`} aria-label={`Manage ${tenant.name} owners`} onClick={() => openOwners(tenant)} disabled={busy}><KeyRound size={14} /></button>
                 <button
                   type="button"
                   className="ops-delete-button"
@@ -676,6 +690,7 @@ function PlatformTenants({ token }) {
           </div>
         </div>
       )}
+      {editTarget && <div className="tenant-delete-modal" role="dialog" aria-modal="true"><button className="tenant-delete-backdrop" aria-label="Close edit business" onClick={()=>setEditTarget(null)}/><div className="tenant-delete-card"><h3>Edit business name</h3><label>Business name<input value={editName} onChange={(event)=>setEditName(event.target.value)} autoFocus maxLength={160}/></label><div className="tenant-delete-actions"><button type="button" className="scorm-button-secondary" onClick={()=>setEditTarget(null)} disabled={busy}>Cancel</button><button type="button" className="scorm-button-primary" onClick={updateBusinessName} disabled={busy || editName.trim().length < 2}>Save name</button></div></div></div>}
       {ownerTarget && <div className="tenant-delete-modal" role="dialog" aria-modal="true"><button className="tenant-delete-backdrop" aria-label="Close owner management" onClick={()=>setOwnerTarget(null)}/><div className="tenant-delete-card"><h3>{ownerTarget.name} owners</h3>{owners.map((membership)=>{const credential=membership.user?.credential;return <div className="owner-reset-row" key={membership.id}><div><strong>{membership.user?.name || membership.email}</strong><span>{credential?.username || "No manual login"}</span></div>{credential&&<button type="button" onClick={()=>{setResetTarget(membership);setResetPassword(generateStrongPassword())}}><KeyRound size={14}/> Reset password</button>}</div>})}<button type="button" className="scorm-button-secondary" onClick={()=>setOwnerTarget(null)}>Close</button></div></div>}
       {resetTarget && <div className="tenant-delete-modal elevated" role="dialog" aria-modal="true"><button className="tenant-delete-backdrop" aria-label="Close password reset" onClick={()=>setResetTarget(null)}/><div className="tenant-delete-card"><h3>Reset owner password</h3><p>The owner must change this temporary password after signing in.</p><label>Temporary password<div className="credential-input-row"><input value={resetPassword} onChange={(e)=>setResetPassword(e.target.value)} /><button type="button" onClick={()=>setResetPassword(generateStrongPassword())}><WandSparkles size={14}/> Generate</button></div></label><div className="tenant-delete-actions"><button className="scorm-button-secondary" type="button" onClick={()=>setResetTarget(null)}>Cancel</button><button className="scorm-button-primary" type="button" onClick={resetOwnerPassword} disabled={busy}>Reset password</button></div></div></div>}
     </section>

@@ -1,22 +1,18 @@
 # Deva mobile
 
-This folder contains the native Flutter Android app for Deva. It uses the same backend API, PostgreSQL data and role permissions as the web application.
+This folder contains the Flutter Android shell for the complete responsive Deva platform. Android users receive the same menus, workflows and live data as browser users.
 
 ## Current app
 
 - Deva-only branding
-- Username/password sign-in through `POST /api/auth/password`
-- Secure storage of the Deva JWT on Android
-- Session restore through `GET /api/auth/status`
-- Forced password change for temporary credentials
-- Super Admin business and owner-account creation
-- Business owner branch and staff-account creation
-- Staff role assignment, suspension and password reset
-- Role-aware current-platform module navigation
-- Assigned branch display
-- Shared API configuration for local development or the deployed backend
+- Complete responsive web-platform experience inside the Android app
+- Username/password sign-in and persistent web session
+- Super Admin, owner and staff workflows without reduced summary screens
+- Branded Deva launcher icon and release-mode APK
+- Friendly offline/retry screen
+- One web-platform URL for deployed environments
 
-Current platform areas represented in the app include stock/batches/stocktakes/transfers, sales/refunds/shifts, restaurant/kitchen/guest orders/reservations, Growth, Owner Control, Ecosystem, Sales & Profit, Reports, Settings, devices and staff access.
+The Android app includes stock, sales, restaurant, Growth, Owner Control, Ecosystem, analytics, reports, settings, devices and staff access through the same responsive interface used on the web.
 
 ## Create the Android project files
 
@@ -33,8 +29,8 @@ flutter pub get
 After generation:
 
 1. Set the Android application ID to the production Deva package name.
-2. Use Android API 23 or newer as the minimum SDK because secure token storage requires it.
-3. Keep Android backup disabled for the application so authentication material is not included in device backups.
+2. Use Android API 23 or newer as the minimum SDK for the supported WebView and sharing plugins.
+3. Keep Android backup disabled for the application.
 
 In `android/app/src/main/AndroidManifest.xml`:
 
@@ -62,16 +58,16 @@ Render may keep using only its private/internal PostgreSQL connection in `DATABA
 
 ```bash
 flutter run \
-  --dart-define=DEVA_API_URL=https://YOUR-DEVA-BACKEND.onrender.com
+  --dart-define=DEVA_WEB_URL=https://YOUR-DEVA-FRONTEND.onrender.com
 ```
 
-For an Android emulator connected to a local backend, the default API URL is already `http://10.0.2.2:5001`.
+The app keeps the same secure web session used by the loaded platform. The backend URL remains owned by the web deployment, so it is not duplicated in the APK configuration.
 
 ## Production build
 
 ```bash
 flutter build appbundle --release \
-  --dart-define=DEVA_API_URL=https://YOUR-DEVA-BACKEND.onrender.com
+  --dart-define=DEVA_WEB_URL=https://YOUR-DEVA-FRONTEND.onrender.com
 ```
 
 Use the generated `.aab` for Google Play distribution after signing configuration is added.
@@ -79,10 +75,9 @@ Use the generated `.aab` for Google Play distribution after signing configuratio
 ## Architecture
 
 ```text
-Deva Web (React) ─────┐
-                      ├── Deva API (Node/Express) ── PostgreSQL
-Deva Android (Flutter)┘              │
-                                     └── object storage / media
+Deva Android (Flutter WebView) ── Deva Web (React) ── Deva API ── PostgreSQL
+                                                        │
+                                                        └── object storage / media
 ```
 
-Both clients authenticate independently but receive the same Deva JWT format and the same access snapshot. Permissions remain enforced by the backend rather than trusted to the client UI.
+Android and browser users run the same responsive interface and backend workflows. Permissions remain enforced by the backend rather than trusted to the client UI.

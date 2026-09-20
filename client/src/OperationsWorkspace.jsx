@@ -10,6 +10,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import { downloadBlob } from "./download";
 import "./operations.css";
 const blank = {
   procurement: [],
@@ -137,7 +138,7 @@ export default function OperationsWorkspace({ token, access }) {
       setLoading(false);
     }
   }
-  async function downloadWorkforce(){try{const response=await api.get(`${endpoint}/workforce-export.csv`,{headers:authHeaders(token),responseType:"blob"});const url=URL.createObjectURL(response.data),anchor=document.createElement("a");anchor.href=url;anchor.download=`workforce-${branch?.code||branchId}.csv`;anchor.click();URL.revokeObjectURL(url);}catch(err){setError(apiErrorMessage(err));}}
+  async function downloadWorkforce(){try{const response=await api.get(`${endpoint}/workforce-export.csv`,{headers:authHeaders(token),responseType:"blob"});await downloadBlob(response.data,`workforce-${branch?.code||branchId}.csv`);}catch(err){setError(apiErrorMessage(err));}}
   const endpoint = `/operations/tenants/${tenantId}/branches/${branchId}`;
   return (
     <div className="control-page">

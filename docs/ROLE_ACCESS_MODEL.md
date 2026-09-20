@@ -20,7 +20,7 @@ The browser UI is only the first layer. Every protected API independently re-che
 
 ## Waiter experience
 
-A waiter does **not** enter the management dashboard. After Google sign-in the application opens directly into a dedicated Table Service workspace for the assigned Bar + Restaurant branch.
+A waiter does **not** enter the management dashboard. After signing in with the staff credential created by the Business Admin, the application opens directly into a dedicated Table Service workspace for the assigned Bar + Restaurant branch.
 
 The waiter sees:
 
@@ -61,7 +61,7 @@ Every workspace selector must therefore filter branches by the role required for
 
 ## Enforcement layers
 
-1. **Google authentication** proves identity.
+1. **Username/password authentication** proves identity against the active managed credential.
 2. **Live membership snapshot** reloads current memberships from PostgreSQL.
 3. **Capability policy** maps branch roles to allowed actions.
 4. **Branch scope check** verifies that the requested branch belongs to the requested tenant.

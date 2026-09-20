@@ -178,7 +178,7 @@ If a verified Google user signs in but has no invitation or membership:
 
 ### 4.5 Waiter accounts
 
-Foundation authentication remains Google-based for consistency and security. A later phase can add managed waiter PIN/username login for outlets that do not issue Google accounts, but it must still map to a real staff identity and branch membership and must never become a shared generic waiter account.
+Authentication uses administrator-created usernames and strong passwords. Every waiter credential maps to one real staff identity and branch membership; shared generic waiter accounts are not allowed.
 
 ---
 
@@ -623,7 +623,7 @@ Design characteristics:
 - Render blueprint
 - Environment contract
 - PostgreSQL/Sequelize boot
-- Google sign-in
+- Manual username/password sign-in
 - Backend JWT
 - Live access/membership re-check
 - Super Admin bootstrap
@@ -753,14 +753,14 @@ Design characteristics:
 
 - **Frontend:** React 19 + Vite
 - **Routing:** React Router
-- **Authentication UI:** `@react-oauth/google`
+- **Authentication UI:** managed username/password credentials
 - **API client:** Axios
 - **Backend:** Node.js + Express
 - **ORM:** Sequelize
 - **Database:** PostgreSQL
-- **Auth verification:** `google-auth-library`
+- **Auth verification:** salted password hashes plus live credential status checks
 - **Application tokens:** JWT
-- **Password hashing (only if optional local waiter auth is added):** bcrypt
+- **Password hashing:** scrypt
 - **Object storage:** AWS SDK S3 client targeting Cloudflare R2
 - **Reports:** Python primary + Node fallback where feasible
 - **PDF/XLSX:** Python reporting libraries plus ExcelJS/PDFKit fallback

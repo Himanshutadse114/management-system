@@ -34,7 +34,7 @@ function publicMembership(membership) {
   return row;
 }
 
-async function audit(req, action, entityType, entityId, metadata = null, tenantId = null) {
+async function audit(req, action, entityType, entityId, metadata = null, tenantId = null, transaction = null) {
   await AuditLog.create({
     tenantId,
     actorUserId: req.userId,
@@ -43,7 +43,7 @@ async function audit(req, action, entityType, entityId, metadata = null, tenantI
     entityId: entityId ? String(entityId) : null,
     metadata,
     ipAddress: req.ip || null
-  });
+  }, { transaction });
 }
 
 router.get('/tenants', async (_req, res) => {
@@ -204,6 +204,30 @@ router.delete('/tenants/:tenantId', async (req, res, next) => {
       message: error.message,
       database: error.parent?.message || null
     });
+    next(error);
+  }
+});
+
+router.patch('/tenants/:tenantId', async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (name.length < 2 || name.length > 160) {
+      return res.status(400).json({ message: 'Business name must be 2-160 characters.' });
+    }
+    let tenant;
+    await sequelize.transaction(async (transaction) => {
+      tenant = await Tenant.findByPk(req.params.tenantId, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!tenant || tenant.deletedAt || tenant.status === 'DELETED') return;
+      const previousName = tenant.name;
+      tenant.name = name;
+      await tenant.save({ transaction });
+      await audit(req, 'TENANT_NAME_CHANGED', 'Tenant', tenant.id, { previousName, name }, tenant.id, transaction);
+    });
+    if (!tenant || tenant.deletedAt || tenant.status === 'DELETED') {
+      return res.status(404).json({ message: 'Business not found.' });
+    }
+    res.json({ tenant, message: 'Business name updated.' });
+  } catch (error) {
     next(error);
   }
 });
