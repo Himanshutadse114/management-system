@@ -1,29 +1,53 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api, authHeaders } from './api';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'devaToken';
 const SESSION_KEY = 'devaSession';
+const AUTH_REFRESH_TIMEOUT_MS = 12000;
+
+function readStoredItem(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeStoredItem(key, value) {
+  try {
+    if (value == null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
+  } catch (_) {
+    // Mobile browsers can temporarily deny storage. React state still keeps the
+    // current session usable for the lifetime of this page.
+  }
+}
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState(() => readStoredItem(TOKEN_KEY));
   const [session, setSession] = useState(() => {
     try {
-      const raw = localStorage.getItem(SESSION_KEY);
+      const raw = readStoredItem(SESSION_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch (_) {
       return null;
     }
   });
-  const [loading, setLoading] = useState(Boolean(token));
+  // A valid cached session should render immediately on refresh. The server
+  // revalidates it in the background, so a slow mobile connection cannot trap
+  // the user behind the full-page loading spinner.
+  const [loading, setLoading] = useState(Boolean(token && !session));
+  const tokenRef = useRef(token);
+  const bootStartedRef = useRef(false);
 
   function persist(nextToken, nextSession) {
-    setToken(nextToken || null);
+    const normalizedToken = nextToken || null;
+    tokenRef.current = normalizedToken;
+    setToken(normalizedToken);
     setSession(nextSession || null);
-    if (nextToken) localStorage.setItem(TOKEN_KEY, nextToken);
-    else localStorage.removeItem(TOKEN_KEY);
-    if (nextSession) localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
-    else localStorage.removeItem(SESSION_KEY);
+    writeStoredItem(TOKEN_KEY, normalizedToken);
+    writeStoredItem(SESSION_KEY, nextSession ? JSON.stringify(nextSession) : null);
   }
 
   function sessionFromData(data) {
@@ -35,18 +59,25 @@ export function AuthProvider({ children }) {
     };
   }
 
-  async function refresh() {
-    if (!token) {
+  async function refresh(options = {}) {
+    const activeToken = options.token || tokenRef.current;
+    if (!activeToken) {
       setLoading(false);
       return null;
     }
     try {
-      const { data } = await api.get('/auth/status', { headers: authHeaders(token) });
+      const { data } = await api.get('/auth/status', {
+        headers: authHeaders(activeToken),
+        timeout: options.timeoutMs || AUTH_REFRESH_TIMEOUT_MS
+      });
+      if (tokenRef.current !== activeToken) return null;
       const next = sessionFromData(data);
-      persist(token, next);
+      persist(activeToken, next);
       return next;
     } catch (error) {
-      if (error?.response?.status === 401) persist(null, null);
+      if (tokenRef.current === activeToken && [401, 403].includes(error?.response?.status)) {
+        persist(null, null);
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -54,7 +85,9 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    if (token) refresh().catch(() => {});
+    if (bootStartedRef.current) return;
+    bootStartedRef.current = true;
+    if (token) refresh({ token }).catch(() => {});
     else setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
