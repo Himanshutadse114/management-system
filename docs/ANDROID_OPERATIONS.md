@@ -1,6 +1,6 @@
 # Android Operational Workflows
 
-Deva is shipped as an installable responsive PWA for supported Android roles. In Chrome, open the production URL, choose **Install app**, and grant only the permissions needed by the outlet.
+Deva now includes a native Flutter Android app alongside the installable responsive PWA. The native app uses administrator-issued usernames and passwords; the PWA remains available for full browser workflows.
 
 ## Supported roles
 
@@ -11,7 +11,7 @@ Deva is shipped as an installable responsive PWA for supported Android roles. In
 
 ## Device setup
 
-Register each Android terminal under **Settings → Devices** as `TERMINAL`, `KDS`, `KIOSK`, `TOKEN_DISPLAY`, `CALLING_DEVICE`, or `APP` connection. Use **Check in** after installation and monitor `lastSeenAt`. Never share a cashier or waiter Google identity across people.
+Register each Android terminal under **Settings → Devices** as `TERMINAL`, `KDS`, `KIOSK`, `TOKEN_DISPLAY`, `CALLING_DEVICE`, or `APP` connection. Use **Check in** after installation and monitor `lastSeenAt`. Give every person a separate staff username; never share cashier, waiter or manager credentials.
 
 ## Offline behavior
 

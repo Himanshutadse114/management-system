@@ -6,7 +6,7 @@ Multi-tenant management platform for bar + restaurant and wine-shop businesses, 
 
 Core delivery phases are implemented:
 
-- **Phase 1:** Google authentication, live RBAC, tenants, branches, PostgreSQL, R2/Render foundation
+- **Phase 1:** Google web authentication plus administrator-issued Android credentials, live RBAC, tenants, branches, PostgreSQL, R2/Render foundation
 - **Phase 2:** ML-based inventory, products, explicit portion pricing, suppliers, purchases, weighted costing and immutable stock ledger
 - **Phase 3:** Wine-shop/counter POS with payment capture, exact stock deduction, COGS and gross-profit snapshots
 - **Phase 4:** Restaurant tables, public QR menu, waiter orders, payment lifecycle, unresolved-order controls and manager cancellation
@@ -22,7 +22,8 @@ Read the architecture in [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md).
 - **Frontend:** React 19 + Vite
 - **Backend:** Node.js 22 + Express
 - **Database:** PostgreSQL + Sequelize
-- **Authentication:** Google Identity verified server-side + application JWT
+- **Authentication:** Google Identity for web, username/password for Android, application JWT, forced temporary-password change and live RBAC
+- **Android:** Native Flutter app with Super Admin business/owner setup, owner branch/staff setup and live current-platform module summaries
 - **Media/artifacts:** Cloudflare R2 through an S3-compatible storage adapter
 - **Reports:** Python-first PDF/XLSX pipeline with Node fallback
 - **Hosting:** Render Static Site + Render Docker Web Service + Render PostgreSQL

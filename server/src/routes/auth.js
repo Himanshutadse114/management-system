@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const { OAuth2Client } = require('google-auth-library');
-const { User, BranchMembership, TenantMembership, AuditLog } = require('../models');
+const { User, UserCredential, BranchMembership, TenantMembership, AuditLog } = require('../models');
 const { jwtSecret, authenticate, requireApproved } = require('../middleware/auth');
 const {
   normalizeEmail,
@@ -14,6 +14,12 @@ const {
   scopeAccessToTenant,
   canManageTenant
 } = require('../services/accessService');
+const {
+  normalizeUsername,
+  publicEmail,
+  verifyPassword,
+  resetPassword
+} = require('../services/credentialService');
 
 const router = express.Router();
 
@@ -46,13 +52,23 @@ function issueToken(user, claims = {}, expiresIn = null) {
   );
 }
 
-function publicUser(user) {
+function publicUser(user, credential = null) {
   return {
     id: user.id,
-    email: user.email,
+    email: publicEmail(user.email),
+    username: credential?.username || null,
     name: user.name || null,
     avatarUrl: user.avatarUrl || null,
     status: user.status
+  };
+}
+
+function credentialState(credential) {
+  if (!credential) return null;
+  return {
+    username: credential.username,
+    mustChangePassword: credential.mustChangePassword === true,
+    lastUsedAt: credential.lastUsedAt || null
   };
 }
 
@@ -129,6 +145,98 @@ async function resolveGoogleIdentity(req) {
   if (accessToken) return googleIdentityFromAccessToken(accessToken);
   return null;
 }
+
+router.post('/password', authLimiter, async (req, res, next) => {
+  try {
+    const username = normalizeUsername(req.body?.username);
+    const password = String(req.body?.password || '');
+    const credential = username
+      ? await UserCredential.findOne({ where: { username } })
+      : null;
+    const invalid = () => res.status(401).json({
+      message: 'Invalid username or password.',
+      code: 'CREDENTIALS_INVALID'
+    });
+
+    if (!credential) return invalid();
+    if (credential.lockedUntil && new Date(credential.lockedUntil).getTime() > Date.now()) {
+      return res.status(429).json({
+        message: 'This account is temporarily locked after repeated failed attempts. Try again later.',
+        code: 'ACCOUNT_TEMPORARILY_LOCKED'
+      });
+    }
+
+    if (!(await verifyPassword(password, credential.passwordHash))) {
+      credential.failedAttempts = Number(credential.failedAttempts || 0) + 1;
+      if (credential.failedAttempts >= 5) {
+        credential.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        credential.failedAttempts = 0;
+      }
+      await credential.save();
+      return invalid();
+    }
+
+    const user = await User.findByPk(credential.userId);
+    if (!user || user.status !== 'ACTIVE') {
+      return res.status(401).json({ message: 'Account is unavailable.', code: 'ACCOUNT_UNAVAILABLE' });
+    }
+
+    credential.failedAttempts = 0;
+    credential.lockedUntil = null;
+    credential.lastUsedAt = new Date();
+    await credential.save();
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    await activateMatchingInvitations(user);
+    const access = await accessSnapshot(user);
+    return res.json({
+      token: issueToken(user),
+      user: publicUser(user, credential),
+      access,
+      credential: credentialState(credential),
+      pendingApproval: !access.approved,
+      impersonation: null,
+      message: credential.mustChangePassword
+        ? 'Signed in. Create a new private password before continuing.'
+        : 'Signed in successfully.'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/change-password', authenticate, async (req, res, next) => {
+  try {
+    const credential = req.credential || await UserCredential.findOne({ where: { userId: req.userId } });
+    if (!credential) return res.status(404).json({ message: 'Password login is not enabled for this account.', code: 'PASSWORD_LOGIN_UNAVAILABLE' });
+    const currentPassword = String(req.body?.currentPassword || '');
+    if (!(await verifyPassword(currentPassword, credential.passwordHash))) {
+      return res.status(401).json({ message: 'Current password is incorrect.', code: 'CURRENT_PASSWORD_INVALID' });
+    }
+    await resetPassword(credential, req.body?.newPassword, { mustChangePassword: false });
+    const access = req.access || await accessSnapshot(req.user);
+    await AuditLog.create({
+      actorUserId: req.userId,
+      action: 'PASSWORD_CHANGED',
+      entityType: 'User',
+      entityId: req.userId,
+      metadata: { username: credential.username },
+      ipAddress: req.ip || null
+    });
+    return res.json({
+      token: issueToken(req.user),
+      user: publicUser(req.user, credential),
+      access,
+      credential: credentialState(credential),
+      pendingApproval: !access.approved,
+      impersonation: null,
+      message: 'Password changed successfully.'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.post('/google', authLimiter, async (req, res) => {
   try {
@@ -362,8 +470,9 @@ router.post('/impersonation/stop', authenticate, async (req, res, next) => {
 router.get('/status', authenticate, async (req, res) => {
   const access = req.access || await accessSnapshot(req.user);
   res.json({
-    user: publicUser(req.user),
+    user: publicUser(req.user, req.credential),
     access,
+    credential: credentialState(req.credential),
     pendingApproval: !access.approved,
     impersonation: impersonationPayload(req)
   });

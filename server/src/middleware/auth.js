@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User, Branch, BranchMembership } = require('../models');
+const { User, UserCredential, Branch, BranchMembership } = require('../models');
 const {
   accessSnapshot,
   scopeAccessToTenant,
@@ -31,6 +31,7 @@ async function authenticate(req, res, next) {
     req.auth = decoded;
     req.user = user;
     req.userId = user.id;
+    req.credential = await UserCredential.findOne({ where: { userId: user.id } });
 
     if (decoded.impersonatorUserId) {
       const tenantId = String(decoded.impersonationTenantId || '');
@@ -72,6 +73,13 @@ async function authenticate(req, res, next) {
     } else {
       req.auditActorUserId = user.id;
       req.access = await accessSnapshot(user);
+    }
+
+    if (req.credential?.mustChangePassword && req.originalUrl !== '/api/auth/status' && req.originalUrl !== '/api/auth/change-password') {
+      return res.status(403).json({
+        message: 'Change the temporary password before continuing.',
+        code: 'PASSWORD_CHANGE_REQUIRED'
+      });
     }
 
     next();

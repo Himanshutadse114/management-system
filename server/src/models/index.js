@@ -42,6 +42,25 @@ const User = sequelize.define('User', {
   indexes: [{ fields: ['email'] }, { fields: ['googleId'] }]
 });
 
+const UserCredential = sequelize.define('UserCredential', {
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  userId: { type: DataTypes.UUID, allowNull: false, unique: true },
+  username: { type: DataTypes.STRING(64), allowNull: false, unique: true },
+  passwordHash: { type: DataTypes.TEXT, allowNull: false },
+  mustChangePassword: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+  failedAttempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  lockedUntil: { type: DataTypes.DATE, allowNull: true },
+  lastUsedAt: { type: DataTypes.DATE, allowNull: true },
+  passwordChangedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  createdByUserId: { type: DataTypes.UUID, allowNull: true }
+}, {
+  tableName: 'user_credentials',
+  indexes: [
+    { unique: true, fields: ['username'], name: 'user_credentials_username_unique' },
+    { unique: true, fields: ['userId'], name: 'user_credentials_user_unique' }
+  ]
+});
+
 const AccessRequest = sequelize.define('AccessRequest', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   userId: { type: DataTypes.UUID, allowNull: false },
@@ -159,6 +178,8 @@ const {
 } = defineInventoryModels(sequelize, DataTypes);
 
 User.hasMany(TenantMembership, { foreignKey: 'userId', as: 'tenantMemberships' });
+User.hasOne(UserCredential, { foreignKey: 'userId', as: 'credential', onDelete: 'CASCADE' });
+UserCredential.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 TenantMembership.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Tenant.hasMany(TenantMembership, { foreignKey: 'tenantId', as: 'memberships', onDelete: 'CASCADE' });
 TenantMembership.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
@@ -295,6 +316,7 @@ async function bootstrapModels() {
 
 module.exports = {
   User,
+  UserCredential,
   AccessRequest,
   Tenant,
   TenantMembership,

@@ -1,6 +1,29 @@
 const { QueryTypes } = require('sequelize');
 
 const INVENTORY_CORE_ID = '20260825_001_inventory_core';
+const PASSWORD_CREDENTIALS_ID = '20260921_001_password_credentials';
+
+async function passwordCredentialsUp(sequelize, transaction) {
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS user_credentials (
+      id UUID PRIMARY KEY,
+      "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      username VARCHAR(64) NOT NULL,
+      "passwordHash" TEXT NOT NULL,
+      "mustChangePassword" BOOLEAN NOT NULL DEFAULT TRUE,
+      "failedAttempts" INTEGER NOT NULL DEFAULT 0,
+      "lockedUntil" TIMESTAMPTZ NULL,
+      "lastUsedAt" TIMESTAMPTZ NULL,
+      "passwordChangedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "createdByUserId" UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS user_credentials_username_unique ON user_credentials (username)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS user_credentials_user_unique ON user_credentials ("userId")`
+  ];
+  for (const statement of statements) await sequelize.query(statement, { transaction });
+}
 
 async function inventoryCoreUp(sequelize, transaction) {
   const statements = [
@@ -150,7 +173,8 @@ async function inventoryCoreUp(sequelize, transaction) {
 }
 
 const migrations = [
-  { id: INVENTORY_CORE_ID, up: inventoryCoreUp }
+  { id: INVENTORY_CORE_ID, up: inventoryCoreUp },
+  { id: PASSWORD_CREDENTIALS_ID, up: passwordCredentialsUp }
 ];
 
 async function runMigrations(sequelize) {

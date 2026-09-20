@@ -8,21 +8,30 @@ if (isProduction && dialect !== 'postgres') {
 }
 
 const sslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+const databaseUrl = String(process.env.DATABASE_URL || '').trim();
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'management_system',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASS || '',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT || 5432),
-    dialect,
-    logging: false,
-    dialectOptions: sslEnabled
-      ? { ssl: { require: true, rejectUnauthorized: false } }
-      : {}
-  }
-);
+const databaseOptions = {
+  dialect,
+  logging: false,
+  dialectOptions: sslEnabled
+    ? { ssl: { require: true, rejectUnauthorized: false } }
+    : {}
+};
+
+// Render may provide its private PostgreSQL connection as DATABASE_URL. The
+// private/internal URL is preferred when the API and database share a region.
+const sequelize = databaseUrl
+  ? new Sequelize(databaseUrl, databaseOptions)
+  : new Sequelize(
+      process.env.DB_NAME || 'management_system',
+      process.env.DB_USER || 'postgres',
+      process.env.DB_PASS || '',
+      {
+        ...databaseOptions,
+        host: process.env.DB_HOST || 'localhost',
+        port: Number(process.env.DB_PORT || 5432)
+      }
+    );
 
 async function connectDatabase() {
   await sequelize.authenticate();
@@ -66,6 +75,9 @@ async function connectDatabase() {
   await runOperationsMigration(sequelize);
   await runEcosystemMigration(sequelize);
   await runGuestPaymentsMigration(sequelize);
+
+  const { ensureBootstrapSuperAdmin } = require('../services/credentialService');
+  await ensureBootstrapSuperAdmin();
 
   if (String(process.env.NODE_ENV || '').toLowerCase() !== 'test') {
     const { seedDemoData } = require('../services/demoSeedService');

@@ -1,20 +1,22 @@
 # Deva mobile
 
-This folder contains the Flutter foundation for the Deva Android app. It is designed to use the same backend API, PostgreSQL data, Google identity and role-based permissions as the Deva web application.
+This folder contains the native Flutter Android app for Deva. It uses the same backend API, PostgreSQL data and role permissions as the web application.
 
-## Current foundation
+## Current app
 
 - Deva-only branding
-- Google Sign-In
-- Google ID token exchange through `POST /api/auth/google`
+- Username/password sign-in through `POST /api/auth/password`
 - Secure storage of the Deva JWT on Android
 - Session restore through `GET /api/auth/status`
-- Pending-access state
-- Role-aware workspace tiles
+- Forced password change for temporary credentials
+- Super Admin business and owner-account creation
+- Business owner branch and staff-account creation
+- Staff role assignment, suspension and password reset
+- Role-aware current-platform module navigation
 - Assigned branch display
 - Shared API configuration for local development or the deployed backend
 
-The operational mobile screens for stock, sales, restaurant, waiter, cashier, analytics, reports and staff can now be connected one by one to the existing API endpoints without creating a second backend or database.
+Current platform areas represented in the app include stock/batches/stocktakes/transfers, sales/refunds/shifts, restaurant/kitchen/guest orders/reservations, Growth, Owner Control, Ecosystem, Sales & Profit, Reports, Settings, devices and staff access.
 
 ## Create the Android wrapper
 
@@ -30,7 +32,7 @@ flutter pub get
 
 After generation:
 
-1. Set the Android application ID to the production package name registered for Deva in Google Cloud.
+1. Set the Android application ID to the production Deva package name.
 2. Use Android API 23 or newer as the minimum SDK because secure token storage requires it.
 3. Keep Android backup disabled for the application so authentication material is not included in device backups.
 
@@ -42,16 +44,25 @@ In `android/app/src/main/AndroidManifest.xml`:
     ...>
 ```
 
-## Google Sign-In
+## Bootstrap Super Admin
 
-The backend already verifies Google ID tokens against its configured `GOOGLE_CLIENT_ID`. Register the Android application in the same Google Cloud project and add the signing certificate fingerprints for debug and release builds.
+Set these variables on the backend service. Do not commit real passwords:
 
-Pass the web OAuth client ID used by the backend as the server client ID:
+```text
+SUPER_ADMIN_EMAIL=platform-owner@example.com
+SUPER_ADMIN_USERNAME=superadmin
+SUPER_ADMIN_PASSWORD=<strong unique bootstrap password>
+```
+
+The backend creates this password credential only if it does not already exist. Changing the environment variable later does not silently overwrite the database password. Owner and staff temporary passwords must be changed on first sign-in.
+
+Render may keep using only its private/internal PostgreSQL connection in `DATABASE_URL`; an external database URL is not required. The backend also remains compatible with the split `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` and `DB_PASS` variables used by `render.yaml`.
+
+## Run
 
 ```bash
 flutter run \
-  --dart-define=DEVA_API_URL=https://YOUR-DEVA-BACKEND.onrender.com \
-  --dart-define=DEVA_GOOGLE_SERVER_CLIENT_ID=YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com
+  --dart-define=DEVA_API_URL=https://YOUR-DEVA-BACKEND.onrender.com
 ```
 
 For an Android emulator connected to a local backend, the default API URL is already `http://10.0.2.2:5001`.
@@ -60,8 +71,7 @@ For an Android emulator connected to a local backend, the default API URL is alr
 
 ```bash
 flutter build appbundle --release \
-  --dart-define=DEVA_API_URL=https://YOUR-DEVA-BACKEND.onrender.com \
-  --dart-define=DEVA_GOOGLE_SERVER_CLIENT_ID=YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com
+  --dart-define=DEVA_API_URL=https://YOUR-DEVA-BACKEND.onrender.com
 ```
 
 Use the generated `.aab` for Google Play distribution after signing configuration is added.
