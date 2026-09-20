@@ -7,7 +7,7 @@ const { BranchSettings } = require('./branchSettings');
 const { Device, PrintJob } = require('./device');
 
 const USER_STATUS = ['PENDING', 'ACTIVE', 'SUSPENDED'];
-const TENANT_STATUS = ['ACTIVE', 'SUSPENDED'];
+const TENANT_STATUS = ['ACTIVE', 'SUSPENDED', 'DELETED'];
 const MEMBERSHIP_STATUS = ['INVITED', 'ACTIVE', 'SUSPENDED'];
 const TENANT_ROLES = ['TENANT_ADMIN', 'AUDITOR'];
 const BRANCH_ROLES = ['BRANCH_MANAGER', 'INVENTORY_MANAGER', 'CASHIER', 'WAITER', 'AUDITOR'];
@@ -47,11 +47,13 @@ const UserCredential = sequelize.define('UserCredential', {
   userId: { type: DataTypes.UUID, allowNull: false, unique: true },
   username: { type: DataTypes.STRING(64), allowNull: false, unique: true },
   passwordHash: { type: DataTypes.TEXT, allowNull: false },
+  recoveryCodeHash: { type: DataTypes.TEXT, allowNull: true },
   mustChangePassword: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
   failedAttempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   lockedUntil: { type: DataTypes.DATE, allowNull: true },
   lastUsedAt: { type: DataTypes.DATE, allowNull: true },
   passwordChangedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  recoveryCodeChangedAt: { type: DataTypes.DATE, allowNull: true },
   createdByUserId: { type: DataTypes.UUID, allowNull: true }
 }, {
   tableName: 'user_credentials',

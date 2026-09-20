@@ -2,14 +2,11 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const { OAuth2Client } = require('google-auth-library');
 const { User, UserCredential, BranchMembership, TenantMembership, AuditLog } = require('../models');
 const { jwtSecret, authenticate, requireApproved } = require('../middleware/auth');
 const {
   normalizeEmail,
-  isSuperAdmin,
   activateMatchingInvitations,
-  capturePendingRequest,
   accessSnapshot,
   scopeAccessToTenant,
   canManageTenant
@@ -18,13 +15,11 @@ const {
   normalizeUsername,
   publicEmail,
   verifyPassword,
+  verifyRecoveryCode,
   resetPassword
 } = require('../services/credentialService');
 
 const router = express.Router();
-
-const DEVA_ANDROID_GOOGLE_CLIENT_ID =
-  '1001652255296-bp21jkesu61ccbgtgf04e4p7kh22iqef.apps.googleusercontent.com';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -33,16 +28,6 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: 'Too many sign-in attempts. Try again shortly.', code: 'AUTH_RATE_LIMITED' }
 });
-
-function googleClientId() {
-  const value = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-  if (!value) throw new Error('GOOGLE_CLIENT_ID is required.');
-  return value;
-}
-
-function googleAndroidClientId() {
-  return String(process.env.GOOGLE_ANDROID_CLIENT_ID || DEVA_ANDROID_GOOGLE_CLIENT_ID).trim();
-}
 
 function issueToken(user, claims = {}, expiresIn = null) {
   return jwt.sign(
@@ -83,67 +68,6 @@ function impersonationPayload(req) {
     admin: publicUser(req.impersonator),
     staff: publicUser(req.user)
   };
-}
-
-async function googleIdentityFromIdToken(credential) {
-  const client = new OAuth2Client(googleClientId());
-  const ticket = await client.verifyIdToken({
-    idToken: credential,
-    audience: googleClientId()
-  });
-  const payload = ticket.getPayload() || {};
-  return {
-    googleId: String(payload.sub || ''),
-    email: normalizeEmail(payload.email),
-    emailVerified: payload.email_verified === true,
-    name: String(payload.name || '').trim(),
-    avatarUrl: payload.picture || null
-  };
-}
-
-async function googleIdentityFromAccessToken(accessToken) {
-  const client = new OAuth2Client();
-  const tokenInfo = await client.getTokenInfo(accessToken);
-  const allowedAudiences = new Set([googleAndroidClientId(), googleClientId()]);
-
-  if (!allowedAudiences.has(String(tokenInfo.aud || '').trim())) {
-    const error = new Error('Google token was not issued to an approved Deva OAuth client.');
-    error.code = 'GOOGLE_OAUTH_AUDIENCE_REJECTED';
-    throw error;
-  }
-
-  let name = '';
-  let avatarUrl = null;
-  try {
-    client.setCredentials({ access_token: accessToken });
-    const profileResponse = await client.request({
-      url: 'https://openidconnect.googleapis.com/v1/userinfo'
-    });
-    const profile = profileResponse.data || {};
-    if (profile.sub && tokenInfo.sub && String(profile.sub) !== String(tokenInfo.sub)) {
-      throw new Error('Google profile identity did not match the access token.');
-    }
-    name = String(profile.name || '').trim();
-    avatarUrl = profile.picture || null;
-  } catch (error) {
-    console.warn('[auth/google] Google profile lookup skipped:', error.message);
-  }
-
-  return {
-    googleId: String(tokenInfo.sub || tokenInfo.user_id || ''),
-    email: normalizeEmail(tokenInfo.email),
-    emailVerified: tokenInfo.email_verified === true,
-    name,
-    avatarUrl
-  };
-}
-
-async function resolveGoogleIdentity(req) {
-  const credential = String(req.body?.credential || '').trim();
-  const accessToken = String(req.body?.accessToken || '').trim();
-  if (credential) return googleIdentityFromIdToken(credential);
-  if (accessToken) return googleIdentityFromAccessToken(accessToken);
-  return null;
 }
 
 router.post('/password', authLimiter, async (req, res, next) => {
@@ -238,82 +162,21 @@ router.post('/change-password', authenticate, async (req, res, next) => {
   }
 });
 
-router.post('/google', authLimiter, async (req, res) => {
+router.post('/recover-password', authLimiter, async (req, res, next) => {
   try {
-    const identity = await resolveGoogleIdentity(req);
-    if (!identity) {
-      return res.status(400).json({ message: 'Google credential is required.' });
-    }
-
-    const {
-      googleId,
-      email,
-      emailVerified,
-      name,
-      avatarUrl
-    } = identity;
-
-    if (!googleId || !email || emailVerified !== true) {
-      return res.status(401).json({
-        message: 'A verified Google email address is required.',
-        code: 'VERIFIED_GOOGLE_EMAIL_REQUIRED'
-      });
-    }
-
-    let user = await User.findOne({ where: { googleId } });
-    if (user && normalizeEmail(user.email) !== email) {
-      const emailOwner = await User.findOne({ where: { email } });
-      if (emailOwner && emailOwner.id !== user.id) {
-        return res.status(409).json({ message: 'This Google email is linked to another account.' });
-      }
-      user.email = email;
-    }
-
-    if (!user) user = await User.findOne({ where: { email } });
-
-    if (!user) {
-      user = await User.create({
-        email,
-        googleId,
-        name: name || email.split('@')[0],
-        avatarUrl,
-        status: isSuperAdmin(email) ? 'ACTIVE' : 'PENDING',
-        lastLoginAt: new Date()
-      });
-    } else {
-      user.googleId = googleId;
-      if (name) user.name = name;
-      if (avatarUrl) user.avatarUrl = avatarUrl;
-      if (isSuperAdmin(email)) user.status = 'ACTIVE';
-      user.lastLoginAt = new Date();
-      await user.save();
-    }
-
-    await activateMatchingInvitations(user);
+    const username = normalizeUsername(req.body?.username);
+    const credential = username ? await UserCredential.findOne({ where: { username } }) : null;
+    const invalid = () => res.status(401).json({ message: 'Username or recovery code is incorrect.', code: 'RECOVERY_INVALID' });
+    if (!credential?.recoveryCodeHash || !(await verifyRecoveryCode(req.body?.recoveryCode, credential.recoveryCodeHash))) return invalid();
+    const user = await User.findByPk(credential.userId);
+    if (!user || user.status !== 'ACTIVE') return invalid();
     const access = await accessSnapshot(user);
-    if (!access.approved) await capturePendingRequest(user);
-
-    const refreshedAccess = await accessSnapshot(user);
-    return res.status(refreshedAccess.approved ? 200 : 202).json({
-      token: issueToken(user),
-      user: publicUser(user),
-      access: refreshedAccess,
-      pendingApproval: !refreshedAccess.approved,
-      impersonation: null,
-      message: refreshedAccess.approved
-        ? 'Signed in successfully.'
-        : 'Your Google account is verified. An administrator must assign you to a tenant or branch before business data is available.'
-    });
-  } catch (error) {
-    console.error('[auth/google]', error);
-    const oauthRejected = error?.code === 'GOOGLE_OAUTH_AUDIENCE_REJECTED';
-    return res.status(oauthRejected ? 401 : 500).json({
-      message: oauthRejected
-        ? 'Google authentication was issued to an unapproved application.'
-        : 'Google authentication failed.',
-      code: oauthRejected ? 'GOOGLE_OAUTH_AUDIENCE_REJECTED' : 'GOOGLE_AUTH_FAILED'
-    });
-  }
+    const isOwner = access.isSuperAdmin || (access.tenants || []).some((row) => row.role === 'TENANT_ADMIN' && row.status === 'ACTIVE');
+    if (!isOwner) return res.status(403).json({ message: 'Self-service recovery is available to Super Admin and Business Owners.', code: 'RECOVERY_NOT_ALLOWED' });
+    await resetPassword(credential, req.body?.newPassword, { mustChangePassword: false });
+    await AuditLog.create({ actorUserId: user.id, action: 'PASSWORD_RECOVERED', entityType: 'User', entityId: user.id, metadata: { username }, ipAddress: req.ip || null });
+    return res.json({ message: 'Password reset successfully. You can now sign in.' });
+  } catch (error) { next(error); }
 });
 
 router.post('/impersonate', authenticate, requireApproved, async (req, res, next) => {

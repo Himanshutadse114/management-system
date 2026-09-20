@@ -2,6 +2,12 @@ const { QueryTypes } = require('sequelize');
 
 const INVENTORY_CORE_ID = '20260825_001_inventory_core';
 const PASSWORD_CREDENTIALS_ID = '20260921_001_password_credentials';
+const RECOVERY_CODES_ID = '20260921_002_recovery_codes';
+
+async function recoveryCodesUp(sequelize, transaction) {
+  await sequelize.query('ALTER TABLE user_credentials ADD COLUMN IF NOT EXISTS "recoveryCodeHash" TEXT NULL', { transaction });
+  await sequelize.query('ALTER TABLE user_credentials ADD COLUMN IF NOT EXISTS "recoveryCodeChangedAt" TIMESTAMPTZ NULL', { transaction });
+}
 
 async function passwordCredentialsUp(sequelize, transaction) {
   const statements = [
@@ -175,6 +181,7 @@ async function inventoryCoreUp(sequelize, transaction) {
 const migrations = [
   { id: INVENTORY_CORE_ID, up: inventoryCoreUp },
   { id: PASSWORD_CREDENTIALS_ID, up: passwordCredentialsUp }
+  ,{ id: RECOVERY_CODES_ID, up: recoveryCodesUp }
 ];
 
 async function runMigrations(sequelize) {

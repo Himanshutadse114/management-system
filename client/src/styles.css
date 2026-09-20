@@ -235,6 +235,20 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .sa-google-button { min-height: 54px; padding: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--sa-border); border-radius: 9px; background: var(--sa-bg-deep); }
 .sa-google-button > div, .sa-google-button iframe { max-width: 100% !important; }
 .sa-google-hint { margin-top: 6px; color: var(--sa-muted); font-size: 9px; line-height: 1.4; }
+.sa-credential-form, .sa-recovery { display: grid; gap: 12px; margin-top: 16px; }
+.sa-credential-form label, .sa-recovery label { display: grid; gap: 6px; color: var(--sa-soft); font-size: 12px; font-weight: 700; }
+.sa-credential-form input, .sa-recovery input { width: 100%; box-sizing: border-box; border: 1px solid var(--sa-border); border-radius: 10px; padding: 12px; background: var(--sa-bg-deep); color: var(--sa-text); }
+.sa-forgot { border: 0; background: transparent; color: var(--sa-accent); cursor: pointer; }
+.sa-recovery { padding: 14px; border: 1px solid var(--sa-border); border-radius: 12px; background: var(--sa-panel-2); }
+.sa-recovery h3, .sa-recovery p { margin: 0; }
+.credential-input-row { display: flex; gap: 8px; align-items: stretch; }
+.credential-input-row input { flex: 1; min-width: 0; }
+.credential-input-row button, .owner-reset-row button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--scorm-line); border-radius: 9px; padding: 0 11px; background: var(--scorm-surface); color: var(--scorm-ink); cursor: pointer; white-space: nowrap; }
+.owner-reset-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--scorm-line); }
+.owner-reset-row > div { display: grid; gap: 3px; }
+.owner-reset-row span { color: var(--scorm-muted); font-size: 12px; }
+.tenant-delete-modal.elevated { z-index: 1002; }
+@media (max-width: 560px) { .credential-input-row { flex-direction: column; } .credential-input-row button { min-height: 42px; } .owner-reset-row { align-items: flex-start; flex-direction: column; } }
 .sa-divider { margin: 18px 0 0; display: flex; align-items: center; gap: 9px; color: var(--sa-muted-deep); font-size: 7px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; white-space: nowrap; }
 .sa-divider::before, .sa-divider::after { content: ''; flex: 1; height: 1px; background: var(--sa-border); }
 .sa-access-grid { margin-top: 16px; display: grid; gap: 8px; }
@@ -516,6 +530,22 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .ops-entity span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--scorm-subtle); font-size: 9px; }
 .ops-status { min-height: 23px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid var(--scorm-line); border-radius: 999px; color: var(--scorm-subtle); font-size: 8px; font-weight: 700; letter-spacing: .05em; }
 .ops-status.is-active { color: #8BE5C1; background: rgba(111,190,147,.08); border-color: rgba(111,190,147,.20); }
+.ops-row-actions { display: flex; align-items: center; gap: 7px; }
+.ops-delete-button { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 1px solid rgba(231,76,60,.28); border-radius: 8px; background: rgba(231,76,60,.07); color: #ff8e84; cursor: pointer; }
+.ops-delete-button:hover { background: rgba(231,76,60,.15); border-color: rgba(231,76,60,.45); }
+.ops-delete-button:disabled { opacity: .45; cursor: not-allowed; }
+.tenant-delete-modal { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 18px; }
+.tenant-delete-backdrop { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(2,5,11,.78); backdrop-filter: blur(5px); }
+.tenant-delete-card { position: relative; width: min(470px,100%); padding: 24px; border: 1px solid var(--scorm-line); border-radius: 16px; background: var(--scorm-surface); box-shadow: 0 24px 80px rgba(0,0,0,.38); color: var(--scorm-ink); }
+.tenant-delete-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: rgba(231,76,60,.12); color: #ff8e84; }
+.tenant-delete-card h3 { margin: 15px 0 7px; font-size: 20px; }
+.tenant-delete-card p { margin: 0 0 17px; color: var(--scorm-muted); font-size: 10px; line-height: 1.6; }
+.tenant-delete-card label { display: grid; gap: 7px; color: var(--scorm-muted); font-size: 9px; }
+.tenant-delete-card label strong { color: var(--scorm-ink); }
+.tenant-delete-card input { min-height: 42px; padding: 0 11px; border: 1px solid var(--scorm-line); border-radius: 9px; background: var(--scorm-surface-soft); color: var(--scorm-ink); font: inherit; }
+.tenant-delete-actions { margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; }
+.tenant-delete-confirm { min-height: 38px; padding: 0 13px; border: 1px solid rgba(231,76,60,.35); border-radius: 9px; background: #c0392b; color: #fff; font: inherit; font-size: 9px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.tenant-delete-confirm:disabled { opacity: .45; cursor: not-allowed; }
 .ops-empty { min-height: 250px; padding: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--scorm-muted); }
 .scorm-empty-icon { width: 36px; height: 36px; margin-bottom: 10px; border-radius: 10px; }
 .ops-empty strong { color: var(--scorm-ink); font-size: 12px; }

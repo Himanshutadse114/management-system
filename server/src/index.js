@@ -17,7 +17,6 @@ const configuredOrigins = String(process.env.CORS_ORIGIN || '')
   .filter(Boolean);
 
 if (isProduction) {
-  if (!process.env.GOOGLE_CLIENT_ID) throw new Error('Production requires GOOGLE_CLIENT_ID.');
   if (!process.env.SUPER_ADMIN_EMAIL) throw new Error('Production requires SUPER_ADMIN_EMAIL.');
   if (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).length < 32) {
     throw new Error('Production requires a strong JWT_SECRET (32+ characters).');
@@ -51,7 +50,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.get(['/health', '/api', '/api/'], (req, res) => {
-  res.json({ service: 'management-system-backend', status: 'healthy', requestId: req.requestId, timestamp: new Date().toISOString() });
+  res.json({ service: 'management-system-backend', status: 'healthy', release: String(process.env.RENDER_GIT_COMMIT || '').slice(0, 7) || null, requestId: req.requestId, timestamp: new Date().toISOString() });
 });
 
 app.get('/ready', async (req, res) => {

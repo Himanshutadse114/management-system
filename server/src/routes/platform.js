@@ -1,10 +1,13 @@
 const express = require('express');
+const { Op } = require('sequelize');
 const {
   User,
   UserCredential,
   AccessRequest,
   Tenant,
   TenantMembership,
+  Branch,
+  BranchMembership,
   AuditLog,
   TENANT_ROLES
 } = require('../models');
@@ -46,7 +49,10 @@ async function audit(req, action, entityType, entityId, metadata = null, tenantI
 }
 
 router.get('/tenants', async (_req, res) => {
-  const tenants = await Tenant.findAll({ order: [['createdAt', 'DESC']] });
+  const tenants = await Tenant.findAll({
+    where: { status: { [Op.ne]: 'DELETED' } },
+    order: [['createdAt', 'DESC']]
+  });
   res.json({ tenants });
 });
 
@@ -57,14 +63,15 @@ router.post('/tenants', async (req, res, next) => {
     let tenantAdminEmail = normalizeEmail(req.body?.tenantAdminEmail || req.body?.ownerEmail);
     const ownerUsername = String(req.body?.ownerUsername || '').trim();
     const ownerPassword = String(req.body?.ownerPassword || '');
+    const ownerRecoveryCode = String(req.body?.ownerRecoveryCode || '');
     const ownerName = String(req.body?.ownerName || '').trim();
 
     if (name.length < 2 || !slug) {
       return res.status(400).json({ message: 'Tenant name is required.' });
     }
 
-    if ((ownerUsername && !ownerPassword) || (!ownerUsername && ownerPassword)) {
-      return res.status(400).json({ message: 'Owner username and temporary password are both required.' });
+    if (!ownerUsername || !ownerPassword || !ownerRecoveryCode) {
+      return res.status(400).json({ message: 'Owner username, temporary password and recovery code are required.' });
     }
 
     const existing = await Tenant.findOne({ where: { slug } });
@@ -85,6 +92,7 @@ router.post('/tenants', async (req, res, next) => {
         ownerAccount = await createPasswordAccount({
           username: ownerUsername,
           password: ownerPassword,
+          recoveryCode: ownerRecoveryCode,
           name: ownerName || ownerUsername,
           email: tenantAdminEmail || null,
           createdByUserId: req.userId,
@@ -126,6 +134,55 @@ router.post('/tenants', async (req, res, next) => {
     });
   } catch (error) {
     if (error?.name === 'SequelizeUniqueConstraintError') return res.status(409).json({ message: 'Business, username or email already exists.' });
+    next(error);
+  }
+});
+
+router.delete('/tenants/:tenantId', async (req, res, next) => {
+  try {
+    const tenant = await Tenant.findByPk(req.params.tenantId);
+    if (!tenant || tenant.status === 'DELETED') {
+      return res.status(404).json({ message: 'Business not found.' });
+    }
+
+    const confirmationName = String(req.body?.confirmationName || '').trim();
+    if (confirmationName !== tenant.name) {
+      return res.status(400).json({
+        message: 'Type the exact business name to confirm deletion.',
+        code: 'BUSINESS_DELETE_CONFIRMATION_REQUIRED'
+      });
+    }
+
+    const previousStatus = tenant.status;
+    await sequelize.transaction(async (transaction) => {
+      await TenantMembership.update(
+        { status: 'SUSPENDED' },
+        { where: { tenantId: tenant.id }, transaction }
+      );
+      await BranchMembership.update(
+        { status: 'SUSPENDED' },
+        { where: { tenantId: tenant.id }, transaction }
+      );
+      await Branch.update(
+        { status: 'SUSPENDED' },
+        { where: { tenantId: tenant.id }, transaction }
+      );
+      tenant.status = 'DELETED';
+      await tenant.save({ transaction });
+    });
+
+    await audit(req, 'TENANT_DELETED', 'Tenant', tenant.id, {
+      name: tenant.name,
+      slug: tenant.slug,
+      previousStatus,
+      retention: 'Business records retained for audit and accounting integrity.'
+    }, tenant.id);
+
+    res.json({
+      message: 'Business deleted. Branch and user access has been revoked; audit and accounting records were retained.',
+      tenant: { id: tenant.id, name: tenant.name, status: tenant.status }
+    });
+  } catch (error) {
     next(error);
   }
 });

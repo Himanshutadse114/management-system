@@ -40,13 +40,13 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 30d
-      - key: GOOGLE_CLIENT_ID
-        sync: false
       - key: SUPER_ADMIN_EMAIL
         sync: false
       - key: SUPER_ADMIN_USERNAME
         sync: false
       - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: SUPER_ADMIN_RECOVERY_CODE
         sync: false
       - key: CORS_ORIGIN
         sync: false
@@ -79,8 +79,6 @@ services:
           type: web
           name: management-system-backend
           envVarKey: RENDER_EXTERNAL_URL
-      - key: VITE_GOOGLE_CLIENT_ID
-        sync: false
     routes:
       - type: rewrite
         source: /*

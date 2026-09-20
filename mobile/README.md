@@ -18,9 +18,9 @@ This folder contains the native Flutter Android app for Deva. It uses the same b
 
 Current platform areas represented in the app include stock/batches/stocktakes/transfers, sales/refunds/shifts, restaurant/kitchen/guest orders/reservations, Growth, Owner Control, Ecosystem, Sales & Profit, Reports, Settings, devices and staff access.
 
-## Create the Android wrapper
+## Create the Android project files
 
-Flutter-generated Android wrapper files are intentionally not hand-written in Git because Flutter should generate them for the installed SDK version.
+Flutter-generated Android project files are created by the installed Flutter SDK.
 
 From the repository root:
 

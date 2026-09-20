@@ -1,6 +1,5 @@
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './AuthContext';
 import { LanguageProvider } from './LanguageContext';
 import App from './App';
@@ -21,8 +20,6 @@ import './shell-layout-final.css';
 import './publicMenuLightFix.css';
 import './publicMenuHeroPolish.css';
 import './deva-typography.css';
-
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 function publicMenuToken() {
   if (typeof window === 'undefined') return null;
@@ -54,12 +51,10 @@ root.render(
       <Suspense fallback={<div className="app-loading">Loading Deva...</div>}>{menuToken || storeSlug ? (
         <PublicMenu qrToken={menuToken} storeSlug={storeSlug} />
       ) : (
-        <GoogleOAuthProvider clientId={googleClientId}>
-          <AuthProvider>
-            <App />
-            <MenuImageManager />
-          </AuthProvider>
-        </GoogleOAuthProvider>
+        <AuthProvider>
+          <App />
+          <MenuImageManager />
+        </AuthProvider>
       )}</Suspense>
     </LanguageProvider>
   </React.StrictMode>

@@ -50,6 +50,17 @@ async function hashPassword(value) {
   return `scrypt$16384$8$1$${salt.toString('base64')}$${key.toString('base64')}`;
 }
 
+async function hashRecoveryCode(value) {
+  const code = String(value || '').trim().toUpperCase();
+  if (code.length < 12 || code.length > 128) {
+    const error = new Error('Recovery code must be at least 12 characters.');
+    error.status = 400; error.code = 'RECOVERY_CODE_INVALID'; throw error;
+  }
+  const salt = crypto.randomBytes(16);
+  const key = await scrypt(code, salt, SCRYPT_KEY_LENGTH, { N: 16384, r: 8, p: 1 });
+  return `scrypt$16384$8$1$${salt.toString('base64')}$${key.toString('base64')}`;
+}
+
 async function verifyPassword(value, encoded) {
   try {
     const [algorithm, n, r, p, saltValue, keyValue] = String(encoded || '').split('$');
@@ -64,7 +75,11 @@ async function verifyPassword(value, encoded) {
   }
 }
 
-async function createPasswordAccount({ username, password, name, email, createdByUserId, mustChangePassword = true, transaction }) {
+async function verifyRecoveryCode(value, encoded) {
+  return verifyPassword(String(value || '').trim().toUpperCase(), encoded);
+}
+
+async function createPasswordAccount({ username, password, recoveryCode, name, email, createdByUserId, mustChangePassword = true, transaction }) {
   const normalizedUsername = validateUsername(username);
   const normalizedEmail = normalizeEmail(email) || internalEmailFor(normalizedUsername);
   if (email && !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
@@ -106,6 +121,8 @@ async function createPasswordAccount({ username, password, name, email, createdB
     userId: user.id,
     username: normalizedUsername,
     passwordHash: await hashPassword(password),
+    recoveryCodeHash: recoveryCode ? await hashRecoveryCode(recoveryCode) : null,
+    recoveryCodeChangedAt: recoveryCode ? new Date() : null,
     mustChangePassword,
     failedAttempts: 0,
     lockedUntil: null,
@@ -151,6 +168,8 @@ async function ensureBootstrapSuperAdmin() {
       userId: user.id,
       username,
       passwordHash: await hashPassword(passwordValue),
+      recoveryCodeHash: process.env.SUPER_ADMIN_RECOVERY_CODE ? await hashRecoveryCode(process.env.SUPER_ADMIN_RECOVERY_CODE) : null,
+      recoveryCodeChangedAt: process.env.SUPER_ADMIN_RECOVERY_CODE ? new Date() : null,
       mustChangePassword: false,
       failedAttempts: 0,
       passwordChangedAt: new Date()
@@ -158,6 +177,10 @@ async function ensureBootstrapSuperAdmin() {
     console.log(`[credentials] bootstrap Super Admin username created: ${username}`);
   } else if (credential.username !== username || credential.userId !== user.id) {
     throw new Error('Bootstrap Super Admin username conflicts with an existing account.');
+  } else if (!credential.recoveryCodeHash && process.env.SUPER_ADMIN_RECOVERY_CODE) {
+    credential.recoveryCodeHash = await hashRecoveryCode(process.env.SUPER_ADMIN_RECOVERY_CODE);
+    credential.recoveryCodeChangedAt = new Date();
+    await credential.save();
   }
   return { user, credential };
 }
@@ -170,6 +193,8 @@ module.exports = {
   publicEmail,
   hashPassword,
   verifyPassword,
+  hashRecoveryCode,
+  verifyRecoveryCode,
   createPasswordAccount,
   resetPassword,
   ensureBootstrapSuperAdmin

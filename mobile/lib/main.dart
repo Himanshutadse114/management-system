@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -9,9 +11,60 @@ const _dark = Color(0xFF121714);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorWidget.builder =
+      (details) => const ColoredBox(
+        color: _surface,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Something went wrong on this screen. Please go back and try again.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _ink, fontSize: 16),
+            ),
+          ),
+        ),
+      );
   final auth = AuthController();
   await auth.initialise();
   runApp(DevaApp(auth: auth));
+}
+
+String _generatePassword([int length = 16]) {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const numbers = '23456789';
+  const symbols = '!@#%*-_';
+  final random = Random.secure();
+  final characters = <String>[
+    upper[random.nextInt(upper.length)],
+    lower[random.nextInt(lower.length)],
+    numbers[random.nextInt(numbers.length)],
+    symbols[random.nextInt(symbols.length)],
+  ];
+  final all = '$upper$lower$numbers$symbols';
+  while (characters.length < length) {
+    characters.add(all[random.nextInt(all.length)]);
+  }
+  characters.shuffle(random);
+  return characters.join();
+}
+
+String _generateRecoveryCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  final random = Random.secure();
+  String block() =>
+      List.generate(5, (_) => alphabet[random.nextInt(alphabet.length)]).join();
+  return 'DEVA-${block()}-${block()}-${block()}';
+}
+
+Future<void> _disposeAfterDialog(
+  Iterable<TextEditingController> controllers,
+) async {
+  await Future<void>.delayed(const Duration(milliseconds: 350));
+  for (final controller in controllers) {
+    controller.dispose();
+  }
 }
 
 class DevaApp extends StatelessWidget {
@@ -232,6 +285,24 @@ class AuthController extends ChangeNotifier {
   Future<Response<dynamic>> patch(String path, {Object? data}) =>
       _dio.patch<dynamic>(path, data: data, options: _authOptions);
 
+  Future<Response<dynamic>> delete(String path, {Object? data}) =>
+      _dio.delete<dynamic>(path, data: data, options: _authOptions);
+
+  Future<void> recoverPassword(
+    String username,
+    String recoveryCode,
+    String newPassword,
+  ) async {
+    await _dio.post<dynamic>(
+      '/auth/recover-password',
+      data: {
+        'username': username.trim(),
+        'recoveryCode': recoveryCode.trim(),
+        'newPassword': newPassword,
+      },
+    );
+  }
+
   Future<void> _clearLocalSession() async {
     token = null;
     session = null;
@@ -314,6 +385,119 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     await widget.auth.signIn(_username.text, _password.text);
+  }
+
+  Future<void> _forgotPassword() async {
+    final username = TextEditingController(text: _username.text);
+    final recoveryCode = TextEditingController();
+    final newPassword = TextEditingController(text: _generatePassword());
+    String? error;
+    bool saving = false;
+    final completed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (dialogContext) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  title: const Text('Recover password'),
+                  content: SizedBox(
+                    width: 460,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Use the private recovery code saved when the Super Admin or Business Owner account was created.',
+                          ),
+                          if (error != null) ...[
+                            const SizedBox(height: 10),
+                            ErrorBanner(message: error!),
+                          ],
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: username,
+                            decoration: const InputDecoration(
+                              labelText: 'Username',
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: recoveryCode,
+                            decoration: const InputDecoration(
+                              labelText: 'Recovery code',
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: newPassword,
+                            decoration: InputDecoration(
+                              labelText: 'New password',
+                              suffixIcon: IconButton(
+                                tooltip: 'Generate strong password',
+                                onPressed:
+                                    () => setDialogState(
+                                      () =>
+                                          newPassword.text =
+                                              _generatePassword(),
+                                    ),
+                                icon: const Icon(Icons.auto_awesome_rounded),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed:
+                          saving
+                              ? null
+                              : () => Navigator.pop(dialogContext, false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed:
+                          saving
+                              ? null
+                              : () async {
+                                setDialogState(() {
+                                  saving = true;
+                                  error = null;
+                                });
+                                try {
+                                  await widget.auth.recoverPassword(
+                                    username.text,
+                                    recoveryCode.text,
+                                    newPassword.text,
+                                  );
+                                  if (dialogContext.mounted) {
+                                    Navigator.pop(dialogContext, true);
+                                  }
+                                } catch (exception) {
+                                  setDialogState(() {
+                                    saving = false;
+                                    error = _apiMessage(exception);
+                                  });
+                                }
+                              },
+                      child: Text(saving ? 'Resetting…' : 'Reset password'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+    if (completed == true && mounted) {
+      _username.text = username.text;
+      _password.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset. Sign in with the new password.'),
+        ),
+      );
+    }
+    await _disposeAfterDialog([username, recoveryCode, newPassword]);
   }
 
   @override
@@ -438,6 +622,10 @@ class _SignInScreenState extends State<SignInScreen> {
                                   )
                                   : const Icon(Icons.login_rounded),
                           label: Text(auth.busy ? 'Signing in…' : 'Sign in'),
+                        ),
+                        TextButton(
+                          onPressed: auth.busy ? null : _forgotPassword,
+                          child: const Text('Forgot password?'),
                         ),
                       ],
                     ),
@@ -800,7 +988,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'These modules are derived from the same permissions used by the web app.',
+              'Your available tools are based on your assigned role and branch permissions.',
               style: TextStyle(color: Colors.grey.shade600, height: 1.45),
             ),
             const SizedBox(height: 16),
@@ -1319,7 +1507,8 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
     final ownerName = TextEditingController();
     final username = TextEditingController();
     final email = TextEditingController();
-    final password = TextEditingController();
+    final password = TextEditingController(text: _generatePassword());
+    final recoveryCode = TextEditingController(text: _generateRecoveryCode());
     String? dialogError;
     bool saving = false;
     final created = await showDialog<bool>(
@@ -1343,6 +1532,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                       'ownerUsername': username.text,
                       'ownerEmail': email.text,
                       'ownerPassword': password.text,
+                      'ownerRecoveryCode': recoveryCode.text,
                     },
                   );
                   if (dialogContext.mounted) Navigator.pop(dialogContext, true);
@@ -1405,11 +1595,37 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                         const SizedBox(height: 10),
                         TextField(
                           controller: password,
-                          obscureText: true,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Temporary password *',
                             helperText:
                                 '10+ characters, upper/lowercase and a number',
+                            suffixIcon: IconButton(
+                              tooltip: 'Generate strong password',
+                              onPressed:
+                                  () => setDialogState(
+                                    () => password.text = _generatePassword(),
+                                  ),
+                              icon: const Icon(Icons.auto_awesome_rounded),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: recoveryCode,
+                          decoration: InputDecoration(
+                            labelText: 'Private recovery code *',
+                            helperText:
+                                'Give this once to the owner for forgotten-password recovery.',
+                            suffixIcon: IconButton(
+                              tooltip: 'Generate recovery code',
+                              onPressed:
+                                  () => setDialogState(
+                                    () =>
+                                        recoveryCode.text =
+                                            _generateRecoveryCode(),
+                                  ),
+                              icon: const Icon(Icons.key_rounded),
+                            ),
                           ),
                         ),
                       ],
@@ -1433,13 +1649,91 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
             },
           ),
     );
-    name.dispose();
-    slug.dispose();
-    ownerName.dispose();
-    username.dispose();
-    email.dispose();
-    password.dispose();
+    await _disposeAfterDialog([
+      name,
+      slug,
+      ownerName,
+      username,
+      email,
+      password,
+      recoveryCode,
+    ]);
     if (created == true) await _load();
+  }
+
+  Future<void> _deleteBusiness(Map<String, dynamic> tenant) async {
+    final confirmation = TextEditingController();
+    final deleted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (dialogContext) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  icon: const Icon(
+                    Icons.delete_forever_rounded,
+                    color: Colors.red,
+                  ),
+                  title: Text('Delete ${tenant['name']}?'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'All owner, staff and branch access will stop immediately. Accounting and audit records will be retained safely.',
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: confirmation,
+                        onChanged: (_) => setDialogState(() {}),
+                        decoration: InputDecoration(
+                          labelText: 'Type ${tenant['name']} to confirm',
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Keep business'),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                      ),
+                      onPressed:
+                          confirmation.text == '${tenant['name']}'
+                              ? () async {
+                                try {
+                                  await widget.auth.delete(
+                                    '/platform/tenants/${tenant['id']}',
+                                    data: {
+                                      'confirmationName': confirmation.text,
+                                    },
+                                  );
+                                  if (dialogContext.mounted) {
+                                    Navigator.pop(dialogContext, true);
+                                  }
+                                } catch (error) {
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(
+                                      dialogContext,
+                                    ).showSnackBar(
+                                      SnackBar(
+                                        content: Text(_apiMessage(error)),
+                                      ),
+                                    );
+                                  }
+                                }
+                              }
+                              : null,
+                      child: const Text('Delete business'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+    await _disposeAfterDialog([confirmation]);
+    if (deleted == true) await _load();
   }
 
   @override
@@ -1519,7 +1813,20 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
                           subtitle: Text(
                             '${tenant['slug']} · ${tenant['status']}',
                           ),
-                          trailing: const Icon(Icons.chevron_right_rounded),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: 'Delete business',
+                                onPressed: () => _deleteBusiness(tenant),
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Colors.red,
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded),
+                            ],
+                          ),
                           onTap:
                               () => Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -1584,7 +1891,7 @@ class _BusinessOwnersScreenState extends State<BusinessOwnersScreen> {
   }
 
   Future<void> _reset(Map<String, dynamic> membership) async {
-    final password = TextEditingController();
+    final password = TextEditingController(text: _generatePassword());
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
@@ -1592,10 +1899,13 @@ class _BusinessOwnersScreenState extends State<BusinessOwnersScreen> {
             title: const Text('Reset owner password'),
             content: TextField(
               controller: password,
-              obscureText: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'New temporary password',
                 helperText: 'The owner must change it after sign in.',
+                suffixIcon: IconButton(
+                  onPressed: () => password.text = _generatePassword(),
+                  icon: const Icon(Icons.auto_awesome_rounded),
+                ),
               ),
             ),
             actions: [
@@ -1630,7 +1940,7 @@ class _BusinessOwnersScreenState extends State<BusinessOwnersScreen> {
         }
       }
     }
-    password.dispose();
+    await _disposeAfterDialog([password]);
   }
 
   @override
@@ -1843,9 +2153,7 @@ class _OwnerAdminScreenState extends State<OwnerAdminScreen> {
         }
       }
     }
-    name.dispose();
-    code.dispose();
-    address.dispose();
+    await _disposeAfterDialog([name, code, address]);
   }
 
   Future<void> _createStaff() async {
@@ -1853,7 +2161,7 @@ class _OwnerAdminScreenState extends State<OwnerAdminScreen> {
     final name = TextEditingController();
     final username = TextEditingController();
     final email = TextEditingController();
-    final password = TextEditingController();
+    final password = TextEditingController(text: _generatePassword());
     String role = 'WAITER';
     final accepted = await showDialog<bool>(
       context: context,
@@ -1893,11 +2201,18 @@ class _OwnerAdminScreenState extends State<OwnerAdminScreen> {
                           const SizedBox(height: 10),
                           TextField(
                             controller: password,
-                            obscureText: true,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Temporary password',
                               helperText:
                                   '10+ characters, upper/lowercase and a number',
+                              suffixIcon: IconButton(
+                                tooltip: 'Generate strong password',
+                                onPressed:
+                                    () => setDialogState(
+                                      () => password.text = _generatePassword(),
+                                    ),
+                                icon: const Icon(Icons.auto_awesome_rounded),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -1970,10 +2285,7 @@ class _OwnerAdminScreenState extends State<OwnerAdminScreen> {
         }
       }
     }
-    name.dispose();
-    username.dispose();
-    email.dispose();
-    password.dispose();
+    await _disposeAfterDialog([name, username, email, password]);
   }
 
   Future<void> _toggleStatus(Map<String, dynamic> membership) async {
@@ -1994,7 +2306,7 @@ class _OwnerAdminScreenState extends State<OwnerAdminScreen> {
   }
 
   Future<void> _resetPassword(Map<String, dynamic> membership) async {
-    final password = TextEditingController();
+    final password = TextEditingController(text: _generatePassword());
     final accepted = await showDialog<bool>(
       context: context,
       builder:
@@ -2002,9 +2314,12 @@ class _OwnerAdminScreenState extends State<OwnerAdminScreen> {
             title: const Text('Reset staff password'),
             content: TextField(
               controller: password,
-              obscureText: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'New temporary password',
+                suffixIcon: IconButton(
+                  onPressed: () => password.text = _generatePassword(),
+                  icon: const Icon(Icons.auto_awesome_rounded),
+                ),
               ),
             ),
             actions: [
@@ -2039,7 +2354,7 @@ class _OwnerAdminScreenState extends State<OwnerAdminScreen> {
         }
       }
     }
-    password.dispose();
+    await _disposeAfterDialog([password]);
   }
 
   @override

@@ -6,7 +6,7 @@ Multi-tenant management platform for bar + restaurant and wine-shop businesses, 
 
 Core delivery phases are implemented:
 
-- **Phase 1:** Google web authentication plus administrator-issued Android credentials, live RBAC, tenants, branches, PostgreSQL, R2/Render foundation
+- **Phase 1:** Administrator-issued web and Android credentials, live RBAC, tenants, branches, PostgreSQL, R2/Render foundation
 - **Phase 2:** ML-based inventory, products, explicit portion pricing, suppliers, purchases, weighted costing and immutable stock ledger
 - **Phase 3:** Wine-shop/counter POS with payment capture, exact stock deduction, COGS and gross-profit snapshots
 - **Phase 4:** Restaurant tables, public QR menu, waiter orders, payment lifecycle, unresolved-order controls and manager cancellation
@@ -22,7 +22,7 @@ Read the architecture in [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md).
 - **Frontend:** React 19 + Vite
 - **Backend:** Node.js 22 + Express
 - **Database:** PostgreSQL + Sequelize
-- **Authentication:** Google Identity for web, username/password for Android, application JWT, forced temporary-password change and live RBAC
+- **Authentication:** Username/password on web and Android, application JWT, forced temporary-password change, private recovery codes and live RBAC
 - **Android:** Native Flutter app with Super Admin business/owner setup, owner branch/staff setup and live current-platform module summaries
 - **Media/artifacts:** Cloudflare R2 through an S3-compatible storage adapter
 - **Reports:** Python-first PDF/XLSX pipeline with Node fallback
@@ -41,7 +41,7 @@ An idempotent demo dataset is automatically created after database migrations un
 
 The demo includes alcohol stock and explicit 30/60/90/full-bottle pricing, suppliers, purchases, six restaurant tables with QR tokens, wine-shop sales, paid and unresolved waiter orders, expenses, wastage, analytics data and a full food menu. Food sections include starters, main course, rice & biryani, breads, bar snacks, mocktails/beverages and desserts.
 
-The three demo users are created by email with `googleId` unset. On first successful Google sign-in, the backend links the verified Google identity to the existing demo user and the assigned role is immediately available.
+Super Admin creates each business owner login, and business owners create their staff logins. Temporary passwords must be changed at first sign-in.
 
 ## Local setup
 

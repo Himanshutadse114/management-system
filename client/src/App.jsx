@@ -1,5 +1,4 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { GoogleLogin } from "@react-oauth/google";
 import {
   AlertTriangle,
   Banknote,
@@ -21,6 +20,9 @@ import {
   Store,
   Sun,
   TrendingUp,
+  Trash2,
+  KeyRound,
+  WandSparkles,
   UsersRound,
   Workflow,
   PlugZap,
@@ -32,6 +34,7 @@ import { useAuth } from "./AuthContext";
 import { api, apiErrorMessage, authHeaders } from "./api";
 import { LanguageSwitcher, useLanguage } from "./LanguageContext";
 import FilledNavIcon from "./FilledNavIcon";
+import { generateRecoveryCode, generateStrongPassword } from "./credentialUtils";
 const InventoryWorkspace = lazy(() => import("./InventoryWorkspace"));
 const SalesWorkspace = lazy(() => import("./SalesWorkspace"));
 const RestaurantManagerWorkspace = lazy(
@@ -150,38 +153,39 @@ function ThemeToggle({ theme, onToggle, auth = false }) {
   );
 }
 
-function getGoogleButtonWidth() {
-  if (typeof window === "undefined") return 400;
-  return Math.max(220, Math.min(400, window.innerWidth - 82));
-}
-
 function LoginScreen() {
-  const { loginWithGoogle } = useAuth();
+  const { loginWithPassword } = useAuth();
   const { t, locale } = useLanguage();
   const [theme, toggleTheme] = usePlatformTheme();
-  const [googleButtonWidth, setGoogleButtonWidth] =
-    useState(getGoogleButtonWidth);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recovery, setRecovery] = useState({ username: "", code: "", password: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    const update = () => setGoogleButtonWidth(getGoogleButtonWidth());
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  async function handleCredential(response) {
-    if (!response?.credential)
-      return setError("Google Sign-In did not return a valid credential.");
+  async function handleCredential(event) {
+    event.preventDefault();
     try {
       setBusy(true);
       setError("");
-      await loginWithGoogle(response.credential);
+      await loginWithPassword(username.trim(), password);
     } catch (err) {
       setError(apiErrorMessage(err));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function recoverPassword(event) {
+    event.preventDefault();
+    try {
+      setBusy(true); setError("");
+      await api.post("/auth/recover-password", {
+        username: recovery.username.trim(), recoveryCode: recovery.code.trim(), newPassword: recovery.password,
+      });
+      setUsername(recovery.username.trim()); setPassword(""); setRecoveryOpen(false);
+    } catch (err) { setError(apiErrorMessage(err)); }
+    finally { setBusy(false); }
   }
 
   const english = locale === "en";
@@ -238,7 +242,7 @@ function LoginScreen() {
               </div>
               <div>
                 {english
-                  ? "Sign in with the Google account your admin has assigned to you. You will only see the work meant for your role."
+                  ? "Sign in with the username and password assigned by your administrator. You will only see the work meant for your role."
                   : t("auth.secureBody")}
               </div>
             </div>
@@ -252,36 +256,24 @@ function LoginScreen() {
             </h2>
             <p className="sa-form-sub">
               {english
-                ? "Use your assigned Google account to continue."
+                ? "Use your assigned username and password to continue."
                 : t("auth.signInCopy")}
             </p>
             {error && <div className="sa-error">{error}</div>}
-            <div
-              className={busy ? "sa-google-block is-busy" : "sa-google-block"}
-            >
-              <div className="sa-google-label">
-                <ShieldCheck size={13} />{" "}
-                {english ? "Continue with Google" : t("auth.googleAccount")}
-              </div>
-              <div className="sa-google-button">
-                <GoogleLogin
-                  onSuccess={handleCredential}
-                  onError={() =>
-                    setError("Google Sign-In failed. Please try again.")
-                  }
-                  theme="outline"
-                  size="large"
-                  shape="rectangular"
-                  text="continue_with"
-                  width={String(googleButtonWidth)}
-                />
-              </div>
-              <div className="sa-google-hint">
-                {english
-                  ? "The system opens the correct screen for your assigned job automatically."
-                  : t("auth.pendingHint")}
-              </div>
-            </div>
+            <form className="sa-credential-form" onSubmit={handleCredential}>
+              <label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required /></label>
+              <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label>
+              <button className="scorm-button-primary" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+              <button type="button" className="sa-forgot" onClick={() => { setRecoveryOpen(true); setRecovery((current) => ({ ...current, username })); }}>Forgot password?</button>
+            </form>
+            {recoveryOpen && <form className="sa-recovery" onSubmit={recoverPassword}>
+              <h3>Recover password</h3>
+              <p>Available to Super Admin and Business Owners who saved their private recovery code.</p>
+              <label>Username<input value={recovery.username} onChange={(e)=>setRecovery({...recovery,username:e.target.value})} required /></label>
+              <label>Recovery code<input value={recovery.code} onChange={(e)=>setRecovery({...recovery,code:e.target.value})} required /></label>
+              <label>New password<div className="credential-input-row"><input type="text" value={recovery.password} onChange={(e)=>setRecovery({...recovery,password:e.target.value})} required /><button type="button" onClick={()=>setRecovery({...recovery,password:generateStrongPassword()})}><WandSparkles size={14}/> Generate</button></div></label>
+              <div className="tenant-delete-actions"><button type="button" className="scorm-button-secondary" onClick={()=>setRecoveryOpen(false)}>Cancel</button><button className="scorm-button-primary" disabled={busy}>Reset password</button></div>
+            </form>}
             <div className="sa-divider">
               <span>
                 {english
@@ -371,7 +363,7 @@ function PendingScreen() {
             <ShieldCheck size={26} />
           </div>
           <div className="sa-kicker">
-            {english ? "Google account verified" : t("auth.identityVerified")}
+            {english ? "Account verified" : t("auth.identityVerified")}
           </div>
           <h1>
             {english ? "Your access is not assigned yet" : t("auth.waiting")}
@@ -410,6 +402,23 @@ function PendingScreen() {
   );
 }
 
+function ChangePasswordScreen() {
+  const { changePassword, logout } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(event) {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) return setError("New passwords do not match.");
+    try { setBusy(true); setError(""); await changePassword(currentPassword, newPassword); }
+    catch (err) { setError(apiErrorMessage(err)); } finally { setBusy(false); }
+  }
+  function generate() { const value = generateStrongPassword(); setNewPassword(value); setConfirmPassword(value); }
+  return <div className="scorm-auth-workbench scorm-theme-light"><main className="pending-card auth-enter"><div className="pending-mark"><KeyRound size={26}/></div><h1>Choose your private password</h1><p>Replace the temporary password before using the system.</p>{error&&<div className="sa-error">{error}</div>}<form className="sa-credential-form" onSubmit={submit}><label>Temporary password<input type="password" value={currentPassword} onChange={(e)=>setCurrentPassword(e.target.value)} required/></label><label>New password<div className="credential-input-row"><input type="text" value={newPassword} onChange={(e)=>setNewPassword(e.target.value)} required/><button type="button" onClick={generate}><WandSparkles size={14}/>Generate</button></div></label><label>Confirm new password<input type="text" value={confirmPassword} onChange={(e)=>setConfirmPassword(e.target.value)} required/></label><button className="scorm-button-primary" disabled={busy}>{busy?"Saving…":"Save password"}</button><button type="button" className="scorm-button-secondary" onClick={logout}>Sign out</button></form></main></div>;
+}
+
 function SectionHeader({ eyebrow, title, count, icon: Icon }) {
   return (
     <div className="scorm-panel-header ops-panel-header">
@@ -431,8 +440,18 @@ function PlatformTenants({ token }) {
   const [tenants, setTenants] = useState([]);
   const [name, setName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerUsername, setOwnerUsername] = useState("");
+  const [ownerPassword, setOwnerPassword] = useState("");
+  const [ownerRecoveryCode, setOwnerRecoveryCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [ownerTarget, setOwnerTarget] = useState(null);
+  const [owners, setOwners] = useState([]);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetPassword, setResetPassword] = useState("");
 
   async function load() {
     try {
@@ -455,11 +474,41 @@ function PlatformTenants({ token }) {
       setError("");
       await api.post(
         "/platform/tenants",
-        { name, tenantAdminEmail: adminEmail },
+        { name, ownerName, ownerUsername, ownerEmail: adminEmail, ownerPassword, ownerRecoveryCode },
         { headers: authHeaders(token) },
       );
       setName("");
       setAdminEmail("");
+      setOwnerName(""); setOwnerUsername(""); setOwnerPassword(""); setOwnerRecoveryCode("");
+      await load();
+    } catch (err) {
+      setError(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openOwners(tenant) {
+    try { setBusy(true); setError(""); const { data } = await api.get(`/platform/tenants/${tenant.id}/admins`, { headers: authHeaders(token) }); setOwners(data.admins || []); setOwnerTarget(tenant); }
+    catch (err) { setError(apiErrorMessage(err)); } finally { setBusy(false); }
+  }
+
+  async function resetOwnerPassword() {
+    try { setBusy(true); setError(""); await api.post(`/platform/tenants/${ownerTarget.id}/admins/${resetTarget.id}/reset-password`, { temporaryPassword: resetPassword }, { headers: authHeaders(token) }); setResetTarget(null); setResetPassword(""); await openOwners(ownerTarget); }
+    catch (err) { setError(apiErrorMessage(err)); } finally { setBusy(false); }
+  }
+
+  async function deleteTenant() {
+    if (!deleteTarget || deleteConfirmation !== deleteTarget.name) return;
+    try {
+      setBusy(true);
+      setError("");
+      await api.delete(`/platform/tenants/${deleteTarget.id}`, {
+        headers: authHeaders(token),
+        data: { confirmationName: deleteConfirmation },
+      });
+      setDeleteTarget(null);
+      setDeleteConfirmation("");
       await load();
     } catch (err) {
       setError(apiErrorMessage(err));
@@ -500,7 +549,12 @@ function PlatformTenants({ token }) {
             />
           </label>
           <label>
-            {english ? "Business Admin email" : t("tenant.firstAdmin")}
+            Owner name
+            <input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="Business owner" required />
+          </label>
+          <label>Owner username<input value={ownerUsername} onChange={(e)=>setOwnerUsername(e.target.value)} placeholder="sunrise.owner" required /></label>
+          <label>
+            {english ? "Owner email (optional)" : t("tenant.firstAdmin")}
             <input
               type="email"
               value={adminEmail}
@@ -508,6 +562,8 @@ function PlatformTenants({ token }) {
               placeholder="owner@example.com"
             />
           </label>
+          <label>Temporary password<div className="credential-input-row"><input type="text" value={ownerPassword} onChange={(e)=>setOwnerPassword(e.target.value)} required /><button type="button" onClick={()=>setOwnerPassword(generateStrongPassword())}><WandSparkles size={14}/> Generate</button></div></label>
+          <label>Private recovery code<div className="credential-input-row"><input value={ownerRecoveryCode} onChange={(e)=>setOwnerRecoveryCode(e.target.value)} required /><button type="button" onClick={()=>setOwnerRecoveryCode(generateRecoveryCode())}><KeyRound size={14}/> Generate</button></div><small>Give this once to the owner and ask them to store it privately.</small></label>
           <button className="scorm-button-primary ops-submit" disabled={busy}>
             {busy
               ? t("common.loading")
@@ -549,15 +605,79 @@ function PlatformTenants({ token }) {
                   <span>{tenant.slug}</span>
                 </div>
               </div>
-              <span
-                className={`ops-status ${tenant.status === "ACTIVE" ? "is-active" : ""}`}
-              >
-                {tenant.status}
-              </span>
+              <div className="ops-row-actions">
+                <span
+                  className={`ops-status ${tenant.status === "ACTIVE" ? "is-active" : ""}`}
+                >
+                  {tenant.status}
+                </span>
+                <button
+                  type="button" className="ops-delete-button" title={`Manage ${tenant.name} owners`} aria-label={`Manage ${tenant.name} owners`} onClick={() => openOwners(tenant)} disabled={busy}><KeyRound size={14} /></button>
+                <button
+                  type="button"
+                  className="ops-delete-button"
+                  title={`Delete ${tenant.name}`}
+                  aria-label={`Delete ${tenant.name}`}
+                  onClick={() => {
+                    setDeleteTarget(tenant);
+                    setDeleteConfirmation("");
+                    setError("");
+                  }}
+                  disabled={busy}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+      {deleteTarget && (
+        <div className="tenant-delete-modal" role="dialog" aria-modal="true">
+          <button
+            className="tenant-delete-backdrop"
+            aria-label="Close delete confirmation"
+            onClick={() => !busy && setDeleteTarget(null)}
+          />
+          <div className="tenant-delete-card">
+            <div className="tenant-delete-icon"><Trash2 size={20} /></div>
+            <h3>Delete {deleteTarget.name}?</h3>
+            <p>
+              Branches and all owner/staff access will be disabled immediately.
+              Accounting and audit records will be retained safely.
+            </p>
+            <label>
+              Type <strong>{deleteTarget.name}</strong> to confirm
+              <input
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+                autoFocus
+                autoComplete="off"
+              />
+            </label>
+            <div className="tenant-delete-actions">
+              <button
+                type="button"
+                className="scorm-button-secondary"
+                onClick={() => setDeleteTarget(null)}
+                disabled={busy}
+              >
+                Keep business
+              </button>
+              <button
+                type="button"
+                className="tenant-delete-confirm"
+                onClick={deleteTenant}
+                disabled={busy || deleteConfirmation !== deleteTarget.name}
+              >
+                <Trash2 size={14} /> {busy ? "Deleting…" : "Delete business"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {ownerTarget && <div className="tenant-delete-modal" role="dialog" aria-modal="true"><button className="tenant-delete-backdrop" aria-label="Close owner management" onClick={()=>setOwnerTarget(null)}/><div className="tenant-delete-card"><h3>{ownerTarget.name} owners</h3>{owners.map((membership)=>{const credential=membership.user?.credential;return <div className="owner-reset-row" key={membership.id}><div><strong>{membership.user?.name || membership.email}</strong><span>{credential?.username || "No manual login"}</span></div>{credential&&<button type="button" onClick={()=>{setResetTarget(membership);setResetPassword(generateStrongPassword())}}><KeyRound size={14}/> Reset password</button>}</div>})}<button type="button" className="scorm-button-secondary" onClick={()=>setOwnerTarget(null)}>Close</button></div></div>}
+      {resetTarget && <div className="tenant-delete-modal elevated" role="dialog" aria-modal="true"><button className="tenant-delete-backdrop" aria-label="Close password reset" onClick={()=>setResetTarget(null)}/><div className="tenant-delete-card"><h3>Reset owner password</h3><p>The owner must change this temporary password after signing in.</p><label>Temporary password<div className="credential-input-row"><input value={resetPassword} onChange={(e)=>setResetPassword(e.target.value)} /><button type="button" onClick={()=>setResetPassword(generateStrongPassword())}><WandSparkles size={14}/> Generate</button></div></label><div className="tenant-delete-actions"><button className="scorm-button-secondary" type="button" onClick={()=>setResetTarget(null)}>Cancel</button><button className="scorm-button-primary" type="button" onClick={resetOwnerPassword} disabled={busy}>Reset password</button></div></div></div>}
     </section>
   );
 }
@@ -1274,6 +1394,7 @@ export default function App() {
       </div>
     );
   if (!session) return <LoginScreen />;
+  if (session.credential?.mustChangePassword) return <ChangePasswordScreen />;
   if (session.pendingApproval || !session.access?.approved)
     return <PendingScreen />;
 

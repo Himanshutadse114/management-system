@@ -129,10 +129,9 @@ router.post('/:tenantId/branches/:branchId/members', loadTenant, requireTenantAd
     const temporaryPassword = String(req.body?.temporaryPassword || req.body?.password || '');
     const name = String(req.body?.name || '').trim();
     const role = String(req.body?.role || '').toUpperCase();
-    if ((username && !temporaryPassword) || (!username && temporaryPassword)) {
-      return res.status(400).json({ message: 'Staff username and temporary password are both required.' });
+    if (!username || !temporaryPassword) {
+      return res.status(400).json({ message: 'Staff username and temporary password are required.' });
     }
-    if (!username && !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: 'Provide a username and temporary password, or a valid staff email.' });
     if (!BRANCH_ROLES.includes(role)) return res.status(400).json({ message: `Role must be one of: ${BRANCH_ROLES.join(', ')}` });
 
     let user;
@@ -140,7 +139,7 @@ router.post('/:tenantId/branches/:branchId/members', loadTenant, requireTenantAd
     let membership;
     let created;
     await sequelize.transaction(async (transaction) => {
-      if (username) {
+      {
         const account = await createPasswordAccount({
           username,
           password: temporaryPassword,
@@ -153,8 +152,6 @@ router.post('/:tenantId/branches/:branchId/members', loadTenant, requireTenantAd
         user = account.user;
         credential = account.credential;
         email = user.email;
-      } else {
-        user = await User.findOne({ where: { email }, transaction });
       }
 
       [membership, created] = await BranchMembership.findOrCreate({

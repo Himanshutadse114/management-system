@@ -54,6 +54,7 @@ export function AuthProvider({ children }) {
     return {
       user: data.user,
       access: data.access,
+      credential: data.credential || null,
       pendingApproval: data.pendingApproval,
       impersonation: data.impersonation || null
     };
@@ -92,10 +93,17 @@ export function AuthProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function loginWithGoogle(credential) {
-    const { data } = await api.post('/auth/google', { credential });
+  async function loginWithPassword(username, password) {
+    const { data } = await api.post('/auth/password', { username, password });
     const next = sessionFromData(data);
     persist(data.token, next);
+    return next;
+  }
+
+  async function changePassword(currentPassword, newPassword) {
+    const { data } = await api.post('/auth/change-password', { currentPassword, newPassword }, { headers: authHeaders(token) });
+    const next = sessionFromData(data);
+    persist(data.token || token, next);
     return next;
   }
 
@@ -123,7 +131,8 @@ export function AuthProvider({ children }) {
     token,
     session,
     loading,
-    loginWithGoogle,
+    loginWithPassword,
+    changePassword,
     startImpersonation,
     stopImpersonation,
     refresh,

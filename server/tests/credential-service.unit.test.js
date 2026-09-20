@@ -6,7 +6,9 @@ const {
   internalEmailFor,
   publicEmail,
   hashPassword,
-  verifyPassword
+  verifyPassword,
+  hashRecoveryCode,
+  verifyRecoveryCode
 } = require('../src/services/credentialService');
 
 describe('credential service', () => {
@@ -30,5 +32,12 @@ describe('credential service', () => {
     assert.equal(first.includes('StrongPass123'), false);
     assert.equal(await verifyPassword('StrongPass123', first), true);
     assert.equal(await verifyPassword('WrongPass123', first), false);
+  });
+
+  it('stores recovery codes as salted hashes and compares them case-insensitively', async () => {
+    const hash = await hashRecoveryCode('DEVA-ABCDE-23456-ZYXWV');
+    assert.equal(hash.includes('ABCDE'), false);
+    assert.equal(await verifyRecoveryCode('deva-abcde-23456-zyxwv', hash), true);
+    assert.equal(await verifyRecoveryCode('DEVA-WRONG-23456-ZYXWV', hash), false);
   });
 });
