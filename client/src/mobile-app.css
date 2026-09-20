@@ -456,6 +456,12 @@
     justify-content: center !important;
   }
 
+  .restaurant-form > .restaurant-submit {
+    width: calc(100% - 28px) !important;
+    margin: 14px 14px 0 !important;
+    box-sizing: border-box !important;
+  }
+
   .growth-link :is(a, code) {
     min-width: 0;
     max-width: 100%;

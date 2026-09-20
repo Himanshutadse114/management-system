@@ -50,6 +50,20 @@ test("restaurant exposes the customer menu journey and resets app scrolling", as
   assert.match(shell, /mainRef\.current\?\.scrollTo\(\{ top: 0/);
 });
 
+test("table QR creation has bounded geometry and visible interaction feedback", async () => {
+  const css = await readFile(cssUrl, "utf8");
+  const workspace = await readFile(
+    new URL("../src/RestaurantManagerWorkspace.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(css, /\.restaurant-form > \.restaurant-submit\s*\{/);
+  assert.match(css, /width:\s*calc\(100% - 28px\) !important/);
+  assert.match(workspace, /nextTableForm/);
+  assert.match(workspace, /Creating table\.\.\./);
+  assert.match(workspace, /restaurant-form-message error/);
+  assert.match(workspace, /Its customer QR is ready below/);
+});
+
 test("mobile forms and cards cannot exceed the application viewport", async () => {
   const css = await readFile(cssUrl, "utf8");
   assert.match(css, /input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)/);

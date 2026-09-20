@@ -44,6 +44,16 @@ function managerBranches(access) {
 const PAYMENT_METHODS = ["CASH", "CARD", "UPI", "OTHER"];
 const EMPTY_SPLIT = { CASH: "", CARD: "", UPI: "", OTHER: "" };
 
+function nextTableForm(rows = []) {
+  const usedCodes = new Set(
+    rows.map((row) => String(row.code || "").trim().toUpperCase()),
+  );
+  let number = Math.max(1, rows.length + 1);
+  while (usedCodes.has(`T${String(number).padStart(2, "0")}`)) number += 1;
+  const suffix = String(number).padStart(2, "0");
+  return { name: `Table ${suffix}`, code: `T${suffix}`, seats: "4" };
+}
+
 function ScopeSelector({ token, access, scope, setScope, setBranch }) {
   const isSuperAdmin = Boolean(access?.isSuperAdmin);
   const tenantAdmin = (access?.tenants || []).find(
@@ -182,6 +192,7 @@ function Empty({ icon: Icon, title, body }) {
 
 export default function RestaurantManagerWorkspace({ token, access }) {
   const pageRef = useRef(null);
+  const tableFormTouched = useRef(false);
   const [scope, setScope] = useState({ tenantId: "", branchId: "" });
   const [branch, setBranch] = useState(null);
   const [tab, setTab] = useState("Orders");
@@ -195,11 +206,9 @@ export default function RestaurantManagerWorkspace({ token, access }) {
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [splitPayment, setSplitPayment] = useState(false);
   const [splitAmounts, setSplitAmounts] = useState(EMPTY_SPLIT);
-  const [tableForm, setTableForm] = useState({
-    name: "",
-    code: "",
-    seats: "4",
-  });
+  const [tableForm, setTableForm] = useState(() => nextTableForm());
+  const [tableFormError, setTableFormError] = useState("");
+  const [tableFormNotice, setTableFormNotice] = useState("");
   const [menuForm, setMenuForm] = useState({
     productId: "",
     displayName: "",
@@ -311,7 +320,9 @@ export default function RestaurantManagerWorkspace({ token, access }) {
         api.get(`${base}/notifications?unread=true`, { headers }),
         api.get(`${base}/guest-orders`, { headers }),
       ]);
-      setTables(tableResult.data.tables || []);
+      const loadedTables = tableResult.data.tables || [];
+      setTables(loadedTables);
+      if (!tableFormTouched.current) setTableForm(nextTableForm(loadedTables));
       setMenuItems(menuResult.data.items || []);
       setProducts(catalogueResult.data.products || []);
       setOrders(orderResult.data.orders || []);
@@ -574,18 +585,39 @@ export default function RestaurantManagerWorkspace({ token, access }) {
   }
   async function createTable(event) {
     event.preventDefault();
+    const name = tableForm.name.trim();
+    const code = tableForm.code.trim().toUpperCase();
+    const seats = Number(tableForm.seats);
+    if (!name || !code) {
+      setTableFormError("Enter a table name and short code before creating the QR.");
+      setTableFormNotice("");
+      return;
+    }
+    if (!Number.isInteger(seats) || seats < 1 || seats > 50) {
+      setTableFormError("Seats must be a whole number between 1 and 50.");
+      setTableFormNotice("");
+      return;
+    }
     try {
+      setBusy(true);
       setError("");
+      setTableFormError("");
+      setTableFormNotice("");
       await api.post(
         `${base}/tables`,
-        { ...tableForm, seats: Number(tableForm.seats || 4) },
+        { name, code, seats },
         { headers: authHeaders(token) },
       );
-      setTableForm({ name: "", code: "", seats: "4" });
+      tableFormTouched.current = false;
       await loadAll();
+      setTableFormNotice(`${name} created. Its customer QR is ready below.`);
       flash("Table and QR code created.");
     } catch (err) {
-      setError(apiErrorMessage(err));
+      const message = apiErrorMessage(err);
+      setTableFormError(message);
+      setError(message);
+    } finally {
+      setBusy(false);
     }
   }
   async function publishMenu(event) {
@@ -1453,6 +1485,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
           <form
             className="restaurant-panel restaurant-form"
             onSubmit={createTable}
+            noValidate
           >
             <div className="restaurant-panel-head">
               <div>
@@ -1465,11 +1498,14 @@ export default function RestaurantManagerWorkspace({ token, access }) {
               <span>Table name</span>
               <input
                 value={tableForm.name}
-                onChange={(e) =>
-                  setTableForm({ ...tableForm, name: e.target.value })
-                }
+                onChange={(e) => {
+                  tableFormTouched.current = true;
+                  setTableFormError("");
+                  setTableFormNotice("");
+                  setTableForm({ ...tableForm, name: e.target.value });
+                }}
                 placeholder="Table 01"
-                required
+                aria-invalid={Boolean(tableFormError && !tableForm.name.trim())}
               />
             </label>
             <div className="form-pair">
@@ -1477,11 +1513,14 @@ export default function RestaurantManagerWorkspace({ token, access }) {
                 <span>Short code</span>
                 <input
                   value={tableForm.code}
-                  onChange={(e) =>
-                    setTableForm({ ...tableForm, code: e.target.value })
-                  }
+                  onChange={(e) => {
+                    tableFormTouched.current = true;
+                    setTableFormError("");
+                    setTableFormNotice("");
+                    setTableForm({ ...tableForm, code: e.target.value });
+                  }}
                   placeholder="T01"
-                  required
+                  aria-invalid={Boolean(tableFormError && !tableForm.code.trim())}
                 />
               </label>
               <label>
@@ -1491,15 +1530,37 @@ export default function RestaurantManagerWorkspace({ token, access }) {
                   min="1"
                   max="50"
                   value={tableForm.seats}
-                  onChange={(e) =>
-                    setTableForm({ ...tableForm, seats: e.target.value })
-                  }
+                  onChange={(e) => {
+                    tableFormTouched.current = true;
+                    setTableFormError("");
+                    setTableFormNotice("");
+                    setTableForm({ ...tableForm, seats: e.target.value });
+                  }}
                 />
               </label>
             </div>
-            <button className="scorm-button-primary restaurant-submit">
-              <Plus size={14} />
-              Add table & QR
+            {tableFormError && (
+              <div className="restaurant-form-message error" role="alert">
+                {tableFormError}
+              </div>
+            )}
+            {tableFormNotice && (
+              <div className="restaurant-form-message success" role="status">
+                <CheckCircle2 size={14} />
+                {tableFormNotice}
+              </div>
+            )}
+            <button
+              type="submit"
+              className="scorm-button-primary restaurant-submit"
+              disabled={busy}
+            >
+              {busy ? (
+                <RefreshCw size={14} className="spin" />
+              ) : (
+                <Plus size={14} />
+              )}
+              {busy ? "Creating table..." : "Add table & QR"}
             </button>
           </form>
           <section className="restaurant-panel">
