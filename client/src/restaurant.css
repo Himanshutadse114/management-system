@@ -687,6 +687,65 @@
   font-size: 8px;
   text-decoration: none;
 }
+.customer-menu-guide {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--ops-orange-line-soft);
+  border-radius: 14px;
+  background: var(--ops-orange-soft);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.customer-menu-guide-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--ops-surface);
+  color: var(--ops-orange-strong);
+  display: grid;
+  place-items: center;
+}
+.customer-menu-guide-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.customer-menu-guide-copy strong {
+  font-size: 12px;
+}
+.customer-menu-guide-copy span {
+  color: var(--ops-body);
+  font-size: 9px;
+  line-height: 1.5;
+}
+.customer-menu-guide-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.customer-menu-guide-actions a,
+.customer-menu-guide-actions button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--ops-orange-line-soft);
+  border-radius: 9px;
+  background: var(--ops-surface);
+  color: var(--ops-orange-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.qr-grid > .restaurant-empty {
+  grid-column: 1 / -1;
+}
 .menu-admin-list {
   display: grid;
 }

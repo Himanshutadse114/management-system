@@ -18,6 +18,38 @@ test("workspace tabs keep their labels and scroll instead of overlapping", async
   assert.match(css, /overflow-x:\s*auto !important/);
 });
 
+test("restaurant destinations use a complete mobile navigation grid", async () => {
+  const css = await readFile(cssUrl, "utf8");
+  assert.match(css, /\.restaurant-page > \.workspace-tabs\s*\{/);
+  assert.match(css, /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\) !important/);
+  assert.match(css, /white-space:\s*normal !important/);
+});
+
+test("role navigation opens as a native left drawer", async () => {
+  const css = await readFile(cssUrl, "utf8");
+  assert.match(css, /\.focused-mobile-drawer\s*\{/);
+  assert.match(css, /inset:\s*0 auto 0 0 !important/);
+  assert.match(css, /right:\s*auto !important/);
+  assert.match(css, /mobileDrawerFromLeft/);
+});
+
+test("restaurant exposes the customer menu journey and resets app scrolling", async () => {
+  const workspace = await readFile(
+    new URL("../src/RestaurantManagerWorkspace.jsx", import.meta.url),
+    "utf8",
+  );
+  const shell = await readFile(
+    new URL("../src/FocusedWorkspaceShell.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(workspace, /Customer menu preview/);
+  assert.match(workspace, /Open customer menu/);
+  assert.match(workspace, /Create table QR/);
+  assert.match(workspace, /No customer QR yet/);
+  assert.match(workspace, /scrollHost\.scrollTo\(\{ top: 0/);
+  assert.match(shell, /mainRef\.current\?\.scrollTo\(\{ top: 0/);
+});
+
 test("mobile forms and cards cannot exceed the application viewport", async () => {
   const css = await readFile(cssUrl, "utf8");
   assert.match(css, /input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)/);

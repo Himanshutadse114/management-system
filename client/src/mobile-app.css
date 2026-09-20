@@ -8,6 +8,10 @@
  */
 
 @media (max-width: 820px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   .scorm-editorial,
   .focused-shell {
     width: 100% !important;
@@ -79,6 +83,55 @@
   .focused-main::-webkit-scrollbar,
   .focused-single-main::-webkit-scrollbar {
     display: none;
+  }
+
+  /* All roles use the same native left navigation drawer. */
+  .focused-mobile-drawer {
+    position: absolute !important;
+    inset: 0 auto 0 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    width: min(320px, 86vw) !important;
+    height: 100% !important;
+    padding: 14px 12px !important;
+    border-left: 0 !important;
+    border-right: 1px solid var(--ops-line) !important;
+    border-radius: 0 18px 18px 0;
+    background: var(--ops-surface) !important;
+    box-shadow: 18px 0 44px color-mix(in srgb, var(--ops-shadow) 78%, transparent) !important;
+    animation: mobileDrawerFromLeft 180ms ease-out both;
+  }
+
+  .focused-mobile-backdrop {
+    background: color-mix(in srgb, #050807 72%, transparent) !important;
+    backdrop-filter: blur(3px);
+  }
+
+  .focused-drawer-head {
+    min-height: 58px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--ops-line);
+  }
+
+  .focused-mobile-drawer .focused-nav {
+    margin-top: 14px !important;
+    overflow-y: auto;
+  }
+
+  .focused-mobile-drawer .focused-nav button {
+    min-height: 48px !important;
+    border-radius: 12px !important;
+  }
+
+  @keyframes mobileDrawerFromLeft {
+    from {
+      transform: translateX(-28px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
   }
 
   /* Navigation is a real application row, never a floating page overlay. */
@@ -271,6 +324,35 @@
     scroll-snap-align: start;
   }
 
+  /* Six restaurant destinations fit as a complete app menu, not a clipped strip. */
+  .restaurant-page > .workspace-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    overflow: visible !important;
+    scroll-snap-type: none;
+  }
+
+  .restaurant-page > .workspace-tabs button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 50px !important;
+    padding: 6px 4px !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    text-align: center;
+    white-space: normal !important;
+  }
+
+  .restaurant-page > .workspace-tabs button svg {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+  }
+
   /* App-like page hierarchy: compact headers, comfortable tap targets. */
   .restaurant-hero,
   .growth-hero,
@@ -380,6 +462,22 @@
     overflow-wrap: anywhere;
   }
 
+  .customer-menu-guide {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: start !important;
+  }
+
+  .customer-menu-guide-actions {
+    grid-column: 1 / -1;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .customer-menu-guide-actions :is(a, button) {
+    width: 100% !important;
+    min-height: 44px !important;
+  }
+
   .growth-mini-list > div,
   .menu-admin-row,
   .active-order-top,
@@ -458,5 +556,9 @@
   .analytics-metrics,
   .cashier-stats {
     grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .restaurant-page > .workspace-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }

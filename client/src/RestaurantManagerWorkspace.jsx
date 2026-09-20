@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Banknote,
@@ -181,6 +181,7 @@ function Empty({ icon: Icon, title, body }) {
 }
 
 export default function RestaurantManagerWorkspace({ token, access }) {
+  const pageRef = useRef(null);
   const [scope, setScope] = useState({ tenantId: "", branchId: "" });
   const [branch, setBranch] = useState(null);
   const [tab, setTab] = useState("Orders");
@@ -235,6 +236,20 @@ export default function RestaurantManagerWorkspace({ token, access }) {
     scope.tenantId && scope.branchId
       ? `/restaurant/tenants/${scope.tenantId}/branches/${scope.branchId}`
       : "";
+  const customerMenuTable = tables.find((table) => table.qrToken) || null;
+
+  function scrollWorkspaceTop(behavior = "smooth") {
+    window.requestAnimationFrame(() => {
+      const scrollHost = pageRef.current?.closest(".focused-main, .scorm-main");
+      if (scrollHost) scrollHost.scrollTo({ top: 0, behavior });
+      else window.scrollTo({ top: 0, behavior });
+    });
+  }
+
+  function selectTab(label) {
+    setTab(label);
+    scrollWorkspaceTop("auto");
+  }
   const splitAllocatedMinor = useMemo(
     () =>
       Object.values(splitAmounts).reduce((sum, value) => {
@@ -644,7 +659,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
         .map((row) => `${row.quantity || 1} x ${row.label}`)
         .join("\n"),
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollWorkspaceTop();
     flash("Menu item loaded for editing.");
   }
   async function openRecipe(item) {
@@ -742,7 +757,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
     );
 
   return (
-    <div className="restaurant-page">
+    <div className="restaurant-page" ref={pageRef}>
       <div className="restaurant-hero">
         <div>
           <div className="restaurant-mini">Restaurant</div>
@@ -795,7 +810,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
           <button
             key={label}
             className={tab === label ? "is-active" : ""}
-            onClick={() => setTab(label)}
+            onClick={() => selectTab(label)}
           >
             <Icon size={15} />
             {label}
@@ -1496,6 +1511,13 @@ export default function RestaurantManagerWorkspace({ token, access }) {
               <span>{tables.length} tables</span>
             </div>
             <div className="qr-grid">
+              {!tables.length && (
+                <Empty
+                  icon={QrCode}
+                  title="No customer QR yet"
+                  body="Create your first table. Deva will generate a QR code and customer menu link automatically."
+                />
+              )}
               {tables.map((table) => {
                 const url = publicMenuUrl(table.qrToken);
                 return (
@@ -1539,7 +1561,46 @@ export default function RestaurantManagerWorkspace({ token, access }) {
       )}
 
       {tab === "Menu" && (
-        <div className="restaurant-two-column">
+        <>
+          <section className="customer-menu-guide">
+            <div className="customer-menu-guide-icon">
+              <QrCode size={21} />
+            </div>
+            <div className="customer-menu-guide-copy">
+              <strong>Customer menu preview</strong>
+              <span>
+                Guests scan a table QR code to view this menu and place their
+                order. No customer login is required.
+              </span>
+            </div>
+            <div className="customer-menu-guide-actions">
+              {customerMenuTable ? (
+                <>
+                  <a
+                    href={publicMenuUrl(customerMenuTable.qrToken)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink size={14} />
+                    Open customer menu
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => copyLink(customerMenuTable)}
+                  >
+                    <Copy size={14} />
+                    Copy customer link
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => selectTab("Tables")}>
+                  <Plus size={14} />
+                  Create table QR
+                </button>
+              )}
+            </div>
+          </section>
+          <div className="restaurant-two-column">
           <form
             className="restaurant-panel restaurant-form"
             onSubmit={publishMenu}
@@ -1851,7 +1912,8 @@ export default function RestaurantManagerWorkspace({ token, access }) {
               ))}
             </div>
           </section>
-        </div>
+          </div>
+        </>
       )}
 
       {cancelTarget && (

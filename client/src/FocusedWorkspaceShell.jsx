@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight,
   Layers3,
@@ -315,6 +315,7 @@ export default function FocusedWorkspaceShell() {
   const [activeModule, setActiveModule] = useState(
     profile?.defaultModule || null,
   );
+  const mainRef = useRef(null);
   const [returning, setReturning] = useState(false);
   const [returnError, setReturnError] = useState("");
 
@@ -323,6 +324,10 @@ export default function FocusedWorkspaceShell() {
     if (!profile.modules.includes(activeModule))
       setActiveModule(profile.defaultModule);
   }, [profile, activeModule]);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [activeModule]);
 
   async function returnToAdmin() {
     try {
@@ -424,7 +429,7 @@ export default function FocusedWorkspaceShell() {
             </button>
           </div>
         </header>
-        <main className="focused-single-main">
+        <main className="focused-single-main" ref={mainRef}>
           <ModuleView
             module={activeModule}
             token={token}
@@ -508,7 +513,7 @@ export default function FocusedWorkspaceShell() {
             </div>
           </div>
         </header>
-        <main className="focused-main">
+        <main className="focused-main" ref={mainRef}>
           <ModuleView
             module={activeModule}
             token={token}
