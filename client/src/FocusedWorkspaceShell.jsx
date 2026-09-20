@@ -1,29 +1,21 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
-  BarChart3,
   ChevronRight,
-  ClipboardList,
-  FileText,
-  HeartHandshake,
   Layers3,
   LogOut,
   Menu,
   Moon,
-  PackageSearch,
-  ReceiptText,
   RotateCcw,
   ShieldCheck,
-  Settings2,
   Store,
   Sun,
   UtensilsCrossed,
   UsersRound,
-  Workflow,
-  PlugZap,
   X,
 } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import { LanguageSwitcher } from "./LanguageContext";
+import FilledNavIcon from "./FilledNavIcon";
 const InventoryWorkspace = lazy(() => import("./InventoryWorkspace"));
 const SalesWorkspace = lazy(() => import("./SalesWorkspace"));
 const RestaurantManagerWorkspace = lazy(
@@ -70,18 +62,18 @@ function useTheme() {
 }
 
 const MODULE_ICONS = {
-  [MODULES.BRANCH_OVERVIEW]: BarChart3,
-  [MODULES.INVENTORY]: PackageSearch,
-  [MODULES.SALES]: ClipboardList,
-  [MODULES.RESTAURANT_MANAGER]: UtensilsCrossed,
-  [MODULES.GROWTH]: HeartHandshake,
-  [MODULES.CONTROL]: Workflow,
-  [MODULES.ECOSYSTEM]: PlugZap,
-  [MODULES.CASHIER]: ReceiptText,
-  [MODULES.WAITER]: UtensilsCrossed,
-  [MODULES.ANALYTICS]: BarChart3,
-  [MODULES.REPORTS]: FileText,
-  [MODULES.SETTINGS]: Settings2,
+  [MODULES.BRANCH_OVERVIEW]: "home",
+  [MODULES.INVENTORY]: "stock",
+  [MODULES.SALES]: "sales",
+  [MODULES.RESTAURANT_MANAGER]: "restaurant",
+  [MODULES.GROWTH]: "growth",
+  [MODULES.CONTROL]: "control",
+  [MODULES.ECOSYSTEM]: "ecosystem",
+  [MODULES.CASHIER]: "billing",
+  [MODULES.WAITER]: "restaurant",
+  [MODULES.ANALYTICS]: "analytics",
+  [MODULES.REPORTS]: "reports",
+  [MODULES.SETTINGS]: "settings",
 };
 
 function ThemeToggle({ theme, onToggle }) {
@@ -156,17 +148,17 @@ function BranchOverview({ access, onOpen }) {
     (row) => row.role !== "BRANCH_MANAGER",
   );
   const tools = [
-    [MODULES.INVENTORY, PackageSearch],
-    [MODULES.SALES, ClipboardList],
-    [MODULES.RESTAURANT_MANAGER, UtensilsCrossed],
-    [MODULES.GROWTH, HeartHandshake],
-    [MODULES.CONTROL, Workflow],
-    [MODULES.ECOSYSTEM, PlugZap],
-    [MODULES.ANALYTICS, BarChart3],
-    [MODULES.REPORTS, FileText],
-    [MODULES.SETTINGS, Settings2],
+    MODULES.INVENTORY,
+    MODULES.SALES,
+    MODULES.RESTAURANT_MANAGER,
+    MODULES.GROWTH,
+    MODULES.CONTROL,
+    MODULES.ECOSYSTEM,
+    MODULES.ANALYTICS,
+    MODULES.REPORTS,
+    MODULES.SETTINGS,
   ].filter(
-    ([module]) =>
+    (module) =>
       module !== MODULES.RESTAURANT_MANAGER ||
       managers.some((row) => row.branch?.type === "BAR_RESTAURANT"),
   );
@@ -222,10 +214,10 @@ function BranchOverview({ access, onOpen }) {
           </div>
         </div>
         <div className="focused-tool-grid">
-          {tools.map(([module, Icon]) => (
+          {tools.map((module) => (
             <button key={module} onClick={() => onOpen(module)}>
               <div>
-                <Icon size={16} />
+                <FilledNavIcon name={MODULE_ICONS[module]} size={16} />
               </div>
               <span>
                 <strong>{module}</strong>
@@ -386,7 +378,6 @@ export default function FocusedWorkspaceShell() {
       <nav className="focused-nav">
         <div className="focused-nav-label">Menu</div>
         {profile.modules.map((module) => {
-          const Icon = MODULE_ICONS[module] || Store;
           return (
             <button
               key={module}
@@ -394,7 +385,7 @@ export default function FocusedWorkspaceShell() {
               onClick={() => open(module)}
             >
               <span>
-                <Icon size={16} />
+                <FilledNavIcon name={MODULE_ICONS[module]} size={17} />
               </span>
               <strong>{module}</strong>
               {activeModule === module && <ChevronRight size={13} />}
@@ -530,14 +521,13 @@ export default function FocusedWorkspaceShell() {
       {mobileTabs.length > 0 && (
         <div className="focused-mobile-tabs">
           {mobileTabs.map((module) => {
-            const Icon = MODULE_ICONS[module] || Store;
             return (
               <button
                 key={module}
                 className={activeModule === module ? "active" : ""}
                 onClick={() => open(module)}
               >
-                <Icon size={16} />
+                <FilledNavIcon name={MODULE_ICONS[module]} size={16} />
                 <span>{module}</span>
               </button>
             );

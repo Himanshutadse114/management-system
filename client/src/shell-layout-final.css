@@ -57,6 +57,20 @@
   }
 }
 
+/* Mobile browsers commonly report a ~980px viewport when “Desktop site” is
+   enabled. Keep the sidebar and the reserved shell column in sync throughout
+   that range so the work area never starts after an empty strip. */
+@media (min-width: 821px) and (max-width: 1023px) {
+  .scorm-sidebar {
+    display: flex !important;
+  }
+
+  .mobile-menu-trigger,
+  .scorm-mobile-tabbar {
+    display: none !important;
+  }
+}
+
 @media (max-width: 820px) {
   .scorm-shell-content,
   .focused-content {

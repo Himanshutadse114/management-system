@@ -695,8 +695,18 @@ label span {
 
 @media (max-width: 520px) {
   .topbar-secondary,
-  .scorm-theme-toggle span:not(.theme-toggle-track),
+  .scorm-theme-toggle > span:not(.theme-toggle-track),
   .focused-theme span { display: none !important; }
+
+  .scorm-theme-toggle {
+    min-width: 68px !important;
+    padding-inline: 8px !important;
+    justify-content: center !important;
+    gap: 7px !important;
+  }
+
+  .scorm-theme-toggle .theme-toggle-track,
+  .scorm-theme-toggle .theme-toggle-knob { display: block !important; }
 
   .metric-grid,
   .inventory-metrics,

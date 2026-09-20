@@ -31,6 +31,7 @@ import {
 import { useAuth } from "./AuthContext";
 import { api, apiErrorMessage, authHeaders } from "./api";
 import { LanguageSwitcher, useLanguage } from "./LanguageContext";
+import FilledNavIcon from "./FilledNavIcon";
 const InventoryWorkspace = lazy(() => import("./InventoryWorkspace"));
 const SalesWorkspace = lazy(() => import("./SalesWorkspace"));
 const RestaurantManagerWorkspace = lazy(
@@ -76,6 +77,22 @@ const SIMPLE_SECTION_LABELS = {
   Control: "Owner Control",
   Ecosystem: "Ecosystem",
   Settings: "Settings",
+};
+
+const NAV_GLYPHS = {
+  Overview: "home",
+  Tenants: "business",
+  Branches: "business",
+  Inventory: "stock",
+  "Sales & Orders": "sales",
+  Restaurant: "restaurant",
+  Analytics: "analytics",
+  Reports: "reports",
+  Staff: "staff",
+  Growth: "growth",
+  Control: "control",
+  Ecosystem: "ecosystem",
+  Settings: "settings",
 };
 
 const SIMPLE_SECTION_COPY = {
@@ -1009,7 +1026,7 @@ function AdminDashboard() {
               {english ? (index ? "Manage" : "Main") : t(group.key)}
             </div>
             <div className="nav-items">
-              {group.items.map(({ label, icon: Icon }) => {
+              {group.items.map(({ label }) => {
                 const active = activeSection === label;
                 return (
                   <button
@@ -1019,7 +1036,7 @@ function AdminDashboard() {
                     onClick={() => openSection(label)}
                   >
                     <span className="scorm-nav-icon">
-                      <Icon size={16} />
+                      <FilledNavIcon name={NAV_GLYPHS[label]} size={17} />
                     </span>
                     <span>{sectionLabel(label)}</span>
                     {active && (
@@ -1233,13 +1250,13 @@ function AdminDashboard() {
               { label: "Sales & Orders", icon: ClipboardList },
               { label: "Restaurant", icon: UtensilsCrossed },
             ]
-        ).map(({ label, icon: Icon }) => (
+        ).map(({ label }) => (
           <button
             key={label}
             className={`scorm-mobile-tab ${activeSection === label ? "is-active" : ""}`}
             onClick={() => openSection(label)}
           >
-            <Icon size={17} />
+            <FilledNavIcon name={NAV_GLYPHS[label]} size={17} />
             <span>{sectionLabel(label)}</span>
           </button>
         ))}
