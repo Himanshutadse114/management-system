@@ -109,18 +109,47 @@
 
   .focused-drawer-head {
     min-height: 58px;
-    padding-bottom: 12px;
+    padding: 0 0 12px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center !important;
+    gap: 10px;
     border-bottom: 1px solid var(--ops-line);
   }
 
   .focused-mobile-drawer .focused-drawer-head .focused-brand {
-    flex: 1 1 auto !important;
-    width: auto !important;
+    width: 100% !important;
     min-width: 0 !important;
+    min-height: 48px !important;
+    margin: 0 !important;
+    padding: 3px 4px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    align-content: center !important;
+    justify-content: start !important;
+    gap: 11px !important;
+    text-align: left !important;
+  }
+
+  .focused-mobile-drawer .focused-drawer-head .focused-brand-mark {
+    justify-self: start !important;
   }
 
   .focused-mobile-drawer .focused-brand > span:last-child {
     min-width: 0;
+    justify-items: start !important;
+    text-align: left !important;
+  }
+
+  .focused-mobile-drawer .focused-drawer-head .focused-brand strong::after {
+    display: block !important;
+    margin: 0 !important;
+    text-align: left !important;
   }
 
   .focused-mobile-drawer .focused-brand small {

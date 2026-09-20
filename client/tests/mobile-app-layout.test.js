@@ -35,10 +35,14 @@ test("role navigation opens as a native left drawer", async () => {
   assert.match(css, /inset:\s*0 auto 0 0 !important/);
   assert.match(css, /right:\s*auto !important/);
   assert.match(css, /mobileDrawerFromLeft/);
+  assert.match(css, /\.focused-drawer-head\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) auto/);
+  assert.match(css, /\.focused-mobile-drawer \.focused-drawer-head \.focused-brand\s*\{[\s\S]*grid-template-columns:\s*auto minmax\(0, 1fr\) !important/);
+  assert.match(css, /justify-content:\s*start !important/);
   assert.match(css, /\.focused-mobile-drawer \.focused-brand small\s*\{/);
   assert.match(css, /max-width:\s*none !important/);
   assert.match(css, /white-space:\s*normal !important/);
   assert.match(shell, /focused-drawer-identity/);
+  assert.match(shell, /<Brand showRole=\{false\} \/>/);
   assert.match(shell, /<small>\{profile\.primaryRoleLabel\}<\/small>/);
 });
 

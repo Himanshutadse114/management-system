@@ -360,7 +360,7 @@ export default function FocusedWorkspaceShell() {
     setMobileOpen(false);
   }
 
-  function Brand() {
+  function Brand({ showRole = true } = {}) {
     return (
       <button
         className="focused-brand"
@@ -372,7 +372,7 @@ export default function FocusedWorkspaceShell() {
         </span>
         <span>
           <strong>Deva</strong>
-          <small>{profile.primaryRoleLabel}</small>
+          {showRole && <small>{profile.primaryRoleLabel}</small>}
         </span>
       </button>
     );
@@ -474,7 +474,7 @@ export default function FocusedWorkspaceShell() {
           />
           <aside className="focused-mobile-drawer">
             <div className="focused-drawer-head">
-              <Brand />
+              <Brand showRole={false} />
               <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
                 <X size={17} />
               </button>
