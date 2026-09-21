@@ -241,8 +241,8 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
     const switched = await request(app)
       .post('/api/auth/impersonate')
       .set('Authorization', `Bearer ${testToken(fixture.actor)}`)
-      .send({ tenantId: fixture.tenantA.id, membershipId: membership.id })
-      .expect(200);
+      .send({ tenantId: fixture.tenantA.id, membershipId: membership.id });
+    assert.equal(switched.status, 200, `impersonation failed: ${JSON.stringify(switched.body)}`);
 
     await request(app)
       .get(`/api/restaurant/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/menu`)
