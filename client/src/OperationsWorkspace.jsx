@@ -3,7 +3,6 @@ import {
   ClipboardCheck,
   Factory,
   FileCheck2,
-  RefreshCw,
   ShoppingCart,
   Store,
   UsersRound,
@@ -11,6 +10,7 @@ import {
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
 import { downloadBlob } from "./download";
+import RefreshButton from "./RefreshButton";
 import "./operations.css";
 const blank = {
   procurement: [],
@@ -151,10 +151,7 @@ export default function OperationsWorkspace({ token, access }) {
             standardize every outlet.
           </p>
         </div>
-        <button className="scorm-button-secondary" onClick={load}>
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          Refresh
-        </button>
+        <RefreshButton onRefresh={load} busy={loading} />
       </section>
       <div className="control-scope">
         <Store size={16} />

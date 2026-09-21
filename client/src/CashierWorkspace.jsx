@@ -8,7 +8,6 @@ import {
   Minus,
   Plus,
   ReceiptText,
-  RefreshCw,
   Search,
   ShoppingCart,
   Store,
@@ -16,6 +15,7 @@ import {
   Wine,
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import RefreshButton from "./RefreshButton";
 import {
   enqueueOfflineSale,
   offlineSaleCount,
@@ -431,10 +431,12 @@ export default function CashierWorkspace({ token, access }) {
               ))}
             </select>
           )}
-          <button onClick={load} disabled={busy}>
-            <RefreshCw size={15} className={busy ? "spin" : ""} />
-            Refresh
-          </button>
+          <RefreshButton
+            className=""
+            onRefresh={load}
+            busy={busy}
+            iconSize={15}
+          />
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { AuthProvider } from './AuthContext';
 import { LanguageProvider } from './LanguageContext';
 import App from './App';
+import MobileSelectOverlay from './MobileSelectOverlay';
 const PublicMenu = lazy(() => import('./PublicMenu'));
 const MenuImageManager = lazy(() => import('./MenuImageManager'));
 import './design-tokens.css';
@@ -49,6 +50,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 root.render(
   <React.StrictMode>
     <LanguageProvider>
+      <MobileSelectOverlay />
       <Suspense fallback={<div className="app-loading">Loading Deva...</div>}>{menuToken || storeSlug ? (
         <PublicMenu qrToken={menuToken} storeSlug={storeSlug} />
       ) : (

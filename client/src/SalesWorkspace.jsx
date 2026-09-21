@@ -8,7 +8,6 @@ import {
   PackageSearch,
   Plus,
   ReceiptText,
-  RefreshCw,
   RotateCcw,
   Search,
   ShoppingCart,
@@ -16,6 +15,7 @@ import {
   Trash2,
   Wine
 } from 'lucide-react';
+import RefreshButton from './RefreshButton';
 import { api, apiErrorMessage, authHeaders } from './api';
 import './sales.css';
 
@@ -215,7 +215,7 @@ export default function SalesWorkspace({ token, access }) {
 
   return (
     <div className="sales-page">
-      <div className="sales-hero"><div><div className="sales-mini">New sale</div><h2>{branch?.type === 'WINE_SHOP' ? 'Wine Shop Sale' : 'Counter Sale'}</h2><p>Choose items, enter payment details and collect the amount. Stock updates automatically after payment.</p></div><button className="scorm-button-secondary" onClick={load} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh</button></div>
+      <div className="sales-hero"><div><div className="sales-mini">New sale</div><h2>{branch?.type === 'WINE_SHOP' ? 'Wine Shop Sale' : 'Counter Sale'}</h2><p>Choose items, enter payment details and collect the amount. Stock updates automatically after payment.</p></div><RefreshButton onRefresh={load} busy={loading}/></div>
       <BranchScope token={token} access={access} scope={scope} setScope={setScope} onBranch={setBranch} />
       {branch?.type === 'BAR_RESTAURANT' && <div className="sales-info">Use this page for counter sales. Use Restaurant for table orders and waiter bills.</div>}
       {error && <div className="sales-error">{error}</div>}

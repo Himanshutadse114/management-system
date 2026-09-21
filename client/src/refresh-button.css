@@ -1,0 +1,26 @@
+@keyframes deva-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.deva-refresh-button {
+  touch-action: manipulation;
+}
+
+.deva-refresh-button .deva-refresh-icon {
+  flex: 0 0 auto;
+  transform-origin: 50% 50%;
+}
+
+.deva-refresh-button.is-refreshing .deva-refresh-icon {
+  animation: deva-refresh-spin 0.72s linear infinite !important;
+}
+
+.deva-refresh-button[aria-busy="true"] {
+  cursor: wait;
+}
+
+.deva-refresh-button[aria-busy="true"] span {
+  opacity: 0.82;
+}

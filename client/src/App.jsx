@@ -35,6 +35,7 @@ import { useAuth } from "./AuthContext";
 import { api, apiErrorMessage, authHeaders } from "./api";
 import { LanguageSwitcher, useLanguage } from "./LanguageContext";
 import FilledNavIcon from "./FilledNavIcon";
+import RefreshButton from "./RefreshButton";
 import { generateRecoveryCode, generateStrongPassword } from "./credentialUtils";
 const InventoryWorkspace = lazy(() => import("./InventoryWorkspace"));
 const SalesWorkspace = lazy(() => import("./SalesWorkspace"));
@@ -381,18 +382,14 @@ function PendingScreen() {
             <div className="sa-notice pending-message">{message}</div>
           )}
           <div className="pending-actions">
-            <button
+            <RefreshButton
               className="scorm-button-primary"
-              onClick={checkAgain}
-              disabled={busy}
-            >
-              <RefreshCw size={15} className={busy ? "spin" : ""} />{" "}
-              {busy
-                ? t("common.loading")
-                : english
-                  ? "Refresh access"
-                  : t("auth.refreshAccess")}
-            </button>
+              onRefresh={checkAgain}
+              busy={busy}
+              iconSize={15}
+              label={english ? "Refresh access" : t("auth.refreshAccess")}
+              refreshingLabel={t("common.loading")}
+            />
             <button className="scorm-button-secondary" onClick={logout}>
               <LogOut size={15} /> {t("common.signOut")}
             </button>

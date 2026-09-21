@@ -1,0 +1,151 @@
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 18px;
+  accent-color: var(--ops-orange);
+}
+
+.mobile-select-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  align-items: end;
+  padding: 12px;
+  background: rgba(4, 3, 2, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+.mobile-select-sheet {
+  width: min(100%, 520px);
+  max-height: min(72dvh, 620px);
+  margin: 0 auto;
+  border: 1px solid var(--ops-line);
+  border-radius: 20px 20px 14px 14px;
+  background: var(--ops-surface);
+  color: var(--ops-text);
+  box-shadow: 0 -18px 48px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+}
+
+.mobile-select-sheet header {
+  min-height: 68px;
+  padding: 13px 14px 12px 18px;
+  border-bottom: 1px solid var(--ops-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.mobile-select-sheet header > div {
+  min-width: 0;
+}
+
+.mobile-select-sheet header span {
+  display: block;
+  color: var(--ops-orange-strong);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mobile-select-sheet h2 {
+  margin: 3px 0 0;
+  font-size: 21px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.mobile-select-close {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  border: 1px solid var(--ops-line);
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--ops-surface-2);
+  color: var(--ops-text);
+}
+
+.mobile-select-options {
+  max-height: calc(min(72dvh, 620px) - 68px);
+  padding: 7px;
+  display: grid;
+  gap: 3px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.mobile-select-options button {
+  width: 100%;
+  min-height: 50px;
+  padding: 9px 11px 9px 13px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  color: var(--ops-text);
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.mobile-select-options button.is-selected {
+  border-color: var(--ops-orange-line);
+  background: var(--ops-orange-soft);
+  color: var(--ops-orange-strong);
+}
+
+.mobile-select-options button:disabled {
+  opacity: 0.45;
+}
+
+.mobile-select-options button i {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--ops-muted);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--ops-orange-dark);
+  font-style: normal;
+}
+
+.mobile-select-options button.is-selected i {
+  border-color: var(--ops-orange);
+  background: var(--ops-orange);
+}
+
+.mobile-select-backdrop.is-light .mobile-select-sheet {
+  --ops-surface: #fff;
+  --ops-surface-2: #f8f2e9;
+  --ops-text: #362b1e;
+  --ops-muted: #8a7a62;
+  --ops-line: #e7dbc4;
+  --ops-orange: #de7a24;
+  --ops-orange-strong: #b95300;
+  --ops-orange-dark: #fff;
+  --ops-orange-soft: rgba(222, 122, 36, 0.12);
+  --ops-orange-line: rgba(222, 122, 36, 0.34);
+}
+
+@media (min-width: 901px) and (pointer: fine) {
+  .mobile-select-backdrop {
+    display: none;
+  }
+}

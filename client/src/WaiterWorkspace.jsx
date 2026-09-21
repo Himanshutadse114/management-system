@@ -6,7 +6,6 @@ import {
   Clock3,
   Minus,
   Plus,
-  RefreshCw,
   Search,
   ShoppingBag,
   Table2,
@@ -15,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import RefreshButton from "./RefreshButton";
 import "./waiter.css";
 
 function formatMoney(value) {
@@ -425,10 +425,12 @@ export default function WaiterWorkspace({ token, access }) {
               ))}
             </select>
           )}
-          <button onClick={load} disabled={busy}>
-            <RefreshCw size={15} className={busy ? "spin" : ""} />
-            Refresh
-          </button>
+          <RefreshButton
+            className=""
+            onRefresh={load}
+            busy={busy}
+            iconSize={15}
+          />
         </div>
       </section>
 

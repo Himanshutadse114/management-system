@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Activity, KeyRound, RefreshCw, Store, Webhook } from "lucide-react";
+import { Activity, KeyRound, Store, Webhook } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import RefreshButton from "./RefreshButton";
 import "./ecosystem.css";
 export default function EcosystemWorkspace({ token, access }) {
   const admin = (access?.tenants || []).find(
@@ -97,14 +98,11 @@ export default function EcosystemWorkspace({ token, access }) {
             outbound delivery.
           </p>
         </div>
-        <button
+        <RefreshButton
           className="scorm-button-secondary eco-refresh"
-          onClick={load}
-          disabled={loading}
-        >
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          Refresh
-        </button>
+          onRefresh={load}
+          busy={loading}
+        />
       </section>
       <div className="eco-scope">
         <Store size={16} />

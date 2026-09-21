@@ -4,12 +4,12 @@ import {
   Building2,
   Calculator,
   Link2,
-  RefreshCw,
   Save,
   Store,
   UsersRound,
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import RefreshButton from "./RefreshButton";
 import "./growth.css";
 
 const empty = {
@@ -155,14 +155,7 @@ export default function GrowthWorkspace({ token, access }) {
             every payout.
           </p>
         </div>
-        <button
-          className="scorm-button-secondary"
-          onClick={load}
-          disabled={loading}
-        >
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          Refresh
-        </button>
+        <RefreshButton onRefresh={load} busy={loading} />
       </section>
       <div className="growth-scope">
         <Building2 size={16} />

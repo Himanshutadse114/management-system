@@ -12,7 +12,6 @@ import {
   Minus,
   Plus,
   QrCode,
-  RefreshCw,
   ReceiptText,
   Search,
   Store,
@@ -24,6 +23,7 @@ import {
   X
 } from 'lucide-react';
 import { api, apiErrorMessage, authHeaders } from './api';
+import RefreshButton from './RefreshButton';
 import './restaurant.css';
 
 function formatMoney(value) {
@@ -246,7 +246,7 @@ export default function RestaurantWorkspace({ token, access }) {
 
   return (
     <div className="restaurant-page">
-      <div className="restaurant-hero"><div><div className="restaurant-mini">Table service · accountable orders</div><h2>Restaurant Operations</h2><p>Waiter orders remain traceable from acceptance through service and payment. Unresolved orders stay visible until paid or manager-cancelled.</p></div><button className="scorm-button-secondary" onClick={loadAll} disabled={busy}><RefreshCw size={14} className={busy ? 'spin' : ''} /> Refresh</button></div>
+      <div className="restaurant-hero"><div><div className="restaurant-mini">Table service · accountable orders</div><h2>Restaurant Operations</h2><p>Waiter orders remain traceable from acceptance through service and payment. Unresolved orders stay visible until paid or manager-cancelled.</p></div><RefreshButton onRefresh={loadAll} busy={busy}/></div>
       <ScopeSelector token={token} access={access} scope={scope} setScope={setScope} setBranch={setBranch} />
       {error && <div className="restaurant-error">{error}</div>}{notice && <div className="restaurant-notice">{notice}</div>}
       <div className="restaurant-tabs">{tabs.map(({ label, icon: Icon }) => <button key={label} className={tab === label ? 'is-active' : ''} onClick={() => setTab(label)}><Icon size={15} />{label}</button>)}</div>

@@ -10,7 +10,6 @@ import {
   PackagePlus,
   PackageSearch,
   Plus,
-  RefreshCw,
   Scale,
   Store,
   Truck,
@@ -18,6 +17,7 @@ import {
   Wine,
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import RefreshButton from "./RefreshButton";
 import "./inventory.css";
 
 function minorFromRupees(value) {
@@ -874,14 +874,7 @@ export default function InventoryWorkspace({ token, access }) {
             wastage or corrections.
           </p>
         </div>
-        <button
-          className="scorm-button-secondary"
-          onClick={() => loadAll()}
-          disabled={loading}
-        >
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          Refresh
-        </button>
+        <RefreshButton onRefresh={() => loadAll()} busy={loading} />
       </div>
       <ScopeSelector
         token={token}

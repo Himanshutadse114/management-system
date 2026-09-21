@@ -5,11 +5,11 @@ import {
   FileSpreadsheet,
   FileText,
   Languages,
-  RefreshCw,
   Store
 } from 'lucide-react';
 import { api, apiErrorMessage, authHeaders } from './api';
 import { downloadBlob } from './download';
+import RefreshButton from './RefreshButton';
 import './reports.css';
 
 function today() {
@@ -50,7 +50,7 @@ export default function ReportsWorkspace({ token, access }) {
   if(!hasTenantView&&!branchMemberships.length)return <div className="reports-page"><div className="reports-empty"><FileText size={25}/><strong>Reports are not assigned to this account</strong><span>Ask your admin if you need report access.</span></div></div>;
 
   return <div className="reports-page">
-    <section className="reports-hero"><div><div className="reports-mini">Reports</div><h2>Create a report</h2><p>Choose what you need, the branch or whole business, the dates and the file type.</p></div><button className="scorm-button-secondary" onClick={loadHistory}><RefreshCw size={14}/>Refresh</button></section>
+    <section className="reports-hero"><div><div className="reports-mini">Reports</div><h2>Create a report</h2><p>Choose what you need, the branch or whole business, the dates and the file type.</p></div><RefreshButton onRefresh={loadHistory}/></section>
     {error&&<div className="reports-error">{error}</div>}{notice&&<div className="reports-notice">{notice}</div>}
 
     <div className="workspace-tabs">{[{label:'Create',icon:FileText},{label:'Previous reports',icon:Download}].map(({label,icon:Icon})=><button key={label} className={tab===label?'is-active':''} onClick={()=>setTab(label)}><Icon size={15}/>{label}</button>)}</div>

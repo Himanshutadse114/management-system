@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ImagePlus, RefreshCw, Upload } from 'lucide-react';
+import { ImagePlus, Upload } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { api, apiErrorMessage, authHeaders } from './api';
+import RefreshButton from './RefreshButton';
 import './menu-images.css';
 
 function backendBase() {
@@ -148,9 +149,7 @@ export default function MenuImageManager() {
           <h3>Add food & drink photos</h3>
           <p>Choose an item and upload a clear JPEG, PNG or WebP image. Maximum size: 5 MB.</p>
         </div>
-        <button type="button" className="scorm-button-secondary" onClick={load} disabled={loading}>
-          <RefreshCw size={14} className={loading ? 'spin' : ''}/> Refresh
-        </button>
+        <RefreshButton onRefresh={load} busy={loading}/>
       </div>
 
       {error && <div className="restaurant-error">{error}</div>}

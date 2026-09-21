@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import RefreshButton from "./RefreshButton";
 import "./restaurant.css";
 
 function formatMoney(value) {
@@ -796,14 +797,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
           <h2>{branch?.name || "Restaurant"}</h2>
           <p>Manage orders, tables, QR menu and bills.</p>
         </div>
-        <button
-          className="scorm-button-secondary"
-          onClick={loadAll}
-          disabled={busy}
-        >
-          <RefreshCw size={14} className={busy ? "spin" : ""} />
-          Refresh
-        </button>
+        <RefreshButton onRefresh={loadAll} busy={busy} />
       </div>
       <ScopeSelector
         token={token}

@@ -6,11 +6,11 @@ import {
   FileText,
   Plus,
   Printer,
-  RefreshCw,
   Save,
   Store,
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import RefreshButton from "./RefreshButton";
 import "./settings.css";
 
 const EMPTY = {
@@ -192,14 +192,10 @@ export default function SettingsWorkspace({ token, access }) {
             in one controlled place.
           </p>
         </div>
-        <button
-          className="scorm-button-secondary"
-          onClick={() => setReloadKey((value) => value + 1)}
-          disabled={loading}
-        >
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          Refresh
-        </button>
+        <RefreshButton
+          onRefresh={() => setReloadKey((value) => value + 1)}
+          busy={loading}
+        />
       </section>
       <div className="settings-scope">
         <Store size={16} />

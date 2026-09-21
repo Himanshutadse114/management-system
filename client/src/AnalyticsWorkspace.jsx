@@ -10,13 +10,13 @@ import {
   CreditCard,
   PackageSearch,
   Plus,
-  RefreshCw,
   Store,
   TrendingUp,
   UsersRound,
   Wine
 } from 'lucide-react';
 import { api, apiErrorMessage, authHeaders } from './api';
+import RefreshButton from './RefreshButton';
 import './analytics.css';
 
 function formatMoney(value) {
@@ -142,7 +142,7 @@ export default function AnalyticsWorkspace({ token, access }) {
   if(!hasTenantView&&!branchAnalyticsMemberships.length){return <div className="analytics-page"><div className="analytics-empty"><BarChart3 size={24}/><strong>Sales & Profit is not assigned to this account</strong><span>Ask your admin if you need access.</span></div></div>}
 
   return <div className="analytics-page">
-    <section className="analytics-hero"><div><div className="analytics-mini">Sales & Profit</div><h2>How is the business doing?</h2><p>See sales, item cost, profit, expenses, stock and open restaurant bills in one place.</p></div><button className="scorm-button-secondary" onClick={load} disabled={busy}><RefreshCw size={14} className={busy?'spin':''}/>Refresh</button></section>
+    <section className="analytics-hero"><div><div className="analytics-mini">Sales & Profit</div><h2>How is the business doing?</h2><p>See sales, item cost, profit, expenses, stock and open restaurant bills in one place.</p></div><RefreshButton onRefresh={load} busy={busy}/></section>
 
     <div className="analytics-controls"><label><span>Business</span><select value={tenantId} onChange={(e)=>{setTenantId(e.target.value);setBranchId('')}}>{tenants.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Branch</span><select value={branchId} onChange={(e)=>setBranchId(e.target.value)}>{hasTenantView&&<option value="">All branches</option>}{branches.map((row)=><option key={row.id} value={row.id}>{row.name} · {row.code}</option>)}</select></label><label><span>From date</span><input type="date" value={from} onChange={(e)=>setFrom(e.target.value)}/></label><label><span>To date</span><input type="date" value={to} onChange={(e)=>setTo(e.target.value)}/></label><button className="scorm-button-primary" onClick={load} disabled={busy}><CalendarDays size={14}/>Show</button></div>
     {error&&<div className="analytics-error">{error}</div>}{notice&&<div className="analytics-notice">{notice}</div>}

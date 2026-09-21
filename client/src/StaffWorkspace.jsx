@@ -5,7 +5,6 @@ import {
   LogIn,
   KeyRound,
   Mail,
-  RefreshCw,
   Search,
   ShieldCheck,
   Store,
@@ -13,6 +12,7 @@ import {
   WandSparkles,
   UsersRound
 } from 'lucide-react';
+import RefreshButton from './RefreshButton';
 import { api, apiErrorMessage, authHeaders } from './api';
 import { useAuth } from './AuthContext';
 import './staff.css';
@@ -153,7 +153,7 @@ export default function StaffWorkspace({ token, access }) {
   const selectedBranch = branches.find((row) => row.id === branchId);
 
   return <div className="staff-page">
-    <section className="staff-hero"><div><div className="staff-mini">Staff</div><h2>Add people & choose their job</h2><p>Create a private username and temporary password for each person. Business Admins can also temporarily work as a staff member for monitoring or emergency cover.</p></div><button className="scorm-button-secondary" onClick={loadMembers} disabled={busy}><RefreshCw size={14} className={busy?'spin':''}/>Refresh</button></section>
+    <section className="staff-hero"><div><div className="staff-mini">Staff</div><h2>Add people & choose their job</h2><p>Create a private username and temporary password for each person. Business Admins can also temporarily work as a staff member for monitoring or emergency cover.</p></div><RefreshButton onRefresh={loadMembers} busy={busy}/></section>
 
     <div className="staff-scope"><label><span>Business</span><select value={tenantId} onChange={(e)=>{setTenantId(e.target.value);setBranchId('')}}>{!tenants.length&&<option value="">No business</option>}{tenants.map((row)=><option value={row.id} key={row.id}>{row.name}</option>)}</select></label><label><span>Branch</span><select value={branchId} onChange={(e)=>setBranchId(e.target.value)}>{!branches.length&&<option value="">No branch</option>}{branches.map((row)=><option value={row.id} key={row.id}>{row.name} · {row.code}</option>)}</select></label></div>
     {error&&<div className="staff-error">{error}</div>}{notice&&<div className="staff-notice">{notice}</div>}

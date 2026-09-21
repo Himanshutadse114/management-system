@@ -24,7 +24,7 @@ body {
 }
 
 button,
-input,
+input:not([type='checkbox']):not([type='radio']),
 select,
 textarea {
   font-size: var(--deva-type-support) !important;
