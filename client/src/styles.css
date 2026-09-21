@@ -290,7 +290,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   position: relative;
   color: var(--scorm-ink);
   background: var(--scorm-canvas);
-  font-family: 'Ubuntu', system-ui, sans-serif;
+  font-family: var(--deva-font-family);
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   transition: background-color 180ms ease, color 180ms ease;

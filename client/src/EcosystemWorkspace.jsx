@@ -97,7 +97,11 @@ export default function EcosystemWorkspace({ token, access }) {
             outbound delivery.
           </p>
         </div>
-        <button className="scorm-button-secondary" onClick={load}>
+        <button
+          className="scorm-button-secondary eco-refresh"
+          onClick={load}
+          disabled={loading}
+        >
           <RefreshCw size={14} className={loading ? "spin" : ""} />
           Refresh
         </button>
@@ -279,13 +283,16 @@ export default function EcosystemWorkspace({ token, access }) {
               <span>Last error</span>
             </div>
             {data.deliveries.map((row) => (
-              <div key={row.id}>
-                <span>{row.eventType}</span>
-                <strong className={`status-${row.status.toLowerCase()}`}>
+              <div className="eco-delivery-row" key={row.id}>
+                <span data-label="Event">{row.eventType}</span>
+                <strong
+                  data-label="Status"
+                  className={`status-${row.status.toLowerCase()}`}
+                >
                   {row.status}
                 </strong>
-                <span>{row.attempts}</span>
-                <span>{row.lastError || "—"}</span>
+                <span data-label="Attempts">{row.attempts}</span>
+                <span data-label="Last error">{row.lastError || "—"}</span>
               </div>
             ))}
           </div>

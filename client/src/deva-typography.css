@@ -1,8 +1,7 @@
 /*
   Deva typography system
   ----------------------
-  Montserrat: product UI, navigation, controls, data and compact titles.
-  Lora:       large editorial/display headings only.
+  Lora: the single brand typeface for interface text and headings.
   Noto Sans Devanagari is a technical glyph fallback for Hindi/Marathi.
 */
 
@@ -10,6 +9,13 @@ html,
 body,
 #root {
   font-family: var(--deva-font-ui) !important;
+}
+
+#root,
+#root *,
+#root *::before,
+#root *::after {
+  font-family: var(--deva-font-family) !important;
 }
 
 body {
@@ -154,7 +160,7 @@ code {
   font-family: var(--deva-font-ui) !important;
 }
 
-/* UI typography stays crisp and compact. */
+/* All interface controls use the same brand family. */
 button,
 input,
 select,
@@ -173,7 +179,7 @@ textarea,
   font-family: var(--deva-font-ui) !important;
 }
 
-/* Large editorial moments use Lora. */
+/* Large editorial moments use a stronger weight of the same family. */
 h1,
 h2,
 .sa-title,
@@ -196,7 +202,7 @@ h2,
   letter-spacing: -0.025em !important;
 }
 
-/* Dense component headings remain Montserrat for better scanning. */
+/* Dense component headings remain compact for quick scanning. */
 h3,
 h4,
 h5,
@@ -217,7 +223,7 @@ h6,
   letter-spacing: -0.012em !important;
 }
 
-/* Brand and navigation benefit from a slightly stronger Montserrat weight. */
+/* Brand and navigation benefit from a slightly stronger weight. */
 .scorm-brand-name,
 .focused-brand strong,
 .public-menu-brand strong,
@@ -264,6 +270,14 @@ html[lang='mr'] body,
 html[lang='mr'] button,
 html[lang='mr'] input,
 html[lang='mr'] select,
-html[lang='mr'] textarea {
-  font-family: 'Noto Sans Devanagari', 'Montserrat', ui-sans-serif, system-ui, sans-serif !important;
+html[lang='mr'] textarea,
+html[lang='hi'] #root,
+html[lang='hi'] #root *,
+html[lang='hi'] #root *::before,
+html[lang='hi'] #root *::after,
+html[lang='mr'] #root,
+html[lang='mr'] #root *,
+html[lang='mr'] #root *::before,
+html[lang='mr'] #root *::after {
+  font-family: 'Noto Sans Devanagari', var(--deva-font-family) !important;
 }

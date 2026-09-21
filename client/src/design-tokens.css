@@ -1,3 +1,77 @@
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Montserrat:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
-:root{font-synthesis:none;text-rendering:optimizeLegibility;--deva-font-ui:'Montserrat','Noto Sans Devanagari',ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--deva-font-display:'Lora','Noto Sans Devanagari',Georgia,'Times New Roman',serif;--deva-type-body:.875rem;--deva-type-support:.8125rem;--deva-type-caption:.75rem;--deva-control-height:44px;--type-xs:12px;--type-sm:13px;--type-md:15px;--type-lg:17px;--type-xl:20px;--type-2xl:26px;--type-3xl:34px;--ops-orange:#e8862e;--ops-orange-strong:#f5a75c;--ops-orange-hover:#ffc98a;--ops-orange-dark:#2a1608;--ops-orange-soft:rgba(232,134,46,.16);--ops-orange-soft-strong:rgba(232,134,46,.24);--ops-orange-line:rgba(232,134,46,.38);--ops-orange-line-soft:rgba(232,134,46,.22);--ops-bg:#1e1811;--ops-bg-deep:#160f0a;--ops-surface:#2a2318;--ops-surface-2:#332b1e;--ops-surface-3:#3d3324;--ops-text:#f4eada;--ops-body:#d3c3ac;--ops-muted:#a8977e;--ops-line:rgba(255,238,214,.1);--ops-line-soft:rgba(255,238,214,.06);--ops-green:#6fbe93;--ops-red:#e2896f;--ops-shadow:rgba(10,6,2,.34);--menu-bg:#f8f6f1;--menu-surface:#fff;--menu-surface-soft:#f2eee6;--menu-ink:#171b18;--menu-body:#646b64;--menu-muted:#929892;--menu-line:#e7e2d9;--menu-orange:#f58220;--menu-orange-strong:#c95700;--menu-orange-soft:#fff1e4;--menu-green-soft:#eaf1e7;--menu-shadow:0 16px 40px rgba(42,37,28,.08)}
-.scorm-theme-light{--ops-orange:#de7a24;--ops-orange-strong:#c4600f;--ops-orange-hover:#ee9750;--ops-orange-dark:#2a1608;--ops-orange-soft:rgba(222,122,36,.12);--ops-orange-soft-strong:rgba(222,122,36,.2);--ops-orange-line:rgba(222,122,36,.34);--ops-orange-line-soft:rgba(222,122,36,.18);--ops-bg:#faf5ea;--ops-bg-deep:#f2eada;--ops-surface:#fff;--ops-surface-2:#fbf6ec;--ops-surface-3:#f3ebda;--ops-text:#362b1e;--ops-body:#5c4e3d;--ops-muted:#8a7a62;--ops-line:#e7dbc4;--ops-line-soft:#f0e6d2;--ops-green:#4e9973;--ops-red:#c86a4c;--ops-shadow:rgba(90,60,25,.1)}
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
+
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --deva-font-family: 'Lora', 'Noto Sans Devanagari', Georgia, 'Times New Roman', serif;
+  --deva-font-ui: var(--deva-font-family);
+  --deva-font-display: var(--deva-font-family);
+  --deva-type-body: 0.875rem;
+  --deva-type-support: 0.8125rem;
+  --deva-type-caption: 0.75rem;
+  --deva-control-height: 44px;
+  --type-xs: 12px;
+  --type-sm: 13px;
+  --type-md: 15px;
+  --type-lg: 17px;
+  --type-xl: 20px;
+  --type-2xl: 26px;
+  --type-3xl: 34px;
+  --ops-orange: #e8862e;
+  --ops-orange-strong: #f5a75c;
+  --ops-orange-hover: #ffc98a;
+  --ops-orange-dark: #2a1608;
+  --ops-orange-soft: rgba(232, 134, 46, 0.16);
+  --ops-orange-soft-strong: rgba(232, 134, 46, 0.24);
+  --ops-orange-line: rgba(232, 134, 46, 0.38);
+  --ops-orange-line-soft: rgba(232, 134, 46, 0.22);
+  --ops-bg: #1e1811;
+  --ops-bg-deep: #160f0a;
+  --ops-surface: #2a2318;
+  --ops-surface-2: #332b1e;
+  --ops-surface-3: #3d3324;
+  --ops-text: #f4eada;
+  --ops-body: #d3c3ac;
+  --ops-muted: #a8977e;
+  --ops-line: rgba(255, 238, 214, 0.1);
+  --ops-line-soft: rgba(255, 238, 214, 0.06);
+  --ops-green: #6fbe93;
+  --ops-red: #e2896f;
+  --ops-shadow: rgba(10, 6, 2, 0.34);
+  --menu-bg: #f8f6f1;
+  --menu-surface: #fff;
+  --menu-surface-soft: #f2eee6;
+  --menu-ink: #171b18;
+  --menu-body: #646b64;
+  --menu-muted: #929892;
+  --menu-line: #e7e2d9;
+  --menu-orange: #f58220;
+  --menu-orange-strong: #c95700;
+  --menu-orange-soft: #fff1e4;
+  --menu-green-soft: #eaf1e7;
+  --menu-shadow: 0 16px 40px rgba(42, 37, 28, 0.08);
+}
+
+.scorm-theme-light {
+  --ops-orange: #de7a24;
+  --ops-orange-strong: #c4600f;
+  --ops-orange-hover: #ee9750;
+  --ops-orange-dark: #2a1608;
+  --ops-orange-soft: rgba(222, 122, 36, 0.12);
+  --ops-orange-soft-strong: rgba(222, 122, 36, 0.2);
+  --ops-orange-line: rgba(222, 122, 36, 0.34);
+  --ops-orange-line-soft: rgba(222, 122, 36, 0.18);
+  --ops-bg: #faf5ea;
+  --ops-bg-deep: #f2eada;
+  --ops-surface: #fff;
+  --ops-surface-2: #fbf6ec;
+  --ops-surface-3: #f3ebda;
+  --ops-text: #362b1e;
+  --ops-body: #5c4e3d;
+  --ops-muted: #8a7a62;
+  --ops-line: #e7dbc4;
+  --ops-line-soft: #f0e6d2;
+  --ops-green: #4e9973;
+  --ops-red: #c86a4c;
+  --ops-shadow: rgba(90, 60, 25, 0.1);
+}

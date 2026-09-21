@@ -45,7 +45,7 @@
 .focused-brand > span:last-child > strong::after {
   content: 'Deva';
   display: inline-block;
-  font-family: 'Ubuntu', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--deva-font-family);
   font-size: 20px;
   font-weight: 800;
   line-height: 1;
@@ -61,7 +61,7 @@
 .sa-title::after {
   content: 'Deva';
   display: block;
-  font-family: 'Ubuntu', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--deva-font-family);
   font-size: clamp(54px, 6vw, 76px);
   line-height: .96;
   font-weight: 800;

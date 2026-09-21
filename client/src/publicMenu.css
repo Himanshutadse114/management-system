@@ -652,7 +652,7 @@
   align-content: center;
   gap: 10px;
   text-align: center;
-  font-family: Ubuntu, sans-serif;
+  font-family: var(--deva-font-family);
 }
 
 .public-menu-loader-brand { width: 64px; height: 64px; margin-bottom: 4px; }
