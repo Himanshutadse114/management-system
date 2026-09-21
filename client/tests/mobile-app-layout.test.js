@@ -83,3 +83,37 @@ test("mobile forms and cards cannot exceed the application viewport", async () =
   assert.match(css, /\.growth-card,[\s\S]*min-width:\s*0 !important/);
   assert.match(css, /max-width:\s*100% !important/);
 });
+
+test("phone QR menu cards keep content below a bounded image area", async () => {
+  const [responsive, simple] = await Promise.all([
+    readFile(new URL("../src/responsive.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/simple-ui.css", import.meta.url), "utf8"),
+  ]);
+  for (const css of [responsive, simple]) {
+    assert.match(
+      css,
+      /\.public-menu-card-media\s*\{[\s\S]*?height:\s*170px !important/,
+    );
+    assert.match(
+      css,
+      /\.public-menu-card-body\s*\{[\s\S]*?min-height:\s*0 !important/,
+    );
+  }
+});
+
+test("staff impersonation banner stays in the header flow", async () => {
+  const [component, css] = await Promise.all([
+    readFile(new URL("../src/FocusedWorkspaceShell.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/impersonation.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(
+    component,
+    /className="focused-header-stack"[\s\S]*?\{impersonationBanner\}[\s\S]*?<header className="focused-topbar">/,
+  );
+  assert.match(component, /aria-label="Open menu"/);
+  assert.match(
+    css,
+    /\.focused-header-stack \.deva-impersonation-banner\{[^}]*position:relative/,
+  );
+  assert.match(css, /\.focused-header-stack\{[^}]*position:sticky/);
+});

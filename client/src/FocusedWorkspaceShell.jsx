@@ -413,22 +413,24 @@ export default function FocusedWorkspaceShell() {
   if (singlePurpose) {
     return (
       <div className={`focused-single scorm-theme-${theme}`}>
-        {impersonationBanner}
-        <header className="focused-single-top">
-          <Brand />
-          <div>
-            <LanguageSwitcher compact />
-            <ThemeToggle theme={theme} onToggle={toggleTheme} />
-            <div className="focused-user">
-              <span>{session?.user?.name || profile.primaryRoleLabel}</span>
-              <small>{session?.user?.email}</small>
+        <div className="focused-header-stack">
+          {impersonationBanner}
+          <header className="focused-single-top">
+            <Brand />
+            <div>
+              <LanguageSwitcher compact />
+              <ThemeToggle theme={theme} onToggle={toggleTheme} />
+              <div className="focused-user">
+                <span>{session?.user?.name || profile.primaryRoleLabel}</span>
+                <small>{session?.user?.email}</small>
+              </div>
+              <button className="focused-signout" onClick={logout}>
+                <LogOut size={14} />
+                <span>Sign out</span>
+              </button>
             </div>
-            <button className="focused-signout" onClick={logout}>
-              <LogOut size={14} />
-              <span>Sign out</span>
-            </button>
-          </div>
-        </header>
+          </header>
+        </div>
         <main className="focused-single-main" ref={mainRef}>
           <ModuleView
             module={activeModule}
@@ -446,7 +448,6 @@ export default function FocusedWorkspaceShell() {
     .slice(0, 4);
   return (
     <div className={`focused-shell scorm-theme-${theme}`}>
-      {impersonationBanner}
       <aside className="focused-sidebar">
         <Brand />
         <Nav />
@@ -500,26 +501,30 @@ export default function FocusedWorkspaceShell() {
       )}
 
       <div className="focused-content">
-        <header className="focused-topbar">
-          <button
-            className="focused-mobile-menu"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu size={18} />
-          </button>
-          <div className="focused-context">
-            <ShieldCheck size={12} />
-            {profile.primaryRoleLabel}
-          </div>
-          <div className="focused-top-actions">
-            <LanguageSwitcher compact />
-            <ThemeToggle theme={theme} onToggle={toggleTheme} />
-            <div className="focused-user">
-              <span>{session?.user?.name || profile.primaryRoleLabel}</span>
-              <small>{session?.user?.email}</small>
+        <div className="focused-header-stack">
+          {impersonationBanner}
+          <header className="focused-topbar">
+            <button
+              className="focused-mobile-menu"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu size={18} />
+            </button>
+            <div className="focused-context">
+              <ShieldCheck size={12} />
+              {profile.primaryRoleLabel}
             </div>
-          </div>
-        </header>
+            <div className="focused-top-actions">
+              <LanguageSwitcher compact />
+              <ThemeToggle theme={theme} onToggle={toggleTheme} />
+              <div className="focused-user">
+                <span>{session?.user?.name || profile.primaryRoleLabel}</span>
+                <small>{session?.user?.email}</small>
+              </div>
+            </div>
+          </header>
+        </div>
         <main className="focused-main" ref={mainRef}>
           <ModuleView
             module={activeModule}

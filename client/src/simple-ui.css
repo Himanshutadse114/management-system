@@ -727,8 +727,10 @@ label span {
   .cashier-settlements { grid-template-columns: 1fr !important; }
 
   .public-menu-card { display: block !important; }
-  .public-menu-card>img,
-  .public-menu-image-placeholder { width: 100% !important; height: 170px !important; min-height: 0 !important; }
+  .public-menu-card-media { width: 100% !important; height: 170px !important; min-height: 170px !important; }
+  .public-menu-card-media > img,
+  .public-menu-image-placeholder { width: 100% !important; height: 100% !important; min-height: 0 !important; }
+  .public-menu-card-body { min-height: 0 !important; padding: 14px !important; }
 }
 
 @media (max-width: 380px) {
