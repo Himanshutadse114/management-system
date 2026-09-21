@@ -31,6 +31,9 @@ test("mobile selects and binary controls use compact application UI", async () =
 
   assert.match(main, /<MobileSelectOverlay \/>/);
   assert.match(overlay, /event\.preventDefault\(\)/);
+  assert.match(overlay, /addEventListener\("pointerdown", interceptPicker/);
+  assert.match(overlay, /addEventListener\("touchstart", interceptPicker/);
+  assert.match(overlay, /passive: false/);
   assert.match(overlay, /new Event\("change", \{ bubbles: true \}\)/);
   assert.match(overlay, /role="radiogroup"/);
   assert.match(css, /input\[type="checkbox"\],[\s\S]*?width:\s*18px !important/);

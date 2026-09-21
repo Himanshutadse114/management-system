@@ -13,7 +13,11 @@ function labelFor(select) {
   }
   const fieldLabel = select.closest("label");
   const directLabel = fieldLabel?.querySelector(":scope > span")?.textContent?.trim();
-  return directLabel || select.name || "Choose an option";
+  const textLabel = Array.from(fieldLabel?.childNodes || [])
+    .filter((node) => node !== select && node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent?.trim())
+    .find(Boolean);
+  return directLabel || textLabel || select.name || "Choose an option";
 }
 
 function optionsFor(select) {
@@ -29,15 +33,16 @@ export default function MobileSelectOverlay() {
   const [picker, setPicker] = useState(null);
 
   useEffect(() => {
-    function openPicker(event) {
+    function interceptPicker(event) {
       const select = event.target?.closest?.("select");
       if (!select || select.multiple || select.disabled) return;
       const isMobilePicker =
         /Android/i.test(navigator.userAgent) ||
         window.matchMedia("(max-width: 900px) and (pointer: coarse)").matches;
       if (!isMobilePicker) return;
-      event.preventDefault();
+      if (event.cancelable) event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation?.();
       setPicker({
         select,
         title: labelFor(select),
@@ -46,8 +51,17 @@ export default function MobileSelectOverlay() {
       });
     }
 
-    document.addEventListener("click", openPicker, true);
-    return () => document.removeEventListener("click", openPicker, true);
+    const listenerOptions = { capture: true, passive: false };
+    document.addEventListener("pointerdown", interceptPicker, listenerOptions);
+    document.addEventListener("touchstart", interceptPicker, listenerOptions);
+    document.addEventListener("mousedown", interceptPicker, listenerOptions);
+    document.addEventListener("click", interceptPicker, listenerOptions);
+    return () => {
+      document.removeEventListener("pointerdown", interceptPicker, true);
+      document.removeEventListener("touchstart", interceptPicker, true);
+      document.removeEventListener("mousedown", interceptPicker, true);
+      document.removeEventListener("click", interceptPicker, true);
+    };
   }, []);
 
   useEffect(() => {
