@@ -72,6 +72,7 @@ router.get('/tenants/:tenantId/branches/:branchId/catalogue', requireBranchRoles
           productType: value.productType,
           inventoryUnit: value.inventoryUnit,
           bottleVolumeMl: value.bottleVolumeMl,
+          trackInventory: value.trackInventory,
           imageUrl: mediaUrl(value.imageObjectKey, value.id),
           availableQuantityBase: value.inventoryBalances?.[0]?.quantityBase || '0.000',
           priceOptions: value.priceOptions || []

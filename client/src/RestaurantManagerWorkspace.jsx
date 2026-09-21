@@ -55,6 +55,22 @@ function nextTableForm(rows = []) {
   return { name: `Table ${suffix}`, code: `T${suffix}`, seats: "4" };
 }
 
+function emptyMenuForm() {
+  return {
+    sourceType: "PREPARED",
+    productId: "",
+    displayName: "",
+    priceRupees: "",
+    priceLabel: "Serving",
+    productType: "FOOD",
+    sectionName: "Main Course",
+    description: "",
+    featured: false,
+    modifierGroups: [],
+    comboItemsText: "",
+  };
+}
+
 function ScopeSelector({ token, access, scope, setScope, setBranch }) {
   const isSuperAdmin = Boolean(access?.isSuperAdmin);
   const tenantAdmin = (access?.tenants || []).find(
@@ -210,15 +226,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
   const [tableForm, setTableForm] = useState(() => nextTableForm());
   const [tableFormError, setTableFormError] = useState("");
   const [tableFormNotice, setTableFormNotice] = useState("");
-  const [menuForm, setMenuForm] = useState({
-    productId: "",
-    displayName: "",
-    sectionName: "Food & Drinks",
-    description: "",
-    featured: false,
-    modifierGroups: [],
-    comboItemsText: "",
-  });
+  const [menuForm, setMenuForm] = useState(() => emptyMenuForm());
   const [reservationForm, setReservationForm] = useState({
     guestName: "",
     phone: "",
@@ -625,8 +633,13 @@ export default function RestaurantManagerWorkspace({ token, access }) {
     event.preventDefault();
     try {
       setError("");
+      const prepared = menuForm.sourceType === "PREPARED";
       const product = products.find((row) => row.id === menuForm.productId);
-      if (!product) throw new Error("Choose an item.");
+      if (!prepared && !product) throw new Error("Choose a stock item.");
+      if (prepared && !menuForm.displayName.trim())
+        throw new Error("Enter the dish or drink name.");
+      if (prepared && Number(menuForm.priceRupees) <= 0)
+        throw new Error("Enter a selling price greater than zero.");
       const modifierGroups = menuForm.modifierGroups.map((group) => ({
         ...group,
         min: Number(group.min || 0),
@@ -653,31 +666,41 @@ export default function RestaurantManagerWorkspace({ token, access }) {
         `${base}/menu`,
         {
           ...menuForm,
-          displayName: menuForm.displayName || product.name,
+          productId: menuForm.productId || undefined,
+          displayName: menuForm.displayName || product?.name,
+          priceMinor: prepared
+            ? minorFromRupees(menuForm.priceRupees)
+            : undefined,
           modifierGroups,
           comboItems,
         },
         { headers: authHeaders(token) },
       );
-      setMenuForm({
-        productId: "",
-        displayName: "",
-        sectionName: "Food & Drinks",
-        description: "",
-        featured: false,
-        modifierGroups: [],
-        comboItemsText: "",
-      });
+      setMenuForm(emptyMenuForm());
       await loadAll();
-      flash("Item added to public menu.");
+      flash(
+        prepared
+          ? "Prepared item saved to the QR menu without creating meal stock."
+          : "Stock item added to the QR menu.",
+      );
     } catch (err) {
       setError(err.message || apiErrorMessage(err));
     }
   }
   function editMenu(item) {
+    const prepared = item.product?.trackInventory === false;
+    const firstPrice = item.product?.priceOptions?.find(
+      (price) => price.active !== false,
+    );
     setMenuForm({
+      sourceType: prepared ? "PREPARED" : "STOCK",
       productId: item.productId,
-      displayName: item.displayName,
+      displayName: item.displayName || item.product?.name || "",
+      priceRupees: prepared
+        ? (Number(firstPrice?.priceMinor || 0) / 100).toFixed(2)
+        : "",
+      priceLabel: firstPrice?.label || "Serving",
+      productType: item.product?.productType || "FOOD",
       sectionName: item.sectionName,
       description: item.description || "",
       featured: Boolean(item.featured),
@@ -1667,39 +1690,122 @@ export default function RestaurantManagerWorkspace({ token, access }) {
               </div>
               <UtensilsCrossed size={18} />
             </div>
-            <label>
-              <span>Item</span>
-              <select
-                value={menuForm.productId}
-                onChange={(e) => {
-                  const product = products.find(
-                    (row) => row.id === e.target.value,
-                  );
+            <div className="menu-source-picker" role="group" aria-label="Menu item source">
+              <button
+                type="button"
+                className={menuForm.sourceType === "PREPARED" ? "is-active" : ""}
+                onClick={() =>
                   setMenuForm({
                     ...menuForm,
-                    productId: e.target.value,
-                    displayName: product?.name || "",
-                  });
-                }}
-                required
+                    sourceType: "PREPARED",
+                    productId: "",
+                    displayName: "",
+                    priceRupees: "",
+                    priceLabel: "Serving",
+                    productType: "FOOD",
+                  })
+                }
               >
-                <option value="">Choose item</option>
-                {products.map((product) => (
-                  <option value={product.id} key={product.id}>
-                    {product.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <ChefHat size={15} />
+                <span><strong>Prepared dish</strong><small>Made after an order</small></span>
+              </button>
+              <button
+                type="button"
+                className={menuForm.sourceType === "STOCK" ? "is-active" : ""}
+                onClick={() =>
+                  setMenuForm({
+                    ...menuForm,
+                    sourceType: "STOCK",
+                    productId: "",
+                    displayName: "",
+                    priceRupees: "",
+                  })
+                }
+              >
+                <ClipboardList size={15} />
+                <span><strong>Stock item</strong><small>Bottle or packaged item</small></span>
+              </button>
+            </div>
+            {menuForm.sourceType === "STOCK" && (
+              <label>
+                <span>Stock item</span>
+                <select
+                  value={menuForm.productId}
+                  onChange={(e) => {
+                    const product = products.find(
+                      (row) => row.id === e.target.value,
+                    );
+                    setMenuForm({
+                      ...menuForm,
+                      productId: e.target.value,
+                      displayName: product?.name || "",
+                    });
+                  }}
+                  required
+                >
+                  <option value="">Choose a bottle or packaged item</option>
+                  {products
+                    .filter((product) => product.trackInventory !== false)
+                    .map((product) => (
+                      <option value={product.id} key={product.id}>
+                        {product.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
             <label>
-              <span>Name shown to guest</span>
+              <span>
+                {menuForm.sourceType === "PREPARED"
+                  ? "Dish or drink name"
+                  : "Name shown to guest"}
+              </span>
               <input
                 value={menuForm.displayName}
                 onChange={(e) =>
                   setMenuForm({ ...menuForm, displayName: e.target.value })
                 }
+                placeholder="e.g. Paneer Tikka Masala"
+                required
               />
             </label>
+            {menuForm.sourceType === "PREPARED" && (
+              <>
+                <div className="form-pair">
+                  <label>
+                    <span>Selling price (₹)</span>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={menuForm.priceRupees}
+                      onChange={(e) =>
+                        setMenuForm({ ...menuForm, priceRupees: e.target.value })
+                      }
+                      placeholder="320.00"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Sold as</span>
+                    <input
+                      value={menuForm.priceLabel}
+                      onChange={(e) =>
+                        setMenuForm({ ...menuForm, priceLabel: e.target.value })
+                      }
+                      placeholder="Serving"
+                    />
+                  </label>
+                </div>
+                <div className="menu-inventory-note">
+                  <ChefHat size={15} />
+                  <span>
+                    This creates a menu-only item. The finished meal is not counted in Stock.
+                    Use <strong>Recipe</strong> after saving if each order should deduct ingredients.
+                  </span>
+                </div>
+              </>
+            )}
             <label>
               <span>Menu section</span>
               <input
@@ -1916,7 +2022,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
             </label>
             <button className="scorm-button-primary restaurant-submit">
               <Plus size={14} />
-              Add to menu
+              Save menu item
             </button>
           </form>
           <section className="restaurant-panel">
@@ -1938,12 +2044,14 @@ export default function RestaurantManagerWorkspace({ token, access }) {
               {menuItems.map((item) => (
                 <div className="menu-admin-row" key={item.id}>
                   <div>
-                    <strong>{item.displayName}</strong>
+                    <strong>{item.displayName || item.product?.name || "Menu item"}</strong>
                     <span>
                       {item.sectionName} ·{" "}
-                      {item.product?.brand ||
-                        item.product?.productType ||
-                        "Item"}
+                      {item.product?.trackInventory === false
+                        ? "Prepared · not counted as stock"
+                        : item.product?.brand ||
+                          item.product?.productType ||
+                          "Stock item"}
                     </span>
                     <div className="menu-price-chips">
                       {(item.product?.priceOptions || []).map((price) => (
@@ -2189,7 +2297,9 @@ export default function RestaurantManagerWorkspace({ token, access }) {
                     <option value="">Ingredient</option>
                     {products
                       .filter(
-                        (product) => product.id !== recipeTarget.productId,
+                        (product) =>
+                          product.id !== recipeTarget.productId &&
+                          product.trackInventory !== false,
                       )
                       .map((product) => (
                         <option key={product.id} value={product.id}>
@@ -2294,7 +2404,8 @@ function minorFromRupees(value) {
   const raw = String(value ?? "").trim();
   if (!raw) return "0";
   const match = raw.match(/^(\d+)(?:\.(\d{0,2}))?$/);
-  if (!match) throw new Error("Enter a valid deposit amount.");
+  if (!match)
+    throw new Error("Enter a valid rupee amount with up to two decimal places.");
   return (
     BigInt(match[1]) * 100n +
     BigInt((match[2] || "").padEnd(2, "0") || "0")

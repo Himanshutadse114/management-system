@@ -335,41 +335,145 @@ router.get('/tenants/:tenantId/branches/:branchId/menu', readAccess, async (req,
 
 router.post('/tenants/:tenantId/branches/:branchId/menu', managerAccess, async (req, res, next) => {
   try {
-    const product = await Product.findOne({ where: { id: req.body?.productId, tenantId: req.params.tenantId, status: 'ACTIVE' } });
-    if (!product) return res.status(404).json({ message: 'Active product not found.' });
-    const priceCount = await ProductPriceOption.count({ where: { productId: product.id, branchId: req.params.branchId, active: true } });
-    if (!priceCount) return res.status(400).json({ message: 'Add at least one active branch price option before publishing the product to the menu.' });
-    const [item, created] = await MenuItem.findOrCreate({
-      where: { branchId: req.params.branchId, productId: product.id },
-      defaults: {
-        tenantId: req.params.tenantId,
-        branchId: req.params.branchId,
-        productId: product.id,
-        displayName: cleanText(req.body?.displayName, 180) || product.name,
-        description: cleanText(req.body?.description, 2000),
-        sectionName: cleanText(req.body?.sectionName, 100) || 'Menu',
-        sortOrder: Number.isInteger(req.body?.sortOrder) ? req.body.sortOrder : 0,
-        featured: Boolean(req.body?.featured),
-        active: req.body?.active !== false,
-        dietaryTags: Array.isArray(req.body?.dietaryTags) ? req.body.dietaryTags.slice(0, 20) : null,
-        modifierGroups: normalizeModifierGroups(req.body?.modifierGroups),
-        comboItems: normalizeComboItems(req.body?.comboItems)
+    // LINKED keeps older installed clients compatible: before the prepared
+    // dish form existed they posted only productId, for both tracked and
+    // non-tracked products.
+    const sourceType = String(req.body?.sourceType || (req.body?.productId ? 'LINKED' : 'PREPARED')).toUpperCase();
+    if (!['PREPARED', 'STOCK', 'LINKED'].includes(sourceType)) {
+      return res.status(400).json({ message: 'Menu source must be PREPARED or STOCK.' });
+    }
+
+    let product;
+    let priceOption = null;
+    let item;
+    let created = false;
+    await sequelize.transaction(async (transaction) => {
+      if (sourceType === 'PREPARED') {
+        const displayName = cleanText(req.body?.displayName, 180);
+        if (!displayName) {
+          const error = new Error('Enter the dish or drink name.');
+          error.status = 400;
+          throw error;
+        }
+        const priceMinor = minorInteger(req.body?.priceMinor, 'Menu price');
+        if (priceMinor <= 0n) {
+          const error = new Error('Menu price must be greater than zero.');
+          error.status = 400;
+          throw error;
+        }
+        const priceLabel = cleanText(req.body?.priceLabel, 80) || 'Serving';
+
+        if (req.body?.productId) {
+          product = await Product.findOne({
+            where: { id: req.body.productId, tenantId: req.params.tenantId, status: 'ACTIVE', trackInventory: false },
+            transaction,
+            lock: transaction.LOCK.UPDATE
+          });
+          if (!product) {
+            const error = new Error('This prepared menu item is unavailable.');
+            error.status = 404;
+            throw error;
+          }
+          product.name = displayName;
+          await product.save({ transaction });
+        } else {
+          product = await Product.create({
+            tenantId: req.params.tenantId,
+            name: displayName,
+            productType: String(req.body?.productType || 'FOOD').toUpperCase() === 'MIXER' ? 'MIXER' : 'FOOD',
+            inventoryUnit: 'PIECE',
+            trackInventory: false,
+            status: 'ACTIVE'
+          }, { transaction });
+        }
+
+        priceOption = await ProductPriceOption.findOne({
+          where: { tenantId: req.params.tenantId, branchId: req.params.branchId, productId: product.id, active: true },
+          order: [['sortOrder', 'ASC']],
+          transaction,
+          lock: transaction.LOCK.UPDATE
+        });
+        if (priceOption) {
+          priceOption.label = priceLabel;
+          priceOption.quantityBaseUnits = '1.000';
+          priceOption.priceMinor = priceMinor.toString();
+          await priceOption.save({ transaction });
+        } else {
+          priceOption = await ProductPriceOption.create({
+            tenantId: req.params.tenantId,
+            branchId: req.params.branchId,
+            productId: product.id,
+            label: priceLabel,
+            quantityBaseUnits: '1.000',
+            priceMinor: priceMinor.toString(),
+            active: true,
+            sortOrder: 0
+          }, { transaction });
+        }
+      } else {
+        product = await Product.findOne({
+          where: {
+            id: req.body?.productId,
+            tenantId: req.params.tenantId,
+            status: 'ACTIVE',
+            ...(sourceType === 'STOCK' ? { trackInventory: true } : {})
+          },
+          transaction
+        });
+        if (!product) {
+          const error = new Error('Choose an active stock item.');
+          error.status = 404;
+          throw error;
+        }
+        const priceCount = await ProductPriceOption.count({
+          where: { productId: product.id, branchId: req.params.branchId, active: true },
+          transaction
+        });
+        if (!priceCount) {
+          const error = new Error('Add at least one active branch price option before publishing this stock item.');
+          error.status = 400;
+          throw error;
+        }
+      }
+
+      [item, created] = await MenuItem.findOrCreate({
+        where: { branchId: req.params.branchId, productId: product.id },
+        defaults: {
+          tenantId: req.params.tenantId,
+          branchId: req.params.branchId,
+          productId: product.id,
+          displayName: cleanText(req.body?.displayName, 180) || product.name,
+          description: cleanText(req.body?.description, 2000),
+          sectionName: cleanText(req.body?.sectionName, 100) || 'Menu',
+          sortOrder: Number.isInteger(req.body?.sortOrder) ? req.body.sortOrder : 0,
+          featured: Boolean(req.body?.featured),
+          active: req.body?.active !== false,
+          dietaryTags: Array.isArray(req.body?.dietaryTags) ? req.body.dietaryTags.slice(0, 20) : null,
+          modifierGroups: normalizeModifierGroups(req.body?.modifierGroups),
+          comboItems: normalizeComboItems(req.body?.comboItems)
+        },
+        transaction
+      });
+      if (!created) {
+        item.displayName = cleanText(req.body?.displayName, 180) || item.displayName || product.name;
+        item.description = req.body?.description !== undefined ? cleanText(req.body.description, 2000) : item.description;
+        item.sectionName = cleanText(req.body?.sectionName, 100) || item.sectionName || 'Menu';
+        if (Number.isInteger(req.body?.sortOrder)) item.sortOrder = req.body.sortOrder;
+        if (req.body?.featured !== undefined) item.featured = Boolean(req.body.featured);
+        if (req.body?.active !== undefined) item.active = Boolean(req.body.active);
+        if (Array.isArray(req.body?.dietaryTags)) item.dietaryTags = req.body.dietaryTags.slice(0, 20);
+        if (Array.isArray(req.body?.modifierGroups)) item.modifierGroups = normalizeModifierGroups(req.body.modifierGroups);
+        if (Array.isArray(req.body?.comboItems)) item.comboItems = normalizeComboItems(req.body.comboItems);
+        await item.save({ transaction });
       }
     });
-    if (!created) {
-      item.displayName = cleanText(req.body?.displayName, 180) || item.displayName || product.name;
-      item.description = req.body?.description !== undefined ? cleanText(req.body.description, 2000) : item.description;
-      item.sectionName = cleanText(req.body?.sectionName, 100) || item.sectionName || 'Menu';
-      if (Number.isInteger(req.body?.sortOrder)) item.sortOrder = req.body.sortOrder;
-      if (req.body?.featured !== undefined) item.featured = Boolean(req.body.featured);
-      if (req.body?.active !== undefined) item.active = Boolean(req.body.active);
-      if (Array.isArray(req.body?.dietaryTags)) item.dietaryTags = req.body.dietaryTags.slice(0, 20);
-      if (Array.isArray(req.body?.modifierGroups)) item.modifierGroups = normalizeModifierGroups(req.body.modifierGroups);
-      if (Array.isArray(req.body?.comboItems)) item.comboItems = normalizeComboItems(req.body.comboItems);
-      await item.save();
-    }
-    await audit(req, created ? 'MENU_ITEM_PUBLISHED' : 'MENU_ITEM_UPDATED', 'MenuItem', item.id, { productId: product.id, sectionName: item.sectionName });
-    res.status(created ? 201 : 200).json({ item });
+
+    await audit(req, created ? 'MENU_ITEM_PUBLISHED' : 'MENU_ITEM_UPDATED', 'MenuItem', item.id, {
+      productId: product.id,
+      sectionName: item.sectionName,
+      sourceType
+    });
+    res.status(created ? 201 : 200).json({ item, product, priceOption, sourceType });
   } catch (error) { next(error); }
 });
 

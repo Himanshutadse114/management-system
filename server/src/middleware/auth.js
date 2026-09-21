@@ -75,7 +75,11 @@ async function authenticate(req, res, next) {
       req.access = await accessSnapshot(user);
     }
 
-    if (req.credential?.mustChangePassword && req.originalUrl !== '/api/auth/status' && req.originalUrl !== '/api/auth/change-password') {
+    // A Business Admin's short-lived "Work as staff" session is an audited
+    // operational view, not the employee signing in with their temporary
+    // password. Keep first-login password enforcement for the employee's own
+    // session, but do not make an impersonated workspace unusable.
+    if (!req.impersonation && req.credential?.mustChangePassword && req.originalUrl !== '/api/auth/status' && req.originalUrl !== '/api/auth/change-password') {
       return res.status(403).json({
         message: 'Change the temporary password before continuing.',
         code: 'PASSWORD_CHANGE_REQUIRED'

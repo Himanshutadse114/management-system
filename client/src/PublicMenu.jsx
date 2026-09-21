@@ -28,6 +28,7 @@ function MenuItemCard({ item, featuredLabel, locale, onAdd }) {
   const prices = item.product?.priceOptions || [];
   const image = item.product?.imageUrl;
   const alcohol = item.product?.productType === "ALCOHOL";
+  const itemName = item.displayName || item.product?.name || "Menu item";
 
   return (
     <article
@@ -35,7 +36,7 @@ function MenuItemCard({ item, featuredLabel, locale, onAdd }) {
     >
       <div className="public-menu-card-media">
         {image ? (
-          <img src={image} alt={item.displayName} loading="lazy" />
+          <img src={image} alt={itemName} loading="lazy" />
         ) : (
           <div className="public-menu-image-placeholder">
             <span className="public-menu-placeholder-ring">
@@ -56,7 +57,7 @@ function MenuItemCard({ item, featuredLabel, locale, onAdd }) {
           {item.product?.brand && (
             <div className="public-menu-brandline">{item.product.brand}</div>
           )}
-          <h3>{item.displayName}</h3>
+          <h3>{itemName}</h3>
           {item.description && <p>{item.description}</p>}
           {Array.isArray(item.dietaryTags) && item.dietaryTags.length > 0 && (
             <div className="public-menu-tags">

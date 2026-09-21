@@ -27,6 +27,10 @@ function mediaUrl(objectKey, productId) {
   return backend && productId ? `${backend}/api/public/products/${encodeURIComponent(productId)}/image` : null;
 }
 
+function cleanMenuName(displayName, productName) {
+  return String(displayName || '').trim() || String(productName || '').trim() || 'Menu item';
+}
+
 function contentTypeForKey(objectKey) {
   switch (path.extname(String(objectKey || '')).toLowerCase()) {
     case '.jpg':
@@ -99,7 +103,7 @@ router.get('/menu/:qrToken', async (req, res, next) => {
         if (!product) return null;
         return {
           id: item.id,
-          displayName: item.displayName,
+          displayName: cleanMenuName(item.displayName, product.name),
           description: item.description,
           sectionName: item.sectionName,
           sortOrder: item.sortOrder,
@@ -153,7 +157,7 @@ router.get('/store/:slug', async (req, res, next) => {
     const productIds = [...new Set(menuItems.map((item) => item.productId))];
     const products = productIds.length ? await Product.findAll({ where: { id:{[Op.in]:productIds}, tenantId:store.tenantId, status:'ACTIVE' }, attributes:['id','name','brand','productType','imageObjectKey'], include:[{ model:ProductPriceOption, as:'priceOptions', where:{branchId:store.branchId,active:true}, required:true, attributes:['id','label','quantityBaseUnits','priceMinor','sortOrder'] }], order:[[{model:ProductPriceOption,as:'priceOptions'},'sortOrder','ASC']] }) : [];
     const productMap = new Map(products.map((product)=>[String(product.id),product.toJSON()]));
-    const items = menuItems.map((item)=>{const product=productMap.get(String(item.productId));if(!product)return null;return {id:item.id,displayName:item.displayName,description:item.description,sectionName:item.sectionName,sortOrder:item.sortOrder,featured:item.featured,dietaryTags:item.dietaryTags||[],modifierGroups:item.modifierGroups||[],comboItems:item.comboItems||[],product:{...product,imageUrl:mediaUrl(product.imageObjectKey,product.id)}};}).filter(Boolean);
+    const items = menuItems.map((item)=>{const product=productMap.get(String(item.productId));if(!product)return null;return {id:item.id,displayName:cleanMenuName(item.displayName,product.name),description:item.description,sectionName:item.sectionName,sortOrder:item.sortOrder,featured:item.featured,dietaryTags:item.dietaryTags||[],modifierGroups:item.modifierGroups||[],comboItems:item.comboItems||[],product:{...product,imageUrl:mediaUrl(product.imageObjectKey,product.id)}};}).filter(Boolean);
     res.set('Cache-Control','public, max-age=60, stale-while-revalidate=120');
     res.json({ branch:{name:store.name,code:branch.code,address:branch.address,phone:store.contactPhone||branch.phone,currency:branch.currency}, table:{name:'Pickup',code:'DIRECT',seats:0}, payment:{upiVpa:settings?.upiVpa||null,methods:settings?.allowedPaymentMethods||['CASH','CARD','UPI']}, store:{slug:store.slug,fulfillmentOptions:store.fulfillmentOptions,theme:store.theme}, menu:items });
   } catch (error) { next(error); }

@@ -42,6 +42,9 @@ const waiterCatalogue = require('../src/routes/waiterCatalogue');
 const cashierSales = require('../src/routes/cashierSales');
 const publicRoutes = require('../src/routes/public');
 const platformRoutes = require('../src/routes/platform');
+const authRoutes = require('../src/routes/auth');
+const restaurantRoutes = require('../src/routes/restaurant');
+const { createPasswordAccount } = require('../src/services/credentialService');
 
 const {
   User,
@@ -124,6 +127,16 @@ function platformApiApp() {
   return app;
 }
 
+function operationsApiApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/auth', authRoutes);
+  app.use('/api/restaurant', restaurantRoutes);
+  app.use((req, res) => res.status(404).json({ message: 'Route not mounted in test app.' }));
+  app.use((error, _req, res, _next) => res.status(Number(error.status || 500)).json({ message: error.message, code: error.code || 'TEST_ERROR' }));
+  return app;
+}
+
 function assertNoSensitiveEmployeeFields(body) {
   const payload = JSON.stringify(body);
   for (const key of ['quantityBase', 'inventoryValueMinor', 'cogsMinor', 'grossProfitMinor', 'costAmountMinor', 'averageUnitCostMinor']) {
@@ -191,6 +204,50 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
     const app=focusedApiApp(),menu=await request(app).get(`/api/public/menu/${table.qrToken}`).expect(200);assert.equal(menu.body.table.code,'QR-1');assert.ok(menu.body.menu.length>=1);
     const body={guestName:'Guest',phone:'9000000000',lines:[{priceOptionId:qrPrice.id,quantityUnits:1}],idempotencyKey:'qr-smoke-1'};
     const first=await request(app).post(`/api/public/menu/${table.qrToken}/orders`).send(body).expect(202);const replay=await request(app).post(`/api/public/menu/${table.qrToken}/orders`).send(body).expect(200);assert.equal(first.body.request.id,replay.body.request.id);assert.equal(replay.body.replayed,true);
+  });
+
+  it('creates a prepared menu item without creating finished-meal stock and exposes its name in the QR menu', async () => {
+    await TenantMembership.findOrCreate({
+      where: { tenantId: fixture.tenantA.id, email: fixture.actor.email, role: 'TENANT_ADMIN' },
+      defaults: { tenantId: fixture.tenantA.id, userId: fixture.actor.id, email: fixture.actor.email, role: 'TENANT_ADMIN', status: 'ACTIVE', activatedAt: new Date() }
+    });
+    const app = operationsApiApp();
+    const response = await request(app)
+      .post(`/api/restaurant/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/menu`)
+      .set('Authorization', `Bearer ${testToken(fixture.actor)}`)
+      .send({ sourceType: 'PREPARED', displayName: 'Paneer Tikka Masala', sectionName: 'Main Course', description: 'Cooked after the guest orders.', priceMinor: '36000', priceLabel: 'Serving', featured: true })
+      .expect(201);
+
+    assert.equal(response.body.sourceType, 'PREPARED');
+    assert.equal(response.body.product.trackInventory, false);
+    assert.equal(await InventoryBalance.count({ where: { productId: response.body.product.id } }), 0);
+
+    const table = await RestaurantTable.create({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, name: 'Prepared Menu Table', code: 'PREP-QR', seats: 2, status: 'ACTIVE', qrToken: `prepared-${crypto.randomUUID()}` });
+    const publicMenu = await request(focusedApiApp()).get(`/api/public/menu/${table.qrToken}`).expect(200);
+    const item = publicMenu.body.menu.find((row) => row.id === response.body.item.id);
+    assert.equal(item.displayName, 'Paneer Tikka Masala');
+    assert.equal(item.product.priceOptions[0].priceMinor, '36000');
+  });
+
+  it('lets a Business Admin work as temporary-password staff without blocking the staff workspace', async () => {
+    await TenantMembership.findOrCreate({
+      where: { tenantId: fixture.tenantA.id, email: fixture.actor.email, role: 'TENANT_ADMIN' },
+      defaults: { tenantId: fixture.tenantA.id, userId: fixture.actor.id, email: fixture.actor.email, role: 'TENANT_ADMIN', status: 'ACTIVE', activatedAt: new Date() }
+    });
+    const username = `shift-manager-${crypto.randomBytes(3).toString('hex')}`;
+    const account = await createPasswordAccount({ username, password: 'Temp!Pass1234', name: 'Shift Manager', createdByUserId: fixture.actor.id, mustChangePassword: true });
+    const membership = await BranchMembership.create({ tenantId: fixture.tenantA.id, branchId: fixture.branchA.id, userId: account.user.id, email: account.user.email, role: 'BRANCH_MANAGER', status: 'ACTIVE', invitedByUserId: fixture.actor.id, activatedAt: new Date() });
+    const app = operationsApiApp();
+    const switched = await request(app)
+      .post('/api/auth/impersonate')
+      .set('Authorization', `Bearer ${testToken(fixture.actor)}`)
+      .send({ tenantId: fixture.tenantA.id, membershipId: membership.id })
+      .expect(200);
+
+    await request(app)
+      .get(`/api/restaurant/tenants/${fixture.tenantA.id}/branches/${fixture.branchA.id}/menu`)
+      .set('Authorization', `Bearer ${switched.body.token}`)
+      .expect(200);
   });
 
   it('prices modifiers, records KOT choices, consumes recipe ingredients and reverses them on cancellation', async () => {
