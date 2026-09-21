@@ -9,7 +9,8 @@ const {
   activateMatchingInvitations,
   accessSnapshot,
   scopeAccessToTenant,
-  canManageTenant
+  canManageTenant,
+  isSuperAdmin
 } = require('../services/accessService');
 const {
   normalizeUsername,
