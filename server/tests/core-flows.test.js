@@ -209,7 +209,7 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
   it('creates a prepared menu item without creating finished-meal stock and exposes its name in the QR menu', async () => {
     await TenantMembership.findOrCreate({
       where: { tenantId: fixture.tenantA.id, email: fixture.actor.email, role: 'TENANT_ADMIN' },
-      defaults: { tenantId: fixture.tenantA.id, userId: fixture.actor.id, email: fixture.actor.email, role: 'TENANT_ADMIN', status: 'ACTIVE', activatedAt: new Date() }
+      defaults: { tenantId: fixture.tenantA.id, userId: fixture.actor.id, email: fixture.actor.email, role: 'TENANT_ADMIN', status: 'ACTIVE', invitedByUserId: fixture.actor.id, activatedAt: new Date() }
     });
     const app = operationsApiApp();
     const response = await request(app)
@@ -232,7 +232,7 @@ describe('critical commerce, restaurant and role-isolation flows', function () {
   it('lets a Business Admin work as temporary-password staff without blocking the staff workspace', async () => {
     await TenantMembership.findOrCreate({
       where: { tenantId: fixture.tenantA.id, email: fixture.actor.email, role: 'TENANT_ADMIN' },
-      defaults: { tenantId: fixture.tenantA.id, userId: fixture.actor.id, email: fixture.actor.email, role: 'TENANT_ADMIN', status: 'ACTIVE', activatedAt: new Date() }
+      defaults: { tenantId: fixture.tenantA.id, userId: fixture.actor.id, email: fixture.actor.email, role: 'TENANT_ADMIN', status: 'ACTIVE', invitedByUserId: fixture.actor.id, activatedAt: new Date() }
     });
     const username = `shift-manager-${crypto.randomBytes(3).toString('hex')}`;
     const account = await createPasswordAccount({ username, password: 'Temp!Pass1234', name: 'Shift Manager', createdByUserId: fixture.actor.id, mustChangePassword: true });
