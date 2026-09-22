@@ -772,5 +772,68 @@
 .public-cart-fab{position:fixed;z-index:55;left:50%;bottom:18px;transform:translateX(-50%);min-width:min(430px,calc(100vw - 28px));min-height:52px;padding:0 16px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:#e67e22;color:#1e1209;box-shadow:0 16px 45px rgba(0,0,0,.34);display:flex;align-items:center;gap:9px;font-weight:800}.public-cart-fab strong{margin-left:auto}
 .public-cart,.public-customizer{position:fixed;inset:0;z-index:80;display:flex;justify-content:flex-end}.public-cart-backdrop{position:absolute;inset:0;border:0;background:rgba(10,7,5,.72);backdrop-filter:blur(4px)}.public-cart-panel{position:relative;width:min(470px,100%);height:100%;overflow:auto;padding:20px;background:#17120f;color:#fff;box-shadow:-20px 0 70px rgba(0,0,0,.4)}.public-cart-panel header,.public-customizer-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.public-cart-panel header span,.public-customizer-card header span{color:#f4a261;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.public-cart-panel h2,.public-customizer-card h2{margin:5px 0 0}.public-cart-panel header button,.public-customizer-card header button{width:36px;height:36px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:#241c17;color:#fff;display:grid;place-items:center}.public-cart-lines{margin:18px 0;display:grid;gap:8px}.public-cart-lines>div{padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:10px;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:9px}.public-cart-lines>div>div:first-child{display:grid;gap:3px}.public-cart-lines span{color:#bfae9e;font-size:10px}.public-cart-qty{display:flex;align-items:center;gap:6px}.public-cart-qty button{width:27px;height:27px;border:1px solid rgba(255,255,255,.12);border-radius:7px;background:#241c17;color:#fff}.public-cart-total{padding:14px 0;border-top:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between}.public-cart-total strong{font-size:20px}.public-cart-panel>label,.public-item-note{margin-top:10px;display:grid;gap:6px}.public-cart-panel>label>span,.public-item-note>span{color:#bfae9e;font-size:10px}.public-cart-panel input,.public-cart-panel textarea,.public-item-note textarea{min-height:42px;padding:9px 10px;border:1px solid rgba(255,255,255,.13);border-radius:9px;background:#241c17;color:#fff}.public-cart-panel label.public-consent{display:flex;align-items:center;grid-template-columns:auto 1fr}.public-consent input{min-height:0;width:17px;height:17px;accent-color:#e67e22}.public-order-submit{width:100%;min-height:48px;margin-top:14px;border:0;border-radius:10px;background:#e67e22;color:#241207;font-weight:850;display:flex;align-items:center;justify-content:center;gap:7px}.public-cart-panel>small{display:block;margin-top:9px;color:#9c8b7c;font-size:9px;line-height:1.5;text-align:center}
 .public-customizer{align-items:center;justify-content:center;padding:18px}.public-customizer-card{position:relative;width:min(520px,100%);max-height:90vh;overflow:auto;padding:18px;border:1px solid rgba(255,255,255,.13);border-radius:16px;background:#17120f;color:#fff}.public-customizer-card fieldset{margin:12px 0;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:10px}.public-customizer-card legend{padding:0 6px;font-weight:800}.public-customizer-card legend small{margin-left:8px;color:#9c8b7c;font-size:9px}.public-customizer-card fieldset label{min-height:40px;border-bottom:1px solid rgba(255,255,255,.08);display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}.public-customizer-card fieldset label:last-child{border-bottom:0}.public-customizer-card fieldset input{width:17px;height:17px;accent-color:#e67e22}.public-customizer-card fieldset strong{color:#f4a261;font-size:10px}.public-combo{padding:9px 10px;border-radius:9px;background:rgba(230,126,34,.12);color:#d8c7b8;font-size:10px;line-height:1.5}
+
+/* Customer checkout is intentionally light regardless of an app or device theme. */
+.public-cart-panel,
+.public-customizer-card {
+  color-scheme: light;
+  background: #fffaf4;
+  color: #201b16;
+  border-color: #e6d8c8;
+  box-shadow: -20px 0 70px rgba(60, 42, 26, .2);
+}
+
+.public-cart-panel header span,
+.public-customizer-card header span,
+.public-customizer-card fieldset strong {
+  color: #b84d00;
+}
+
+.public-cart-panel header button,
+.public-customizer-card header button,
+.public-cart-qty button {
+  border-color: #e6d8c8;
+  background: #ffffff;
+  color: #201b16;
+}
+
+.public-cart-lines > div,
+.public-customizer-card fieldset {
+  border-color: #eadfd2;
+  background: #ffffff;
+}
+
+.public-cart-lines span,
+.public-cart-panel > label > span,
+.public-item-note > span,
+.public-customizer-card legend small,
+.public-cart-panel > small {
+  color: #74695d;
+}
+
+.public-cart-panel input,
+.public-cart-panel textarea,
+.public-item-note textarea {
+  border-color: #ddcdbb;
+  background: #ffffff;
+  color: #201b16;
+  caret-color: #b84d00;
+}
+
+.public-cart-panel input::placeholder,
+.public-cart-panel textarea::placeholder,
+.public-item-note textarea::placeholder {
+  color: #9b8d7d;
+}
+
+.public-cart-total,
+.public-customizer-card fieldset label {
+  border-color: #eadfd2;
+}
+
+.public-combo {
+  background: #fff0e2;
+  color: #6f5947;
+}
 .public-order-success{position:fixed;z-index:60;right:18px;bottom:18px;max-width:420px;padding:12px 14px;border:1px solid rgba(52,211,153,.3);border-radius:12px;background:#123125;color:#b6f3d0;box-shadow:0 14px 40px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px}.public-order-success>div{display:grid;gap:3px}.public-order-success small,.public-order-success span{font-size:9px}.public-order-success button{border:0;background:transparent;color:inherit}
 .public-upi-pay{display:grid;gap:9px;padding:12px;border:1px solid var(--menu-line);border-radius:10px;background:var(--menu-surface-soft)}.public-upi-pay a{min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--menu-orange);color:#fff;font-weight:750;text-decoration:none}.public-upi-pay select{min-height:44px;padding:8px 10px;border:1px solid var(--menu-line);border-radius:9px;background:var(--menu-surface);color:var(--menu-ink)}

@@ -243,7 +243,6 @@ export default function PublicMenu({ qrToken, storeSlug }) {
     });
     setCustomizer(null);
     setError("");
-    setCartOpen(true);
   }
   const cartTotal = useMemo(
     () =>
@@ -527,10 +526,14 @@ export default function PublicMenu({ qrToken, storeSlug }) {
       </section>
 
       {cart.length > 0 && (
-        <button className="public-cart-fab" onClick={() => setCartOpen(true)}>
+        <button
+          className="public-cart-fab"
+          onClick={() => setCartOpen(true)}
+          aria-label="Open checkout"
+        >
           <ShoppingCart size={17} />
           <span>
-            {cart.reduce((sum, row) => sum + row.quantityUnits, 0)} item
+            Checkout · {cart.reduce((sum, row) => sum + row.quantityUnits, 0)} item
             {cart.length === 1 ? "" : "s"}
           </span>
           <strong>{localeMoney(locale, cartTotal)}</strong>
