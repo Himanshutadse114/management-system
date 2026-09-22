@@ -704,21 +704,39 @@
   line-height: 1.4;
 }
 .menu-image-field-copy small { color: var(--ops-green); }
-.menu-image-choose {
-  min-height: 38px;
-  padding: 0 10px;
+.restaurant-form label.menu-image-choose {
+  min-height: 40px;
+  padding: 0 12px;
   border: 1px solid var(--ops-orange-line-soft);
   border-radius: 9px;
   background: var(--ops-orange-soft);
   color: var(--ops-orange-strong);
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: 16px max-content;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 9px;
+  align-content: center;
+  gap: 7px;
+  font-size: 10px;
   font-weight: 750;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
   cursor: pointer;
   white-space: nowrap;
+}
+.menu-image-choose svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  align-self: center;
+}
+.restaurant-form .menu-image-choose > span {
+  display: block;
+  align-self: center;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
 }
 .menu-image-choose input {
   position: absolute;
@@ -1375,7 +1393,7 @@
   .menu-source-picker { grid-template-columns: 1fr; }
   .menu-image-field { grid-template-columns: 58px minmax(0, 1fr); }
   .menu-image-form-preview { width: 58px; height: 58px; }
-  .menu-image-choose { grid-column: 1 / -1; width: 100%; }
+  .restaurant-form label.menu-image-choose { grid-column: 1 / -1; width: 100%; }
   .menu-image-remove { grid-column: 1 / -1; width: 100%; }
   .modifier-builder-head {
     grid-template-columns: 1fr 58px 58px auto;

@@ -723,7 +723,11 @@ export default function RestaurantManagerWorkspace({ token, access }) {
       if (menuImageFile && savedMenu.product?.id) {
         try {
           const body = new FormData();
-          body.append("image", menuImageFile);
+          body.append(
+            "image",
+            menuImageFile,
+            menuImageFile.name || "menu-photo.jpg",
+          );
           await api.post(
             `/inventory/tenants/${scope.tenantId}/branches/${scope.branchId}/products/${savedMenu.product.id}/image`,
             body,

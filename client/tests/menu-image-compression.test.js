@@ -16,9 +16,26 @@ test("menu photos are compressed to 100 KB from both upload interfaces", async (
   assert.match(compression, /type:\s*"image\/jpeg"/);
   assert.match(menuForm, /Menu item photo/);
   assert.match(menuForm, /compressMenuImage\(original\)/);
-  assert.match(menuForm, /body\.append\("image", menuImageFile\)/);
+  assert.match(
+    menuForm,
+    /body\.append\([\s\S]*?"image",[\s\S]*?menuImageFile,[\s\S]*?menuImageFile\.name/,
+  );
   assert.match(imageManager, /const compressed = await compressMenuImage\(file\)/);
-  assert.match(imageManager, /body\.append\('image', compressed\)/);
+  assert.match(
+    imageManager,
+    /body\.append\('image', compressed, compressed\.name/,
+  );
+});
+
+test("the Android shell connects web photo inputs to the native picker", async () => {
+  const [mobileSource, mobileManifest] = await Promise.all([
+    source("../../mobile/lib/main.dart"),
+    source("../../mobile/pubspec.yaml"),
+  ]);
+  assert.match(mobileManifest, /file_picker:\s*\^8\.3\.7/);
+  assert.match(mobileSource, /setOnShowFileSelector\(_selectWebFiles\)/);
+  assert.match(mobileSource, /FilePicker\.platform\.pickFiles/);
+  assert.match(mobileSource, /FileType\.image/);
 });
 
 test("the API refuses to store menu photos over 100 KB", async () => {
@@ -27,4 +44,17 @@ test("the API refuses to store menu photos over 100 KB", async () => {
   assert.match(inventoryRoute, /limits:\s*\{\s*fileSize:\s*MAX_PRODUCT_IMAGE_BYTES/);
   assert.match(inventoryRoute, /MENU_IMAGE_TOO_LARGE/);
   assert.match(inventoryRoute, /receiveProductImage/);
+});
+
+test("the choose-photo control keeps its icon and text on one aligned row", async () => {
+  const css = await source("../src/restaurant.css");
+  assert.match(
+    css,
+    /\.restaurant-form label\.menu-image-choose\s*\{[\s\S]*?display:\s*inline-grid;[\s\S]*?grid-template-columns:\s*16px max-content;[\s\S]*?align-items:\s*center;/,
+  );
+  assert.match(css, /\.menu-image-choose svg\s*\{[\s\S]*?align-self:\s*center;/);
+  assert.match(
+    css,
+    /\.restaurant-form \.menu-image-choose > span\s*\{[\s\S]*?line-height:\s*1 !important;/,
+  );
 });

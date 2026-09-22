@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 const _orange = Color(0xFFF58220);
 const _ink = Color(0xFF171B18);
@@ -87,7 +90,7 @@ class _WebPlatformScreenState extends State<WebPlatformScreen> {
   @override
   void initState() {
     super.initState();
-    _controller =
+    final controller =
         WebViewController()
           ..setJavaScriptMode(JavaScriptMode.unrestricted)
           ..setBackgroundColor(_surface)
@@ -120,8 +123,53 @@ class _WebPlatformScreenState extends State<WebPlatformScreen> {
                 }
               },
             ),
-          )
-          ..loadRequest(Uri.parse(_webUrl));
+          );
+    _controller = controller;
+    unawaited(_configureAndroidFilePicker(controller));
+    unawaited(controller.loadRequest(Uri.parse(_webUrl)));
+  }
+
+  Future<void> _configureAndroidFilePicker(WebViewController controller) async {
+    if (!Platform.isAndroid) return;
+    final platformController = controller.platform;
+    if (platformController is AndroidWebViewController) {
+      await platformController.setOnShowFileSelector(_selectWebFiles);
+    }
+  }
+
+  Future<List<String>> _selectWebFiles(FileSelectorParams params) async {
+    try {
+      final acceptsImages =
+          params.acceptTypes.isEmpty ||
+          params.acceptTypes.any(
+            (type) => type == 'image/*' || type.startsWith('image/'),
+          );
+      final result = await FilePicker.platform.pickFiles(
+        type: acceptsImages ? FileType.image : FileType.any,
+        allowMultiple: params.mode == FileSelectorMode.openMultiple,
+        dialogTitle: acceptsImages ? 'Choose menu photo' : 'Choose file',
+      );
+      if (result == null) return const <String>[];
+
+      return result.files
+          .map((file) {
+            final identifier = file.identifier;
+            if (identifier != null && identifier.isNotEmpty) return identifier;
+            final path = file.path;
+            return path == null ? null : Uri.file(path).toString();
+          })
+          .whereType<String>()
+          .toList(growable: false);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The photo could not be opened. Please try again.'),
+          ),
+        );
+      }
+      return const <String>[];
+    }
   }
 
   Future<void> _prepareWebExperience() async {

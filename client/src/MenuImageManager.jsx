@@ -121,7 +121,7 @@ export default function MenuImageManager() {
       setError('');
       const compressed = await compressMenuImage(file);
       const body = new FormData();
-      body.append('image', compressed);
+      body.append('image', compressed, compressed.name || 'menu-photo.jpg');
       await api.post(
         `/inventory/tenants/${context.tenantId}/branches/${context.branchId}/products/${productId}/image`,
         body,
