@@ -8,15 +8,22 @@ import {
   ClipboardList,
   Copy,
   ExternalLink,
+  ImagePlus,
   LayoutGrid,
   Plus,
   QrCode,
   RefreshCw,
   UtensilsCrossed,
   Timer,
+  Upload,
   X,
 } from "lucide-react";
 import { api, apiErrorMessage, authHeaders } from "./api";
+import {
+  compressMenuImage,
+  formatImageSize,
+  MENU_IMAGE_MAX_BYTES,
+} from "./menuImageCompression";
 import RefreshButton from "./RefreshButton";
 import "./restaurant.css";
 
@@ -227,6 +234,9 @@ export default function RestaurantManagerWorkspace({ token, access }) {
   const [tableFormError, setTableFormError] = useState("");
   const [tableFormNotice, setTableFormNotice] = useState("");
   const [menuForm, setMenuForm] = useState(() => emptyMenuForm());
+  const [menuImageFile, setMenuImageFile] = useState(null);
+  const [menuImageInfo, setMenuImageInfo] = useState("");
+  const [compressingImage, setCompressingImage] = useState(false);
   const [reservationForm, setReservationForm] = useState({
     guestName: "",
     phone: "",
@@ -255,6 +265,17 @@ export default function RestaurantManagerWorkspace({ token, access }) {
       ? `/restaurant/tenants/${scope.tenantId}/branches/${scope.branchId}`
       : "";
   const customerMenuTable = tables.find((table) => table.qrToken) || null;
+  const menuImagePreview = useMemo(
+    () => (menuImageFile ? URL.createObjectURL(menuImageFile) : ""),
+    [menuImageFile],
+  );
+
+  useEffect(
+    () => () => {
+      if (menuImagePreview) URL.revokeObjectURL(menuImagePreview);
+    },
+    [menuImagePreview],
+  );
 
   function scrollWorkspaceTop(behavior = "smooth") {
     window.requestAnimationFrame(() => {
@@ -353,6 +374,28 @@ export default function RestaurantManagerWorkspace({ token, access }) {
   function flash(message) {
     setNotice(message);
     window.setTimeout(() => setNotice(""), 2500);
+  }
+
+  async function selectMenuImage(event) {
+    const original = event.target.files?.[0] || null;
+    event.target.value = "";
+    if (!original) return;
+    try {
+      setCompressingImage(true);
+      setError("");
+      setMenuImageInfo(`Compressing ${formatImageSize(original.size)} photo…`);
+      const compressed = await compressMenuImage(original);
+      setMenuImageFile(compressed);
+      setMenuImageInfo(
+        `${formatImageSize(original.size)} compressed to ${formatImageSize(compressed.size)}.`,
+      );
+    } catch (err) {
+      setMenuImageFile(null);
+      setMenuImageInfo("");
+      setError(err.message || "The selected image could not be compressed.");
+    } finally {
+      setCompressingImage(false);
+    }
   }
 
   async function markNotificationRead(notification) {
@@ -662,7 +705,7 @@ export default function RestaurantManagerWorkspace({ token, access }) {
             quantity: match ? Number(match[1]) : 1,
           };
         });
-      await api.post(
+      const { data: savedMenu } = await api.post(
         `${base}/menu`,
         {
           ...menuForm,
@@ -676,8 +719,28 @@ export default function RestaurantManagerWorkspace({ token, access }) {
         },
         { headers: authHeaders(token) },
       );
+      let photoError = "";
+      if (menuImageFile && savedMenu.product?.id) {
+        try {
+          const body = new FormData();
+          body.append("image", menuImageFile);
+          await api.post(
+            `/inventory/tenants/${scope.tenantId}/branches/${scope.branchId}/products/${savedMenu.product.id}/image`,
+            body,
+            { headers: authHeaders(token) },
+          );
+        } catch (imageError) {
+          photoError = apiErrorMessage(imageError);
+        }
+      }
       setMenuForm(emptyMenuForm());
+      setMenuImageFile(null);
+      setMenuImageInfo("");
       await loadAll();
+      if (photoError) {
+        setError(`Menu item saved, but its photo could not be uploaded: ${photoError}`);
+        return;
+      }
       flash(
         prepared
           ? "Prepared item saved to the QR menu without creating meal stock."
@@ -715,6 +778,8 @@ export default function RestaurantManagerWorkspace({ token, access }) {
         .map((row) => `${row.quantity || 1} x ${row.label}`)
         .join("\n"),
     });
+    setMenuImageFile(null);
+    setMenuImageInfo("Choose a new photo only if you want to replace the current one.");
     scrollWorkspaceTop();
     flash("Menu item loaded for editing.");
   }
@@ -1826,6 +1891,53 @@ export default function RestaurantManagerWorkspace({ token, access }) {
                 }
               />
             </label>
+            <div className="menu-image-field">
+              <div
+                className={`menu-image-form-preview ${menuImagePreview ? "has-image" : ""}`}
+              >
+                {menuImagePreview ? (
+                  <img src={menuImagePreview} alt="Selected menu item" />
+                ) : (
+                  <ImagePlus size={24} />
+                )}
+              </div>
+              <div className="menu-image-field-copy">
+                <strong>Menu item photo</strong>
+                <span>
+                  Upload a JPEG, PNG or WebP of any source size. Deva compresses
+                  it to no more than {formatImageSize(MENU_IMAGE_MAX_BYTES)}.
+                </span>
+                {menuImageInfo && <small>{menuImageInfo}</small>}
+              </div>
+              <label className="menu-image-choose">
+                <Upload size={13} />
+                <span>
+                  {compressingImage
+                    ? "Compressing…"
+                    : menuImageFile
+                      ? "Change photo"
+                      : "Choose photo"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={compressingImage}
+                  onChange={selectMenuImage}
+                />
+              </label>
+              {menuImageFile && (
+                <button
+                  type="button"
+                  className="menu-image-remove"
+                  onClick={() => {
+                    setMenuImageFile(null);
+                    setMenuImageInfo("");
+                  }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
             <div className="menu-config-builder">
               <div className="menu-config-head">
                 <div>
@@ -2020,9 +2132,12 @@ export default function RestaurantManagerWorkspace({ token, access }) {
               />
               <span>Show as featured</span>
             </label>
-            <button className="scorm-button-primary restaurant-submit">
+            <button
+              className="scorm-button-primary restaurant-submit"
+              disabled={compressingImage}
+            >
               <Plus size={14} />
-              Save menu item
+              {compressingImage ? "Preparing photo…" : "Save menu item"}
             </button>
           </form>
           <section className="restaurant-panel">

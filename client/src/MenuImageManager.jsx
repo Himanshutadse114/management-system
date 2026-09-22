@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ImagePlus, Upload } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { api, apiErrorMessage, authHeaders } from './api';
+import { compressMenuImage, formatImageSize, MENU_IMAGE_MAX_BYTES } from './menuImageCompression';
 import RefreshButton from './RefreshButton';
 import './menu-images.css';
 
@@ -118,8 +119,9 @@ export default function MenuImageManager() {
     try {
       setBusyProductId(productId);
       setError('');
+      const compressed = await compressMenuImage(file);
       const body = new FormData();
-      body.append('image', file);
+      body.append('image', compressed);
       await api.post(
         `/inventory/tenants/${context.tenantId}/branches/${context.branchId}/products/${productId}/image`,
         body,
@@ -128,7 +130,7 @@ export default function MenuImageManager() {
       setSelectedFile(null);
       setImageVersion(Date.now());
       await load();
-      flash('Menu photo uploaded. It is now available on the QR menu.');
+      flash(`Menu photo compressed to ${formatImageSize(compressed.size)} and added to the QR menu.`);
     } catch (err) {
       setError(apiErrorMessage(err));
     } finally {
@@ -147,7 +149,7 @@ export default function MenuImageManager() {
         <div>
           <div className="restaurant-mini">Menu photos</div>
           <h3>Add food & drink photos</h3>
-          <p>Choose an item and upload a clear JPEG, PNG or WebP image. Maximum size: 5 MB.</p>
+          <p>Choose any JPEG, PNG or WebP photo. It is automatically compressed below {formatImageSize(MENU_IMAGE_MAX_BYTES)}.</p>
         </div>
         <RefreshButton onRefresh={load} busy={loading}/>
       </div>

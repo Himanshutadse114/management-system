@@ -618,6 +618,7 @@
 .restaurant-form > .featured-check,
 .restaurant-form > .menu-source-picker,
 .restaurant-form > .menu-inventory-note,
+.restaurant-form > .menu-image-field,
 .restaurant-form > .menu-config-builder {
   margin: 13px 15px 0;
 }
@@ -664,6 +665,79 @@
   line-height: 1.5;
 }
 .menu-inventory-note svg { flex: 0 0 auto; color: var(--ops-green); }
+.menu-image-field {
+  padding: 10px;
+  border: 1px solid var(--ops-line);
+  border-radius: 11px;
+  background: var(--ops-surface-2);
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.menu-image-form-preview {
+  width: 68px;
+  height: 68px;
+  border: 1px dashed var(--ops-orange-line-soft);
+  border-radius: 10px;
+  background: var(--ops-orange-soft);
+  color: var(--ops-orange-strong);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.menu-image-form-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.menu-image-field-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.menu-image-field-copy strong { font-size: 10px; }
+.menu-image-field-copy span,
+.menu-image-field-copy small {
+  color: var(--ops-muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+.menu-image-field-copy small { color: var(--ops-green); }
+.menu-image-choose {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--ops-orange-line-soft);
+  border-radius: 9px;
+  background: var(--ops-orange-soft);
+  color: var(--ops-orange-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.menu-image-choose input {
+  position: absolute;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}
+.menu-image-remove {
+  grid-column: 3;
+  min-height: 30px;
+  border: 0;
+  background: transparent;
+  color: var(--ops-red);
+  font: inherit;
+  font-size: 8px;
+  font-weight: 750;
+}
 .form-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1299,6 +1373,10 @@
 }
 @media (max-width: 700px) {
   .menu-source-picker { grid-template-columns: 1fr; }
+  .menu-image-field { grid-template-columns: 58px minmax(0, 1fr); }
+  .menu-image-form-preview { width: 58px; height: 58px; }
+  .menu-image-choose { grid-column: 1 / -1; width: 100%; }
+  .menu-image-remove { grid-column: 1 / -1; width: 100%; }
   .modifier-builder-head {
     grid-template-columns: 1fr 58px 58px auto;
   }

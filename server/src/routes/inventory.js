@@ -41,9 +41,10 @@ const { dispatchTransfer, receiveTransfer, postSupplierReturn, listTransfers } =
 const router = express.Router();
 const ALL_BRANCH_ROLES = ['BRANCH_MANAGER', 'INVENTORY_MANAGER', 'CASHIER', 'WAITER', 'AUDITOR'];
 const INVENTORY_WRITE_ROLES = ['BRANCH_MANAGER', 'INVENTORY_MANAGER'];
+const MAX_PRODUCT_IMAGE_BYTES = 100 * 1024;
 const imageUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  limits: { fileSize: MAX_PRODUCT_IMAGE_BYTES, files: 1 },
   fileFilter(_req, file, callback) {
     const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
     if (!allowed.has(file.mimetype)) {
@@ -54,6 +55,19 @@ const imageUpload = multer({
     callback(null, true);
   }
 });
+
+function receiveProductImage(req, res, next) {
+  imageUpload.single('image')(req, res, (error) => {
+    if (error?.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        message: 'Menu image must be 100 KB or smaller after compression.',
+        code: 'MENU_IMAGE_TOO_LARGE'
+      });
+    }
+    if (error) return next(error);
+    next();
+  });
+}
 
 router.use(authenticate, requireApproved);
 
@@ -350,9 +364,12 @@ router.post('/tenants/:tenantId/branches/:branchId/products/:productId/prices', 
   } catch (error) { next(error); }
 });
 
-router.post('/tenants/:tenantId/branches/:branchId/products/:productId/image', branchInventoryWriteAccess, imageUpload.single('image'), async (req, res, next) => {
+router.post('/tenants/:tenantId/branches/:branchId/products/:productId/image', branchInventoryWriteAccess, receiveProductImage, async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'Image file is required.' });
+    if (req.file.size > MAX_PRODUCT_IMAGE_BYTES) {
+      return res.status(413).json({ message: 'Menu image must be 100 KB or smaller after compression.', code: 'MENU_IMAGE_TOO_LARGE' });
+    }
     const product = await Product.findOne({ where: { id: req.params.productId, tenantId: req.params.tenantId } });
     if (!product) return res.status(404).json({ message: 'Product not found.' });
 
