@@ -58,8 +58,21 @@ function createSequelize() {
 
 const sequelize = createSequelize();
 
+async function authenticateWithRetry() {
+  // JSON mode boots an in-process engine on first use, which can be slow on a
+  // small instance; give it a few attempts and report each failure clearly.
+  const attempts = jsonMode ? 5 : 1;
+  for (let attempt = 1; ; attempt += 1) {
+    try { return await sequelize.authenticate(); } catch (error) {
+      if (attempt >= attempts) throw error;
+      console.error(`[database] connection attempt ${attempt}/${attempts} failed: ${error.message}; retrying`);
+      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+    }
+  }
+}
+
 async function connectDatabase() {
-  await sequelize.authenticate();
+  await authenticateWithRetry();
   const models = require('../models');
   await models.bootstrapModels();
   const { runSalesMigration } = require('../migrations/sales');

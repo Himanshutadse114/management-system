@@ -61,21 +61,42 @@ async function createDatabase() {
   const { PGlite } = require('@electric-sql/pglite');
   if (fs.existsSync(TEMPLATE_PATH)) {
     try {
-      return await PGlite.create({ loadDataDir: new Blob([fs.readFileSync(TEMPLATE_PATH)]) });
+      const database = await PGlite.create({ loadDataDir: new Blob([fs.readFileSync(TEMPLATE_PATH)]) });
+      log('started embedded engine from the prebuilt template');
+      return database;
     } catch (error) {
       log(`prebuilt template could not be loaded (${error.message}); initialising a fresh cluster`);
     }
   }
+  log('prebuilt template not found; initialising a fresh cluster (uses more memory)');
   return PGlite.create();
 }
 
 async function createEngine() {
   const { PGLiteSocketServer } = require('@electric-sql/pglite-socket');
+  const startedAt = Date.now();
   const db = await createDatabase();
-  const server = new PGLiteSocketServer({ db, port: 0, host: '127.0.0.1', maxConnections: 1 });
+
+  // The socket layer swallows engine failures and just drops the client
+  // connection (surfacing as ECONNRESET). Log the real reason before that.
+  const runProtocol = db.execProtocolRawStream.bind(db);
+  db.execProtocolRawStream = async (...args) => {
+    try { return await runProtocol(...args); } catch (error) {
+      log('embedded engine query failed:', error && error.stack ? error.stack : error);
+      throw error;
+    }
+  };
+
+  // Sequelize only ever uses one pooled connection, but a reconnect can briefly
+  // overlap the old socket closing; extra connections are queued, not harmful.
+  const server = new PGLiteSocketServer({
+    db, port: 0, host: '127.0.0.1', maxConnections: 4, debug: envFlag('JSON_DB_DEBUG', false)
+  });
+  server.addEventListener('error', (event) => log('socket server error:', event.detail && event.detail.message ? event.detail.message : event.detail));
   await server.start();
   const address = String(server.getServerConn());
   const separator = address.lastIndexOf(':');
+  log(`embedded engine ready in ${Date.now() - startedAt} ms, memory ${Math.round(process.memoryUsage().rss / 1048576)} MB RSS`);
   return {
     db,
     server,
