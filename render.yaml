@@ -12,6 +12,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # TEMPORARY: JSON database mode. Runs without the PostgreSQL service; data is
+      # saved as a JSON snapshot in the R2 bucket configured below. Remove this
+      # variable (or set it to postgres) to go back to the PostgreSQL settings.
+      - key: DB_DRIVER
+        value: json
       - key: DB_DIALECT
         value: postgres
       - key: DB_HOST

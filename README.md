@@ -63,6 +63,25 @@ npm install
 npm run dev
 ```
 
+## Temporary JSON database mode
+
+Set `DB_DRIVER=json` on the backend to run **without a PostgreSQL server**. An embedded PostgreSQL engine (PGlite) runs inside the Node process, so every query, migration and transaction behaves as before, and all data is saved as a readable JSON snapshot:
+
+- on Render (`STORAGE_DRIVER=s3`) the snapshot is written to the R2 bucket at `system/db/snapshot.json`, so it survives restarts and redeploys;
+- otherwise it is a local file (`JSON_DB_FILE`, default `server/data/db.json`).
+
+It is restored at boot (a fresh demo tenant is seeded if no snapshot exists) and saved a few seconds after any write and on shutdown. Seven rolling daily copies are kept under `system/db/backups/`. `DATABASE_URL` and the `DB_*` PostgreSQL variables are ignored in this mode. `GET /health` reports `"database": "json"`.
+
+Things to know before relying on it:
+
+- **Memory:** about 400 MB for the app plus engine. Use an instance with at least 1 GB.
+- **Single writer:** run exactly one backend instance. Writes in the last few seconds before a hard crash, or during the overlap of a rolling deploy, can be lost.
+- **Throughput:** one embedded session serialises requests, and every save rewrites the whole snapshot, so this suits a single outlet, not growth.
+- **Corrupt or unreadable snapshot:** the server refuses to start rather than silently starting empty. Replace `snapshot.json` with a file from `backups/`.
+- **Going back to PostgreSQL:** remove `DB_DRIVER` (or set it to `postgres`). Data does not migrate automatically between the two modes.
+
+`npm test` runs unchanged in this mode (`DB_DRIVER=json JSON_DB_PERSIST=false`), and `node tests/json-database-e2e.js` verifies a hard-restart round trip.
+
 ## Security model
 
 A JWT identifies the signed-in user but does **not** permanently grant tenant/branch authority. Protected APIs re-check the active user and current PostgreSQL memberships. Tenant and branch IDs supplied by the frontend are never trusted without server-side membership verification.

@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
+    "@electric-sql/pglite": "0.5.10",
+    "@electric-sql/pglite-socket": "0.2.13",
     "cors": "^2.8.6",
     "decimal.js": "^10.6.0",
     "dotenv": "^17.3.1",

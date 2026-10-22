@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { connectDatabase, sequelize } = require('./config/database');
+const { connectDatabase, sequelize, databaseMode } = require('./config/database');
 const { policyGuard } = require('./middleware/routePolicy');
 const { responsePolicy } = require('./middleware/responsePolicy');
 const { requestContext } = require('./middleware/requestContext');
@@ -50,7 +50,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.get(['/health', '/api', '/api/'], (req, res) => {
-  res.json({ service: 'management-system-backend', status: 'healthy', release: String(process.env.RENDER_GIT_COMMIT || '').slice(0, 7) || null, requestId: req.requestId, timestamp: new Date().toISOString() });
+  res.json({ service: 'management-system-backend', status: 'healthy', database: databaseMode, release: String(process.env.RENDER_GIT_COMMIT || '').slice(0, 7) || null, requestId: req.requestId, timestamp: new Date().toISOString() });
 });
 
 app.get('/ready', async (req, res) => {

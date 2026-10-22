@@ -29,6 +29,10 @@ RUN npm install --omit=dev
 
 COPY . .
 
+# Temporary JSON database mode (DB_DRIVER=json): prebuild an empty embedded cluster
+# so runtime starts from it instead of paying a one-off memory spike. Optional.
+RUN node scripts/build-pglite-template.js
+
 ENV NODE_ENV=production
 EXPOSE 5001
 

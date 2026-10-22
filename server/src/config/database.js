@@ -7,6 +7,12 @@ if (isProduction && dialect !== 'postgres') {
   throw new Error('Production requires DB_DIALECT=postgres.');
 }
 
+const embedded = require('./embeddedDatabase');
+// Temporary mode: DB_DRIVER=json replaces the external PostgreSQL service with
+// an embedded engine whose durable storage is a JSON snapshot. See
+// embeddedDatabase.js. Anything else keeps the normal PostgreSQL behaviour.
+const jsonMode = embedded.isJsonDatabase();
+
 const sslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
 const databaseUrl = String(process.env.DATABASE_URL || '').trim();
 
@@ -18,20 +24,39 @@ const databaseOptions = {
     : {}
 };
 
-// Render may provide its private PostgreSQL connection as DATABASE_URL. The
-// private/internal URL is preferred when the API and database share a region.
-const sequelize = databaseUrl
-  ? new Sequelize(databaseUrl, databaseOptions)
-  : new Sequelize(
-      process.env.DB_NAME || 'management_system',
-      process.env.DB_USER || 'postgres',
-      process.env.DB_PASS || '',
-      {
-        ...databaseOptions,
-        host: process.env.DB_HOST || 'localhost',
-        port: Number(process.env.DB_PORT || 5432)
-      }
-    );
+function createSequelize() {
+  if (jsonMode) {
+    // One embedded session: a single pooled connection, with transaction
+    // context so nested work joins the open transaction instead of deadlocking.
+    const instance = new Sequelize('management_system', 'postgres', '', {
+      dialect,
+      logging: false,
+      dialectModule: embedded.pgModule,
+      host: '127.0.0.1',
+      port: 5432,
+      pool: { max: 1, min: 0, idle: 600000, acquire: 120000 }
+    });
+    embedded.enableTransactionContext(Sequelize, instance);
+    embedded.bindEngineLifecycle(instance);
+    return instance;
+  }
+  // Render may provide its private PostgreSQL connection as DATABASE_URL. The
+  // private/internal URL is preferred when the API and database share a region.
+  return databaseUrl
+    ? new Sequelize(databaseUrl, databaseOptions)
+    : new Sequelize(
+        process.env.DB_NAME || 'management_system',
+        process.env.DB_USER || 'postgres',
+        process.env.DB_PASS || '',
+        {
+          ...databaseOptions,
+          host: process.env.DB_HOST || 'localhost',
+          port: Number(process.env.DB_PORT || 5432)
+        }
+      );
+}
+
+const sequelize = createSequelize();
 
 async function connectDatabase() {
   await sequelize.authenticate();
@@ -76,6 +101,10 @@ async function connectDatabase() {
   await runEcosystemMigration(sequelize);
   await runGuestPaymentsMigration(sequelize);
 
+  // JSON mode: load the saved snapshot over the freshly migrated schema before
+  // the bootstrap admin and demo seed look at what already exists.
+  if (jsonMode) await embedded.restoreSnapshotIfPresent(sequelize);
+
   const { ensureBootstrapSuperAdmin } = require('../services/credentialService');
   await ensureBootstrapSuperAdmin();
 
@@ -84,7 +113,12 @@ async function connectDatabase() {
     await seedDemoData();
   }
 
-  console.log('[database] PostgreSQL connected and models ready');
+  if (jsonMode) {
+    await embedded.startPersistence(sequelize);
+    console.log('[database] JSON database ready (embedded engine, temporary mode)');
+  } else {
+    console.log('[database] PostgreSQL connected and models ready');
+  }
 }
 
-module.exports = { sequelize, connectDatabase };
+module.exports = { sequelize, connectDatabase, databaseMode: jsonMode ? 'json' : 'postgres' };

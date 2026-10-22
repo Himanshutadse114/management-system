@@ -85,3 +85,29 @@ jobs:
           createdb --host=127.0.0.1 --username=postgres management_system_restore_test
           pg_restore --host=127.0.0.1 --username=postgres --dbname=management_system_restore_test --no-owner --no-privileges --exit-on-error /tmp/management-system.backup
           psql --host=127.0.0.1 --username=postgres --dbname=management_system_restore_test --set=ON_ERROR_STOP=1 --command='SELECT COUNT(*) AS applied_migrations FROM schema_migrations;'
+
+  backend-json:
+    name: backend (JSON database mode)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    env:
+      NODE_ENV: test
+      DB_DRIVER: json
+      JSON_DB_PERSIST: "false"
+      JWT_SECRET: test-only-jwt-secret-with-more-than-32-characters
+      SUPER_ADMIN_EMAIL: superadmin@example.com
+      STORAGE_DRIVER: local
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts
+      - name: Run critical flow tests on the embedded JSON database
+        run: npm test
+      - name: Generate and download a report
+        run: node tests/report-smoke.js
+      - name: Restart persistence end to end
+        run: node tests/json-database-e2e.js
