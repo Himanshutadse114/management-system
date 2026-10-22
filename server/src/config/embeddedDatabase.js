@@ -239,20 +239,63 @@ function createFileBackend(filePath) {
   };
 }
 
+function isAccessDenied(error) {
+  return error?.$metadata?.httpStatusCode === 403 || error?.name === 'AccessDenied' || error?.Code === 'AccessDenied';
+}
+
 function createObjectBackend(key) {
   const { getObjectStorage } = require('../storage/objectStorage');
   const prefix = key.includes('/') ? key.slice(0, key.lastIndexOf('/')) : 'system/db';
+  const bucket = process.env.S3_BUCKET || '(S3_BUCKET not set)';
+
+  function accessError(action, cause) {
+    const error = new Error(
+      `Object storage denied ${action} on bucket "${bucket}" (HTTP 403). The R2/S3 credentials need Object Read & Write ` +
+      `permission on this bucket, and S3_BUCKET, S3_ENDPOINT, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must match it. ` +
+      `Refusing to start so no data is lost.`
+    );
+    error.cause = cause;
+    return error;
+  }
+
+  // Some S3-compatible stores answer 403 instead of 404 for a key that does not
+  // exist when the token cannot list the bucket. Prove the credentials can write
+  // and read back before treating the snapshot as simply absent.
+  async function credentialsCanReadAndWrite() {
+    const storage = getObjectStorage();
+    const probeKey = `${prefix}/.access-probe`;
+    try {
+      await storage.putObject({ key: probeKey, body: Buffer.from('ok'), contentType: 'text/plain' });
+    } catch (error) {
+      throw isAccessDenied(error) ? accessError('writing', error) : error;
+    }
+    try {
+      await storage.getObjectBuffer(probeKey);
+    } catch (error) {
+      throw isAccessDenied(error) ? accessError('reading', error) : error;
+    }
+  }
+
   return {
     kind: 'object',
     describe: () => `object storage key ${key}`,
     async read() {
       try { return await getObjectStorage().getObjectBuffer(key); } catch (error) {
         if (isNotFound(error)) return null;
+        if (isAccessDenied(error)) {
+          await credentialsCanReadAndWrite();
+          log('object storage returned 403 for the snapshot key, but the credentials can read and write: treating it as not created yet');
+          return null;
+        }
         throw error;
       }
     },
     async write(buffer) {
-      await getObjectStorage().putObject({ key, body: buffer, contentType: 'application/json' });
+      try {
+        await getObjectStorage().putObject({ key, body: buffer, contentType: 'application/json' });
+      } catch (error) {
+        throw isAccessDenied(error) ? accessError('writing the snapshot', error) : error;
+      }
     },
     async writeBackup(name, buffer) {
       await getObjectStorage().putObject({ key: `${prefix}/backups/${name}.json`, body: buffer, contentType: 'application/json' });

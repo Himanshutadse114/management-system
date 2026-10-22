@@ -108,6 +108,42 @@ describe('JSON database snapshot', function jsonDatabaseSuite() {
     assert.strictEqual(await embedded.restoreSnapshotIfPresent(sequelize, embedded.createFileBackend(path.join(directory, 'missing.json'))), false);
   });
 
+  describe('object storage backend', () => {
+    const storageModule = require('../src/storage/objectStorage');
+    const realGetObjectStorage = storageModule.getObjectStorage;
+    const denied = () => Object.assign(new Error('Access Denied'), { name: 'AccessDenied', $metadata: { httpStatusCode: 403 } });
+    const missing = () => Object.assign(new Error('missing'), { name: 'NoSuchKey', $metadata: { httpStatusCode: 404 } });
+    after(() => { storageModule.getObjectStorage = realGetObjectStorage; });
+
+    function stubStorage(handlers) {
+      const objects = new Map();
+      storageModule.getObjectStorage = () => ({
+        async getObjectBuffer(key) { return handlers.get ? handlers.get(key, objects) : (objects.get(key) || (() => { throw missing(); })()); },
+        async putObject({ key, body }) { if (handlers.put) handlers.put(key); objects.set(key, body); return { key }; }
+      });
+    }
+
+    it('treats a plain 404 as "no snapshot yet"', async () => {
+      stubStorage({});
+      assert.strictEqual(await embedded.createObjectBackend('system/db/snapshot.json').read(), null);
+    });
+
+    it('treats 403 for the snapshot key as missing when the credentials can really read and write', async () => {
+      stubStorage({ get: (key, objects) => { if (key.endsWith('snapshot.json')) throw denied(); return objects.get(key); } });
+      assert.strictEqual(await embedded.createObjectBackend('system/db/snapshot.json').read(), null);
+    });
+
+    it('refuses to start, with a clear message, when the credentials cannot write', async () => {
+      stubStorage({ get: () => { throw denied(); }, put: () => { throw denied(); } });
+      await assert.rejects(() => embedded.createObjectBackend('system/db/snapshot.json').read(), /denied writing on bucket .*Object Read & Write/);
+    });
+
+    it('refuses to start rather than assume "empty" when reads are denied everywhere', async () => {
+      stubStorage({ get: () => { throw denied(); } });
+      await assert.rejects(() => embedded.createObjectBackend('system/db/snapshot.json').read(), /denied reading on bucket/);
+    });
+  });
+
   it('turns a nested transaction into a savepoint instead of deadlocking', async () => {
     const { sequelize } = await open();
     await createSchema(sequelize);
